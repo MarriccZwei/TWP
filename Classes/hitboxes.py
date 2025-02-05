@@ -1,5 +1,6 @@
-from typing import Tuple
+from typing import Tuple, List
 import unittest
+import numpy as np
 
 class Hitbox():
     '''A rectangular Hitbox'''
@@ -21,7 +22,8 @@ class Hitbox():
             if (refxmin > xmax) or (refxmax < xmin):
                 return True #if one of the coords is separate
         return False #if all coordinates are nested then the hitboxes ain't separate
-    
+
+
 def uncodePoints(ptStr:str, masterSep="|", coordSep=";"):
     '''Uncodes the points from CATIA and returns them as a list of tuples'''
 
@@ -31,6 +33,30 @@ def uncodePoints(ptStr:str, masterSep="|", coordSep=";"):
         ptCoords = pt.split(coordSep) #obtaining the coords
         uncodedPts.append((float(ptCoords[0]), float(ptCoords[1]), float(ptCoords[2]))) #will throw error if too little data
     return uncodedPts
+
+
+class Cell():
+    """A representation of the prismatic truss cell being the main storage unit for the batteries"""
+    #radiusOffset - how much offset is needed for structural ements
+    def __init__(self, orderedPTs:List[Tuple[float]], radiusOffset):
+        self.corners = orderedPTs
+
+        #offset for structural elements
+        self.offsetCorners = self.corners
+        for i in range(3):
+            #offsetting the lower elements an entire truss diameter up (in the local coord sys)
+            self.offsetCorners[i][1] -= 2*radiusOffset
+        for j in range(3,6):
+            #offsetting the upper elements an entire truss diameter down (in the local coord sys)
+            self.offsetCorners[i][1] += 2*radiusOffset
+        
+        def inwardsOffsetTriangle(vertices):
+            #centroid of the bottom triangle (also approx. of the top cuz the are almost same)
+            pass
+            
+            
+        
+
 
 if __name__ == "__main__":
     class TestHitbox(unittest.TestCase):
