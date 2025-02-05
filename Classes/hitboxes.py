@@ -2,6 +2,7 @@ from typing import Tuple
 import unittest
 
 class Hitbox():
+    '''A rectangular Hitbox'''
     def __init__(self, corner1:Tuple[float], corner2:Tuple[float]):
         self.corner1 = corner1
         self.corner2 = corner2
@@ -20,6 +21,16 @@ class Hitbox():
             if (refxmin > xmax) or (refxmax < xmin):
                 return True #if one of the coords is separate
         return False #if all coordinates are nested then the hitboxes ain't separate
+    
+def uncodePoints(ptStr:str, masterSep="|", coordSep=";"):
+    '''Uncodes the points from CATIA and returns them as a list of tuples'''
+
+    codedPts = ptStr.split(masterSep)
+    uncodedPts = list()
+    for pt in codedPts:
+        ptCoords = pt.split(coordSep) #obtaining the coords
+        uncodedPts.append((float(ptCoords[0]), float(ptCoords[1]), float(ptCoords[2]))) #will throw error if too little data
+    return uncodedPts
 
 if __name__ == "__main__":
     class TestHitbox(unittest.TestCase):
@@ -29,5 +40,5 @@ if __name__ == "__main__":
             hb3 = Hitbox((0, 0.5, 1), (9, 9, -8))
             self.assertTrue(not hb1.outside(hb2))
             self.assertTrue(hb3.outside(hb1))
-            
+
     unittest.main()
