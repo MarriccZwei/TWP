@@ -36,23 +36,9 @@ def uncodePoints(ptStr:str, masterSep="|", coordSep=";"):
 
 
 class Cell():
-    """A representation of the prismatic truss cell being the main storage unit for the batteries"""
-    #radiusOffset - how much offset is needed for structural ements
-    def __init__(self, orderedPTs:List[Tuple[float]], radiusOffset):
+    """A representation of the prismatic cell being the main storage unit for the batteries"""
+    def __init__(self, orderedPTs:List[Tuple[float]]):
         self.corners = orderedPTs
-
-        #offset for structural elements
-        self.offsetCorners = self.corners
-        for i in range(3):
-            #offsetting the lower elements an entire truss diameter up (in the local coord sys)
-            self.offsetCorners[i][1] -= 2*radiusOffset
-        for j in range(3,6):
-            #offsetting the upper elements an entire truss diameter down (in the local coord sys)
-            self.offsetCorners[i][1] += 2*radiusOffset
-        
-        def inwardsOffsetTriangle(vertices):
-            #centroid of the bottom triangle (also approx. of the top cuz the are almost same)
-            pass
             
             
         
