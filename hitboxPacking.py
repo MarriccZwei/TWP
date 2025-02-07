@@ -31,6 +31,7 @@ if test:
     #testing if the tops and bottoms of the cells correspond to each other
     plt.plot([pt[0] for pt in cellBots[5]], [pt[2] for pt in cellBots[5]])
     plt.plot([pt[0] for pt in cellTops[5]], [pt[2] for pt in cellTops[5]])
+    plt.plot([cellTops[8][0][0]]+[cellTops[8][1][0]], [cellTops[8][0][2]]+[cellTops[8][1][2]])
 
     plt.scatter(xs, zs)
     plt.show()
