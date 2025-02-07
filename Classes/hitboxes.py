@@ -37,8 +37,13 @@ def uncodePoints(ptStr:str, masterSep="|", coordSep=";"):
 
 class Cell():
     """A representation of the prismatic cell being the main storage unit for the batteries"""
-    def __init__(self, orderedPTs:List[Tuple[float]]):
-        self.corners = orderedPTs
+    def __init__(self, botPTs:List[Tuple[float]], topPts:List[Tuple[float]]):
+        self.botCorners = botPTs
+        self.topCorners = topPts
+
+    #code from stack overflow - adapted to python and used in zx plane for our top and bottom triangles
+    def _halfplaneSign(self, pt1:Tuple[float], pt2:Tuple[float], pt3:Tuple[float]):
+        return (pt1[0]-pt3[0])    
             
             
         
