@@ -24,7 +24,7 @@ for i in range(len(cellBots)):
 batteries:hbx.List[hbx.Battery] = list()
 batteryTemplate = hbx.Battery((0,0,0), 150, 75, 100)
 for c in cells:
-    batteries += c.populate(batteryTemplate, 25, hitboxes)
+    batteries += c.optimised_populate(batteryTemplate, 25, hitboxes)
 
 returnstr = ';'.join([str(b.corner1[0]) for b in batteries])+'|'+';'.join([str(b.corner1[1]) for b in batteries])+'|'+';'.join([str(b.corner1[2]) for b in batteries])+'|'
 returnstr += ';'.join([str(b.corner2[0]) for b in batteries])+'|'+';'.join([str(b.corner2[1]) for b in batteries])+'|'+';'.join([str(b.corner2[2]) for b in batteries])

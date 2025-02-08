@@ -1,6 +1,6 @@
 from typing import Tuple, List
 import unittest
-import numpy as np
+import math
 
 class Hitbox():
     '''A rectangular Hitbox'''
@@ -74,6 +74,10 @@ class Cell():
         #generating top and bottom planes
         self.botPlane = plane_3_points_xz(*self.botCorners)
         self.topPlane = plane_3_points_xz(*self.topCorners)
+
+        #accounting for the root cell
+        if self.atZ and topPts[2][2] > topPts[1][2]:
+            self.topCorners[1] = (topPts[1][0], topPts[1][1], topPts[2][2]) #shrinking the root cell to a higher (lower negative) z value
 
     #code from stack overflow - adapted to python and used in zx plane for our top and bottom triangles
     def populate(self, battery:Battery, margin:float, hitboxes2avoid:List[Hitbox]) -> List[Battery]:
@@ -151,6 +155,30 @@ class Cell():
 
                 if append: bats.append(bat)
             
+        return bats
+
+    def optimised_populate(self, battery:Battery, margin:float, hitboxes2avoid:List[Hitbox]) -> List[Battery]:
+        bats = self.populate(battery, margin, hitboxes2avoid) #populate with battery in the original direction
+
+        def try_another_bat(bat): #trying another direction of the battery function
+            batsNew = self.populate(bat, margin, hitboxes2avoid)
+            if len(batsNew)>len(bats):
+                return batsNew
+            else:
+                return bats
+
+        #5 remaining permutations of the battery direction
+        bat2 = Battery((0,0,0), battery.xdim, battery.zdim, battery.ydim)
+        bats = try_another_bat(bat2)
+        bat3 = Battery((0,0,0), battery.ydim, battery.zdim, battery.xdim)
+        bats = try_another_bat(bat3)
+        bat4 = Battery((0,0,0), battery.ydim, battery.xdim, battery.zdim)
+        bats = try_another_bat(bat4)
+        bat5 = Battery((0,0,0), battery.zdim, battery.xdim, battery.ydim)
+        bats = try_another_bat(bat5)
+        bat6 = Battery((0,0,0), battery.zdim, battery.ydim, battery.xdim)
+        bats = try_another_bat(bat6)
+
         return bats
 
 
