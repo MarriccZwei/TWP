@@ -99,8 +99,6 @@ class Cell():
         nx = int((xwidth+margin)/(battery.xdim+margin))
 
         #fitting batteries in the XZ plane
-        batDelx = 0
-        batDelz = 0
         for ix in range(nx):
             for iz in range(nz):
                 #translate towards negative z and towards positive x, with closer corner in x and further in z 
