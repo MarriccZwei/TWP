@@ -62,22 +62,26 @@ def plane_3_points_xz(p1:Tuple[float], p2:Tuple[float], p3:Tuple[float]): #the p
 
 class Cell():
     """A representation of the prismatic cell being the main storage unit for the batteries"""
-    def __init__(self, botPTs:List[Tuple[float]], topPts:List[Tuple[float]], resolution=100):
-        self.botCorners = botPTs
-        self.topCorners = topPts
-        #checking if the cell has a sharp corner at the z axis or elsewhere - checking which type of cell we deal with 
-        self.atZ = topPts[1][0] < resolution and topPts[1][0] > -resolution
-        #generating the line between the 2 side corners x = a*z + b
-        topLineA = (topPts[0][0]-topPts[2][0])/(topPts[0][2]-topPts[2][2])
-        topLineB = topPts[0][0] - topLineA*topPts[0][2]
-        self.midline = lambda z: topLineA*z+topLineB
+    def __init__(self, pts:List[Tuple[float]]):
+        #points assigned by their signatures
+        self.fit = pts[0]
+        self.fib = pts[1]
+        self.fot = pts[2]
+        self.fob = pts[3]
+        self.rot = pts[4]
+        self.rob = pts[5]
         #generating top and bottom planes
-        self.botPlane = plane_3_points_xz(*self.botCorners)
-        self.topPlane = plane_3_points_xz(*self.topCorners)
+        self.topPlane = plane_3_points_xz(self.fit, self.fot, self.rot)
+        self.botPlane = plane_3_points_xz(self.fib, self.fob, self.rob)
 
-        #accounting for the root cell
-        if self.atZ and topPts[2][2] > topPts[1][2]:
-            self.topCorners[1] = (topPts[1][0], topPts[1][1], topPts[2][2]) #shrinking the root cell to a higher (lower negative) z value
+        #generating corner points
+        #z is the spanwise direction here. Thus x and y are copied from the rect corner with z of the offseted corner
+        self.cft = (self.fot[0], self.fot[1], self.fit[2])
+        self.cfb = (self.fob[0], self.fob[1], self.fib[2])
+
+        # #accounting for the root cell
+        # if self.atZ and topPts[2][2] > topPts[1][2]:
+        #     self.topCorners[1] = (topPts[1][0], topPts[1][1], topPts[2][2]) #shrinking the root cell to a higher (lower negative) z value
 
     #code from stack overflow - adapted to python and used in zx plane for our top and bottom triangles
     def populate(self, battery:Battery, margin:float, hitboxes2avoid:List[Hitbox]) -> List[Battery]:
@@ -86,38 +90,22 @@ class Cell():
         batXZs = list() #the list of battery least positive corners on the XZ plane
         bats = list() #the final list that shall be returned
 
-        #first cell type - unshared corner around z = 0
-        if self.atZ:
-            layerPt = point_from_point(self.topCorners[1], 0, 0, margin) #the point marking a z-layer of bats
-            maxLayer = self.topCorners[0][2] - margin+battery.zdim #the maximum z a layer can have
-            while layerPt[2] < maxLayer:
-                zwidth = margin+battery.zdim
-                #generating a layer pt rectngle
-                layerEndPt = point_from_point(layerPt, 0, 0, zwidth)
-                #here the y coord doesn't matter
-                xwidth = layerPt[0]-self.midline(layerEndPt[2])
-                #how many batteries ar in a layer in the x direction
-                batEffXdim = battery.xdim+margin #effective x dimension of the batteries
-                n = int((xwidth-margin)/(batEffXdim))
-                for i in range(1, n+1):
-                    batXZs.append(point_from_point(layerPt, -i*batEffXdim, 0, 0))
-                #to generate the next layer, we move on to the next layer point
-                layerPt = layerEndPt
+        #top dimensions seem to be a bit more constraining so we will do in terms of them
+        zwidth = self.cft[2]-self.fot[2]
+        xwidth = self.rot[0]-self.fot[0]
 
-        #second cell type - unshared corner not at z=0
-        else:
-            layerPt = point_from_point(self.topCorners[1], 0, 0, -margin) #the point marking a z-layer of bats
-            minLayer = self.topCorners[2][2]+margin+battery.zdim # the minimum z a layer can have
-            while layerPt[2] > minLayer:
-                zoffset = -margin-battery.zdim #now we go towards negative z
-                layerEndPt = point_from_point(layerPt, 0, 0, zoffset)
-                xwidth = self.midline(layerEndPt[2])-layerPt[0] #now layerPt has a more negative x than the midline point
-                batEffXdim = battery.xdim+margin #effective x dimension of the batteries
-                n = int((xwidth-margin)/(batEffXdim))
-                for i in range(n):
-                    #1 margin from the wall and then nominal spacing
-                    batXZs.append(point_from_point(layerEndPt, batEffXdim*i+margin, 0, 0))
-                layerPt = layerEndPt #as above
+        #how many batteries would fit
+        nz = int((zwidth+margin)/(battery.zdim+margin))
+        nx = int((xwidth+margin)/(battery.xdim+margin))
+
+        #fitting batteries in the XZ plane
+        batDelx = 0
+        batDelz = 0
+        for ix in range(nx):
+            for iz in range(nz):
+                #translate towards negative z and towards positive x, with closer corner in x and further in z 
+                #to satisfy the batXZs sign convention
+                batXZs.append(point_from_point(self.cft, (battery.xdim+margin)*ix, 0, -battery.zdim*(iz+1)-margin*iz))
 
         for p in batXZs:
             #obtaining the most constraining y height for the battery stack
