@@ -129,7 +129,7 @@ class Cell():
                 startHeight = oppCornHeight
 
             batEffY = margin+battery.ydim #effective dimension
-            m = int((startHeight-margin)/batEffY) #counting batteries           
+            m = int((startHeight+margin)/batEffY) #counting batteries           
             #generating batteries
             for i in range(m):
                 corner1 = (p[0], starty+margin+i*batEffY, p[2])
