@@ -109,19 +109,19 @@ class Cell():
             #obtaining the most constraining y height for the battery stack
             #evaluating for each corner and if more constraining than the previous one - replacing as the new minimum
             starty = self.topPlane(p[0], p[2])
-            startHeight = self.botPlane(p[0], p[2])-starty
+            startHeight = abs(self.botPlane(p[0], p[2])-starty) #abs comes with some risks but since the planes never intersect...
 
-            xcornHeight = self.botPlane(p[0]+battery.xdim, p[2])-self.topPlane(p[0]+battery.xdim, p[2])
+            xcornHeight = abs(self.botPlane(p[0]+battery.xdim, p[2])-self.topPlane(p[0]+battery.xdim, p[2]))
             if xcornHeight<startHeight:
                 starty = self.topPlane(p[0]+battery.xdim, p[2])
                 startHeight = xcornHeight
 
-            zcornHeight = self.botPlane(p[0], p[2]+battery.zdim)-self.topPlane(p[0], p[2]+battery.zdim)
+            zcornHeight = abs(self.botPlane(p[0], p[2]+battery.zdim)-self.topPlane(p[0], p[2]+battery.zdim))
             if zcornHeight<startHeight:
                 starty = self.topPlane(p[0], p[2]+battery.zdim)
                 startHeight = zcornHeight
 
-            oppCornHeight = self.botPlane(p[0]+battery.xdim, p[2]+battery.zdim)-self.topPlane(p[0]+battery.xdim, p[2]+battery.zdim)
+            oppCornHeight = abs(self.botPlane(p[0]+battery.xdim, p[2]+battery.zdim)-self.topPlane(p[0]+battery.xdim, p[2]+battery.zdim))
             if xcornHeight<startHeight:
                 starty = self.topPlane(p[0]+battery.xdim, p[2]+battery.zdim)
                 startHeight = oppCornHeight
@@ -130,7 +130,7 @@ class Cell():
             m = int((startHeight+margin)/batEffY) #counting batteries           
             #generating batteries
             for i in range(m):
-                corner1 = (p[0], starty+margin+i*batEffY, p[2])
+                corner1 = (p[0], starty-batEffY-i*(batEffY+margin), p[2]) #y-axis direction dependent !!!
                 bat = Battery(corner1, battery.xdim, battery.ydim, battery.zdim)
                
                 #checking if the batteries are not inside or touching any hitbox
@@ -168,7 +168,7 @@ class Cell():
         return bats
 
 
-
+'''OUTDATED'''
 if __name__ == "__main__":
     class TestHitbox(unittest.TestCase):
         def test_outside(self):
