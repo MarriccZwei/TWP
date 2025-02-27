@@ -143,29 +143,11 @@ class Cell():
             
         return bats
 
-    def optimised_populate(self, battery:Battery, margin:float, hitboxes2avoid:List[Hitbox]) -> List[Battery]:
-        bats = self.populate(battery, margin, hitboxes2avoid) #populate with battery in the original direction
+    # def optimised_populate(self, battery:Battery, margin:float, hitboxes2avoid:List[Hitbox]) -> List[Battery]:
+    #     batVol = battery.ydim*battery.ydim*battery.zdim
+    #     bats = self.populate(battery, margin, hitboxes2avoid) #populate with battery in the original direction
 
-        def try_another_bat(bat): #trying another direction of the battery function
-            batsNew = self.populate(bat, margin, hitboxes2avoid)
-            if len(batsNew)>len(bats):
-                return batsNew
-            else:
-                return bats
-
-        #5 remaining permutations of the battery direction
-        bat2 = Battery((0,0,0), battery.xdim, battery.zdim, battery.ydim)
-        bats = try_another_bat(bat2)
-        bat3 = Battery((0,0,0), battery.ydim, battery.zdim, battery.xdim)
-        bats = try_another_bat(bat3)
-        bat4 = Battery((0,0,0), battery.ydim, battery.xdim, battery.zdim)
-        bats = try_another_bat(bat4)
-        bat5 = Battery((0,0,0), battery.zdim, battery.xdim, battery.ydim)
-        bats = try_another_bat(bat5)
-        bat6 = Battery((0,0,0), battery.zdim, battery.ydim, battery.xdim)
-        bats = try_another_bat(bat6)
-
-        return bats
+        
 
 
 '''OUTDATED'''
