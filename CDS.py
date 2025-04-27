@@ -1,8 +1,15 @@
 
 trapVertEnc = "2196.48;5;266.241|2196.48;5;-107.114|2196.48;1400;424.795|2196.48;1400;32.391|2196.48;17995;2018.516|2196.48;17995;1841.318"
+motor_yzones = "16019.787;16322.714|12263.436;12566.363|8507.085;8810.012|4750.734;5053.661"
+lg_yzone = "6409.425;7136.436"
 dihedral = "6deg"
+LEenc = "631.798;1400;424.795"
+TEenc = "3183.4;1400;424.795"
+fsang = "2.939deg"
+rsang = "179.054deg"
 startTop=True
 removeLast=True
+xlg = 3005.513
 
 import matplotlib.pyplot as plt
 
@@ -13,8 +20,6 @@ nteeth = [3 for i in range(25)] + [2 for i in range(175)]
 toothDepth = [7 for i in range(25)] + [5 for i in range(175)] #[mm]
 adhesive_t = [1 for i in range(50)] + [0.5 for i in range(150)]
 #!IMPROVISED!
-lg_yzone = "6010.01;6320.2"
-motor_yzones = "5039.0;5282.127|9022.222;9270.0|13033.9;13288.06|17009.99;17259.908"
 cell_d = 21.22
 delta = 0.58
 delta_radius = (cell_d+delta)/2
@@ -22,6 +27,7 @@ delta_diameter = cell_d+delta
 rect_joint_t = 25
 fus_skin_offset = 15
 root_rib_offset = 10
+cell_h = 70.3
 
 import math
 class Point2D():
@@ -361,16 +367,6 @@ class Triangle():
                     correctedRow.append(pt)
             cellptsrow = list() #clearing the row list
 
-
-        # plt.plot([pt.y for pt in looped_center_boundary], [pt.z for pt in looped_center_boundary])
-        # plt.scatter(centroid.y, centroid.z)
-        # for i in range(len(normal_vectors)):
-        #     side_midpoint = Point2D(looped_center_boundary[i+1].y/2+looped_center_boundary[i].y/2, looped_center_boundary[i+1].z/2+looped_center_boundary[i].z/2, None)
-        #     step_midpoint = normal_vectors[i].step(side_midpoint, 25)
-        #     plt.plot([side_midpoint.y, step_midpoint.y], [side_midpoint.z, step_midpoint.z])
-        # step_midpoint = minus30dir.step(side_midpoint, 25)
-        # plt.plot([side_midpoint.y, step_midpoint.y], [side_midpoint.z, step_midpoint.z])
-
         return cellpts
 
 
@@ -379,9 +375,15 @@ class Triangle():
         self.state = 'clean' #'clean' means unobstructed, 'lg' means obstructed by the lg 'motor' means obstructed by the motor, 'hinge' - by the wingtip hinge
         self.cellpts = [] #here be battery cells belonging to this triangle
 
+        #adding an x dimension to a triangle
+        self.xLE = None
+        self.xTE = None
+        self.cellxs = []
+
         self.v1 = vertex1
         self.v2 = vertex2
         self.v3 = vertex3
+        self.maxy = max(self.v1.y, self.v2.y, self.v3.y) #useful for xwise packing
 
         #creating adhesion joint vertics - as in the April28 page
         self.v12 = UnitVector2D.from_pts(self.v1, self.v2).step(self.v1, jointDepth)
@@ -391,11 +393,7 @@ class Triangle():
         self.v23 = UnitVector2D.from_pts(self.v2, self.v3).step(self.v2, jointDepth)
         self.v32 = UnitVector2D.from_pts(self.v3, self.v2).step(self.v3, jointDepth)
 
-        #space for intermediate tooth points if any
-        # self.toothpts1 = [self.v12, self.v13]
-        # self.toothpts2 = [self.v23, self.v21]
-        # self.toothpts3 = [self.v31, self.v32]
-
+    #generating toothed wedges for the triangle
     def teeth(self, nteeth, toothDepth, tadh1, tadh2):
         # self.toothpts1 = self._tooth_generation(self.v1, self.toothpts1[0], self.toothpts1[1], nteeth, toothDepth)
         # self.toothpts2 = self._tooth_generation(self.v2, self.toothpts2[0], self.toothpts2[1], nteeth, toothDepth)
@@ -404,6 +402,7 @@ class Triangle():
         wedges.append(Wedge.toothed(self.v2, self.v23, self.v21, nteeth, toothDepth, tadh1, tadh2))
         wedges.append(Wedge.toothed(self.v3, self.v31, self.v32, nteeth, toothDepth, tadh1, tadh2))
 
+    #generating untoothed wedges for the triangle
     def no_teeth(self, tadh1, tadh2):
         wedges.append(Wedge.toothless(self.v1, self.v12, self.v13, tadh1, tadh2))
         wedges.append(Wedge.toothless(self.v2, self.v23, self.v21, tadh1, tadh2))
@@ -411,6 +410,30 @@ class Triangle():
 
     def populate(self):
         self.cellpts = self._populate(self.v12, self.v13, self.v21, self.v23, self.v31, self.v32)
+
+    #establishes the x bounds of the triangle and it's number of cell layers in x direction.
+    def xbounds(self, lineLE:Line, lineTE:Line):       
+        #caution! points inside this method are in yx coords instead of in yz coords, so z means x
+        xLEpt = lineLE.intersect(Line(Point2D(self.maxy, 0, None), UnitVector2D(0, 1)))
+        self.xLE = xLEpt.z
+        xTEpt = lineTE.intersect(Line(Point2D(self.maxy, 0, None), UnitVector2D(0, 1)))
+        if self.state == 'lg': #accounting for the shortening by lg. motor engines do not carry cells so it does not matter for them
+            xTEpt = Point2D(xTEpt.y, xlg, None)
+        self.xTE = xTEpt.z
+
+        #non-battery carrying cells are accounted for by not having cellposes
+        #packing batteries in x direction
+        self.trimmed_xdist = self.xTE-self.xLE-delta #points are imported from catia, where xTE > xLE
+        nbats = int(self.trimmed_xdist/(cell_h+delta))
+        #there is no centering margin, for we want bats closer to TE so there is more space for stuff @LE
+        descendvect = UnitVector2D(0, -1)
+        batpos = descendvect.step(xTEpt, delta)
+        for i in range(nbats):
+            self.cellxs.append(batpos.z) #again, z means x
+            batpos = descendvect.step(batpos, cell_h+delta) #moving on to the next cell
+
+    def ncells(self): #once x bounds are defined, returns the total number of cells in the triangle
+        return len(self.cellxs)*len(self.cellpts)
 
         
     
@@ -645,8 +668,34 @@ while correctedRow != []:
             correctedRow.append(pt)
     cellptsrow = list() #clearing the row list
 
+
+'''Computing the between spar distance for each triangle'''
+#decoding input
+angleLE = float(fsang[:-3])
+angleTE =float(rsang[:-3])
+LEref = LEenc.split(";")
+TEref = TEenc.split(";")
+yref = float(LEref[1])
+ydir = UnitVector2D(1, 0)
+
+#!ATTENTION! THE BELOW VECTORS ARE IN YX INSTEAD OF YZ SO POINT.Z REPRESENTS THE X COORD IN THE CAD!!!
+xLEptref = Point2D(yref, float(LEref[0]), None)
+xTEptref = Point2D(yref, float(TEref[0]), None)
+LEline = Line(xLEptref, ydir.rotate(angleLE, True))
+TELine = Line(xTEptref, ydir.rotate(angleTE, False))
+
+#packing and counting batteries
+cellcount = 0
+for t in triangles:
+    t.xbounds(LEline, TELine)
+    cellcount+=t.ncells()
+
 '''END COPY-PASTE HERE'''
 #trapezoid outline
+plt.subplot(3, 1, 1)
+plt.title("Front view of the 'wingbox'")
+plt.xlabel("spanwise position [mm]", loc="right")
+plt.ylabel("height [mm]")
 plt.plot([fustop[1], fusbot[1], tipbot[1], tiptop[1], fustop[1]], [fustop[2], fusbot[2], tipbot[2], tiptop[2], fustop[2]])
 plt.plot(ys, zs)
 for j in joints:
@@ -665,5 +714,30 @@ plt.plot([fusbotpt.y, fustoppt.y, roottop.y, rootbot.y, fusbotpt.y], [fusbotpt.z
 plt.plot([pt.y for pt in rootbatsides+[rootbatsides[0]]], [pt.z for pt in rootbatsides+[rootbatsides[0]]])
 plt.plot([pt.y for pt in appended_centerline], [pt.z for pt in appended_centerline])
 plt.scatter([pt.y for pt in cellpts], [pt.z for pt in cellpts])
+
+#top view
+plt.subplot(3, 1, 2)
+plt.title("Top view of the 'wingbox'")
+plt.xlabel("spanwise position [mm]", loc="right")
+plt.ylabel("chordwise coord. [mm]")
+for t in triangles:
+    plt.plot([t.maxy, t.maxy], [t.xTE, t.xLE])
+    cellys, cellxs = [], []
+    for x in t.cellxs:
+        for pt in t.cellpts:
+            cellys.append(pt.y), cellxs.append(x)
+    plt.scatter(cellys, cellxs)
+
+#how each triangle contributes to cell count
+plt.subplot(3,1,3)
+plt.title(f"distribution of {cellcount} cells over the wing")
+plt.xlabel("spanwise position [mm]", loc="right")
+plt.ylabel("amount of cells per primatic pack [-]")
+ys = []
+hs = []
+for t in triangles:
+    ys.append(t.maxy)
+    hs.append(t.ncells())
+plt.plot(ys, hs)
 
 plt.show()
