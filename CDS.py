@@ -690,6 +690,14 @@ for t in triangles:
     t.xbounds(LEline, TELine)
     cellcount+=t.ncells()
 
+'''Bigger question - wha happens in the rectangular part : ).
+1) use xdist of the first triangle
+How to get x coordinates to other components
+1) sheets - get the x positions from the corresponding triangle (by list indices)
+2) ignore the joints 4 now
+3) wedges - same as sheets - the wedge list should be exactly 3 times as long as the trig list'''
+
+
 '''END COPY-PASTE HERE'''
 #trapezoid outline
 plt.subplot(3, 1, 1)
