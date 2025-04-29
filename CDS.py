@@ -10,6 +10,9 @@ rsang = "179.054deg"
 startTop=True
 removeLast=True
 xlg = 3005.513
+cell_d = 21.22
+delta = 0.58
+cell_h = 70.3
 
 import matplotlib.pyplot as plt
 
@@ -20,14 +23,11 @@ nteeth = [3 for i in range(25)] + [2 for i in range(175)]
 toothDepth = [7 for i in range(25)] + [5 for i in range(175)] #[mm]
 adhesive_t = [1 for i in range(50)] + [0.5 for i in range(150)]
 #!IMPROVISED!
-cell_d = 21.22
-delta = 0.58
 delta_radius = (cell_d+delta)/2
 delta_diameter = cell_d+delta
 rect_joint_t = 25
 fus_skin_offset = 15
 root_rib_offset = 10
-cell_h = 70.3
 
 import math
 class Point2D():
@@ -734,50 +734,60 @@ finalsheetLine = Line(Point2D(max(sheets[-1].s1.y, sheets[-1].s2.y, sheets[-1].s
 sheets[-1].xLE = finalsheetLine.intersect(LEline).z
 sheets[-1].xTE = finalsheetLine.intersect(TELine).z
 
+#adjusting the edge of joints
+
+
 '''!Output Lists!'''
+#everything is converted to meters as that is what is projected into ekl objects
 #sheets
-s1ys = [s.s1.y for s in sheets]
-s1zs = [s.s1.z for s in sheets]
-s2ys = [s.s2.y for s in sheets]
-s2zs = [s.s2.z for s in sheets]
-s3ys = [s.s3.y for s in sheets]
-s3zs = [s.s3.z for s in sheets]
-s4ys = [s.s4.y for s in sheets]
-s4zs = [s.s4.z for s in sheets]
-sLEs = [s.xLE for s in sheets]
-sTEs = [s.xTE for s in sheets]
+s1ys = [s.s1.y/1000 for s in sheets]
+s1zs = [s.s1.z/1000 for s in sheets]
+s2ys = [s.s2.y/1000 for s in sheets]
+s2zs = [s.s2.z/1000 for s in sheets]
+s3ys = [s.s3.y/1000 for s in sheets]
+s3zs = [s.s3.z/1000 for s in sheets]
+s4ys = [s.s4.y/1000 for s in sheets]
+s4zs = [s.s4.z/1000 for s in sheets]
+sLEs = [s.xLE/1000 for s in sheets]
+sTEs = [s.xTE/1000 for s in sheets]
 
 #cells - for now all in one list set
 cellxs, cellys, cellzs = list(), list(), list()
 for pt in cellpts: #first the fuselage cells
     for x in fuscellxs:
-        cellxs.append(x)
-        cellys.append(pt.y)
-        cellzs.append(pt.z)
+        cellxs.append(x/1000)
+        cellys.append(pt.y/1000)
+        cellzs.append(pt.z/1000)
+for t in triangles:
+    for x in t.cellxs:
+        for pt in t.cellpts:
+            cellxs.append(x/1000)
+            cellys.append(pt.y/1000)
+            cellzs.append(pt.z/1000)
 
 #wedges - again one list set
-wmainys = [w.main_vertex.y for w in wedges]
-wmainzs = [w.main_vertex.z for w in wedges]
-wLEs = [w.xLE for w in wedges]
-wTEs = [w.xTE for w in wedges]
-wtoothys = [[pt.y in w.toothpts] for w in wedges]
-wtoothzs = [[pt.z in w.toothpts] for w in wedges]
+wmainys = [w.main_vertex.y/1000 for w in wedges]
+wmainzs = [w.main_vertex.z/1000 for w in wedges]
+wLEs = [w.xLE/1000 for w in wedges]
+wTEs = [w.xTE/1000 for w in wedges]
+wtoothys = [[pt.y/1000 for pt in w.toothpts] for w in wedges]
+wtoothzs = [[pt.z/1000 for pt in w.toothpts] for w in wedges]
 
 #triangles - again one list set, will require index calibration to get the wavy pattern from wedges
-v12ys = [t.v12.y for t in triangles]
-v12zs = [t.v12.z for t in triangles]
-v13ys = [t.v13.y for t in triangles]
-v13zs = [t.v13.z for t in triangles]
-v23ys = [t.v23.y for t in triangles]
-v23zs = [t.v23.z for t in triangles]
-v21ys = [t.v21.y for t in triangles]
-v21zs = [t.v21.z for t in triangles]
-v32ys = [t.v32.y for t in triangles]
-v32zs = [t.v32.z for t in triangles]
-v31ys = [t.v31.y for t in triangles]
-v31zs = [t.v31.z for t in triangles]
-tLEs = [t.xLE for t in triangles]
-tTEs = [t.xTE for t in triangles]
+v12ys = [t.v12.y/1000 for t in triangles]
+v12zs = [t.v12.z/1000 for t in triangles]
+v13ys = [t.v13.y/1000 for t in triangles]
+v13zs = [t.v13.z/1000 for t in triangles]
+v23ys = [t.v23.y/1000 for t in triangles]
+v23zs = [t.v23.z/1000 for t in triangles]
+v21ys = [t.v21.y/1000 for t in triangles]
+v21zs = [t.v21.z/1000 for t in triangles]
+v32ys = [t.v32.y/1000 for t in triangles]
+v32zs = [t.v32.z/1000 for t in triangles]
+v31ys = [t.v31.y/1000 for t in triangles]
+v31zs = [t.v31.z/1000 for t in triangles]
+tLEs = [t.xLE/1000 for t in triangles]
+tTEs = [t.xTE/1000 for t in triangles]
 
 '''END COPY-PASTE HERE'''
 #trapezoid outline
