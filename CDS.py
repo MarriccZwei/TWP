@@ -690,12 +690,32 @@ for t in triangles:
     t.xbounds(LEline, TELine)
     cellcount+=t.ncells()
 
+#the in-fuselage section
+fuscellxs = []
+towardsLE = UnitVector2D(0,-1)
+fusLETELine = Line(Point2D(fusbotpt.y, 0, None), towardsLE)
+fusLEpt = LEline.intersect(fusLETELine)
+fusTEpt = TELine.intersect(fusLETELine)
+fus_xdist = fusTEpt.z-fusLEpt.z-delta #xTE always > xLE! Account for the +1th delta
+nbats = int(fus_xdist/(cell_h+delta))
+centering_margin = (fus_xdist-nbats*(cell_h+delta))/2
+currentpt = towardsLE.step(fusTEpt, delta+centering_margin)
+for i in range(nbats):
+    fuscellxs.append(currentpt.z)
+    currentpt = towardsLE.step(currentpt, delta+cell_h)
+cellcount+=len(fuscellxs)*len(cellpts)
+
+
 '''Bigger question - wha happens in the rectangular part : ).
 1) use xdist of the first triangle
 How to get x coordinates to other components
 1) sheets - get the x positions from the corresponding triangle (by list indices)
 2) ignore the joints 4 now
 3) wedges - same as sheets - the wedge list should be exactly 3 times as long as the trig list'''
+
+'''getting x coordinates of other elements'''
+for i in range(len(triangles)):
+    pass
 
 
 '''END COPY-PASTE HERE'''
@@ -735,6 +755,14 @@ for t in triangles:
         for pt in t.cellpts:
             cellys.append(pt.y), cellxs.append(x)
     plt.scatter(cellys, cellxs)
+#fuselage batteries
+fusbatxs = []
+fusbatys = []
+for pt in cellpts:
+    for x in fuscellxs:
+        fusbatxs.append(x)
+        fusbatys.append(pt.y)
+plt.scatter(fusbatys, fusbatxs)
 
 #how each triangle contributes to cell count
 plt.subplot(3,1,3)
