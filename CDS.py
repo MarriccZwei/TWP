@@ -235,6 +235,9 @@ class Wedge():
         #actual constructor
         self.toothpts = toothpts
         self.main_vertex = main_vertex
+        #will be specified later based on triangle lists
+        self.xLE=None
+        self.xTE=None
 
 
 #list of wedges that shall get appended by triangles
@@ -435,7 +438,16 @@ class Triangle():
     def ncells(self): #once x bounds are defined, returns the total number of cells in the triangle
         return len(self.cellxs)*len(self.cellpts)
 
-        
+
+class Sheet():
+    def __init__(self, s1, s2, s3, s4):
+        self.s1 = s1
+        self.s2 = s2
+        self.s3 = s3
+        self.s4 = s4
+        #to be assigned later
+        self.xLE = None 
+        self.xTE = None     
     
 
 """creation of the ray pattern"""
@@ -572,7 +584,7 @@ for i in range(1, len(intermediate2Dpoints)-1): #again without the edge point
 
 sheets = list()
 for i in range(0, len(intermediate2Dpoints)-1): #there is only 1 less sheet than joints so here the parametrization has to change
-    sheets.append([joints[i].trigpt, joints[i].p2, joints[i+1].trigpt, joints[i+1].p1])
+    sheets.append(Sheet(joints[i].trigpt, joints[i].p2, joints[i+1].trigpt, joints[i+1].p1))
 
 #step 2. removing triangles that would coincide with the engines and the hinge, moving the triangles that overlap with lg to their own category
 engineranges = [code.split(';') for code in motor_yzones.split('|')]
@@ -697,31 +709,80 @@ fusLETELine = Line(Point2D(fusbotpt.y, 0, None), towardsLE)
 fusLEpt = LEline.intersect(fusLETELine)
 fusTEpt = TELine.intersect(fusLETELine)
 fus_xdist = fusTEpt.z-fusLEpt.z-delta #xTE always > xLE! Account for the +1th delta
-nbats = int(fus_xdist/(cell_h+delta))
-centering_margin = (fus_xdist-nbats*(cell_h+delta))/2
+nbatsFus = int(fus_xdist/(cell_h+delta))
+centering_margin = (fus_xdist-nbatsFus*(cell_h+delta))/2
 currentpt = towardsLE.step(fusTEpt, delta+centering_margin)
-for i in range(nbats):
+for i in range(nbatsFus):
     fuscellxs.append(currentpt.z)
     currentpt = towardsLE.step(currentpt, delta+cell_h)
 cellcount+=len(fuscellxs)*len(cellpts)
 
+for i, t in enumerate(triangles):
+    wedges[3*i].xLE = t.xLE
+    wedges[3*i].xTE = t.xTE
+    wedges[3*i+1].xLE = t.xLE
+    wedges[3*i+1].xTE = t.xTE
+    wedges[3*i+2].xLE = t.xLE
+    wedges[3*i+2].xTE = t.xTE
+    sheets[i].xLE = t.xLE
+    sheets[i].xTE = t.xTE
 
-'''Bigger question - wha happens in the rectangular part : ).
-1) use xdist of the first triangle
-How to get x coordinates to other components
-1) sheets - get the x positions from the corresponding triangle (by list indices)
-2) ignore the joints 4 now
-3) wedges - same as sheets - the wedge list should be exactly 3 times as long as the trig list'''
+#adjusting x positions of edge sheets
+sheets[0].xLE = fusLEpt.z
+sheets[0].xTE = fusTEpt.z
+finalsheetLine = Line(Point2D(max(sheets[-1].s1.y, sheets[-1].s2.y, sheets[-1].s3.y, sheets[-1].s4.y), 0, None), towardsLE)
+sheets[-1].xLE = finalsheetLine.intersect(LEline).z
+sheets[-1].xTE = finalsheetLine.intersect(TELine).z
 
-'''getting x coordinates of other elements'''
-for i in range(len(triangles)):
-    pass
+'''!Output Lists!'''
+#sheets
+s1ys = [s.s1.y for s in sheets]
+s1zs = [s.s1.z for s in sheets]
+s2ys = [s.s2.y for s in sheets]
+s2zs = [s.s2.z for s in sheets]
+s3ys = [s.s3.y for s in sheets]
+s3zs = [s.s3.z for s in sheets]
+s4ys = [s.s4.y for s in sheets]
+s4zs = [s.s4.z for s in sheets]
+sLEs = [s.xLE for s in sheets]
+sTEs = [s.xTE for s in sheets]
 
+#cells - for now all in one list set
+cellxs, cellys, cellzs = list(), list(), list()
+for pt in cellpts: #first the fuselage cells
+    for x in fuscellxs:
+        cellxs.append(x)
+        cellys.append(pt.y)
+        cellzs.append(pt.z)
+
+#wedges - again one list set
+wmainys = [w.main_vertex.y for w in wedges]
+wmainzs = [w.main_vertex.z for w in wedges]
+wLEs = [w.xLE for w in wedges]
+wTEs = [w.xTE for w in wedges]
+wtoothys = [[pt.y in w.toothpts] for w in wedges]
+wtoothzs = [[pt.z in w.toothpts] for w in wedges]
+
+#triangles - again one list set, will require index calibration to get the wavy pattern from wedges
+v12ys = [t.v12.y for t in triangles]
+v12zs = [t.v12.z for t in triangles]
+v13ys = [t.v13.y for t in triangles]
+v13zs = [t.v13.z for t in triangles]
+v23ys = [t.v23.y for t in triangles]
+v23zs = [t.v23.z for t in triangles]
+v21ys = [t.v21.y for t in triangles]
+v21zs = [t.v21.z for t in triangles]
+v32ys = [t.v32.y for t in triangles]
+v32zs = [t.v32.z for t in triangles]
+v31ys = [t.v31.y for t in triangles]
+v31zs = [t.v31.z for t in triangles]
+tLEs = [t.xLE for t in triangles]
+tTEs = [t.xTE for t in triangles]
 
 '''END COPY-PASTE HERE'''
 #trapezoid outline
-plt.subplot(3, 1, 1)
-plt.title("Front view of the 'wingbox'")
+plt.subplot(2, 1, 1)
+plt.title(f"Front view of the 'wingbox', {cellcount} cells in total")
 plt.xlabel("spanwise position [mm]", loc="right")
 plt.ylabel("height [mm]")
 plt.plot([fustop[1], fusbot[1], tipbot[1], tiptop[1], fustop[1]], [fustop[2], fusbot[2], tipbot[2], tiptop[2], fustop[2]])
@@ -732,7 +793,7 @@ for t in triangles:
     plt.plot([t.v1.y, t.v2.y, t.v3.y, t.v1.y], [t.v1.z, t.v2.z, t.v3.z, t.v1.z])
     plt.scatter([pt.y for pt in t.cellpts], [pt.z for pt in t.cellpts])
 for s in sheets:
-    plt.plot([s[0].y, s[1].y, s[2].y, s[3].y, s[0].y], [s[0].z, s[1].z, s[2].z, s[3].z, s[0].z])
+    plt.plot([s.s1.y, s.s2.y, s.s3.y, s.s4.y, s.s1.y], [s.s1.z, s.s2.z, s.s3.z, s.s4.z, s.s1.z])
 for w in wedges:
     plt.plot([w.main_vertex.y]+[pt.y for pt in w.toothpts]+[w.main_vertex.y],
              [w.main_vertex.z]+[pt.z for pt in w.toothpts]+[w.main_vertex.z])
@@ -744,7 +805,7 @@ plt.plot([pt.y for pt in appended_centerline], [pt.z for pt in appended_centerli
 plt.scatter([pt.y for pt in cellpts], [pt.z for pt in cellpts])
 
 #top view
-plt.subplot(3, 1, 2)
+plt.subplot(2, 1, 2)
 plt.title("Top view of the 'wingbox'")
 plt.xlabel("spanwise position [mm]", loc="right")
 plt.ylabel("chordwise coord. [mm]")
@@ -763,17 +824,21 @@ for pt in cellpts:
         fusbatxs.append(x)
         fusbatys.append(pt.y)
 plt.scatter(fusbatys, fusbatxs)
+for s in sheets:
+    plt.plot([s.s1.y, s.s1.y], [s.xLE, s.xTE])
+for w in wedges:
+    plt.plot([w.main_vertex.y, w.main_vertex.y], [w.xLE, w.xTE])
 
-#how each triangle contributes to cell count
-plt.subplot(3,1,3)
-plt.title(f"distribution of {cellcount} cells over the wing")
-plt.xlabel("spanwise position [mm]", loc="right")
-plt.ylabel("amount of cells per primatic pack [-]")
-ys = []
-hs = []
-for t in triangles:
-    ys.append(t.maxy)
-    hs.append(t.ncells())
-plt.plot(ys, hs)
+# #how each triangle contributes to cell count
+# plt.subplot(3,1,3)
+# plt.title(f"distribution of {cellcount} cells over the wing")
+# plt.xlabel("spanwise position [mm]", loc="right")
+# plt.ylabel("amount of cells per primatic pack [-]")
+# ys = [fusbotpt.y]
+# hs = [len(fuscellxs)*len(cellpts)]
+# for t in triangles:
+#     ys.append(t.maxy)
+#     hs.append(t.ncells())
+# plt.plot(ys, hs)
 
 plt.show()
