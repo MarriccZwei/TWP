@@ -806,6 +806,21 @@ jtzs = [j.trigpt.z/1000 for j in joints]
 jLEs = [j.xLE/1000 for j in joints]
 jTEs = [j.xTE/1000 for j in joints]
 
+
+#root battery
+fusBatLE = sheets[0].xLE/1000
+fusBatTE = sheets[0].xTE/1000
+rootboty = rootbotboundary.y/1000
+rootbotz = rootbotboundary.z/1000
+roottopy = roottopboundary.y/1000
+roottopz = roottopboundary.z/1000
+fusboty = fusbotboundary.y/1000
+fusbotz = fusbotboundary.z/1000
+fustopy = fustopboundary.y/1000
+fustopz = fustopboundary.z/1000
+
+
+
 '''END COPY-PASTE HERE'''
 #trapezoid outline
 plt.subplot(2, 1, 1)
