@@ -117,6 +117,9 @@ class Joint():
         self.p1 = p1
         self.p2 = pt2
         self.trigpt = trigpt
+        #to be assigned later
+        self.xLE = None
+        self.xTE = None
 
     #creates a joint based on a point and a set of directions - only if neither r1 or r2 are parallel to c so only for nonzero dihedral
     @classmethod
@@ -734,8 +737,12 @@ finalsheetLine = Line(Point2D(max(sheets[-1].s1.y, sheets[-1].s2.y, sheets[-1].s
 sheets[-1].xLE = finalsheetLine.intersect(LEline).z
 sheets[-1].xTE = finalsheetLine.intersect(TELine).z
 
-#adjusting the edge of joints
-
+#adjusting the x positions of joints
+for i, s in enumerate(sheets):
+    joints[i].xLE = s.xLE
+    joints[i].xTE = s.xTE
+joints[-1].xLE = sheets[-1].xLE
+joints[-1].xTE = sheets[-1].xTE
 
 '''!Output Lists!'''
 #everything is converted to meters as that is what is projected into ekl objects
@@ -788,6 +795,16 @@ v31ys = [t.v31.y/1000 for t in triangles]
 v31zs = [t.v31.z/1000 for t in triangles]
 tLEs = [t.xLE/1000 for t in triangles]
 tTEs = [t.xTE/1000 for t in triangles]
+
+#joints
+j1ys = [j.p1.y/1000 for j in joints]
+j1zs = [j.p1.z/1000 for j in joints]
+j2ys = [j.p2.y/1000 for j in joints]
+j2zs = [j.p2.z/1000 for j in joints]
+jtys = [j.trigpt.y/1000 for j in joints]
+jtzs = [j.trigpt.z/1000 for j in joints]
+jLEs = [j.xLE/1000 for j in joints]
+jTEs = [j.xTE/1000 for j in joints]
 
 '''END COPY-PASTE HERE'''
 #trapezoid outline
