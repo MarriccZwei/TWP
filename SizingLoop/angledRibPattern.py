@@ -3,7 +3,7 @@ import geometricClasses as gcl
 import typing as ty
 
 class JointPoints(): 
-    def __init__(self, fi, ri, fo, ro): #front-inner/rear-outer
+    def __init__(self, fi:gcl.Point3D, ri:gcl.Point3D, fo:gcl.Point3D, ro:gcl.Point3D): #front-inner/rear-outer
         #TODO: implement a class made of 3d mid points that will represent a very idealised, outer dims only, version of the diagonal rib
         self.fi = fi
         self.ri = ri
