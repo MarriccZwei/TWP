@@ -10,6 +10,6 @@ class JointPoints():
         self.fo = fo
         self.ro = ro
 
-def ray_rib_pattern(startTop=True, endTop=True) -> ty.Tuple[ty.List[JointPoints], ty.List[gcl.Line2D]]:
-    '''Generates the diagonal ribs. Return points grouped in joint points plus the upper and lower spanwise directions'''
+def ray_rib_pattern(startTop=True, endTop=True) -> ty.Tuple[ty.List[JointPoints], gcl.direction2D, ty.List[gcl.Line2D]]:
+    '''Generates the diagonal ribs. Return points grouped in joint points plus the dihedral vector, upper and lower spanwise directions'''
     raise NotImplementedError
