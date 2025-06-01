@@ -10,7 +10,7 @@ import componentSizer as csz
 import jointSizer as jsz
 
 '''preparation for the loop - importing geometry from CATIA and creating the initial mesh'''
-joints, dihedral, skindirs = arp.ray_rib_pattern(asu.startTop, asu.endTop)
+joints, dihedral, skindirs = arp.ray_rib_pattern(asu.jointWidth, asu.startTop, asu.endTop)
 components = ivl.initial_components(joints)
 nodes, ids2track = tqm.mesh(components)
 elements = ecr.eles(nodes, components) #initial final elements
