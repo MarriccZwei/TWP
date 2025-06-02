@@ -53,3 +53,20 @@ class Point3D():
         self.x = x
         self.y = y
         self.z = z
+
+class Direction3D():
+    def __init__(self, dx:float, dy:float, dz:float):
+        magn = (dx**2+dy**2+dz**2)**.5
+        self.x = dx/magn
+        self.y = dy/magn
+        self.z = dz/magn
+
+    def step(self, pt:Point3D, dist:float): #moving a point a certain distance along the direction
+        return Point3D(pt.x+self.x*dist, pt.y+self.y*dist, pt.z+self.z*dist)
+    
+    @classmethod #used to obtain directions between adjacent points
+    def from_pts(cls, p1:Point3D, p2:Point3D):
+        delta_y = p2.y-p1.y
+        delta_x = p2.x-p1.x
+        delta_z = p2.z-p1.z
+        return cls(delta_x, delta_y, delta_z)
