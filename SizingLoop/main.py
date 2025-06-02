@@ -8,11 +8,15 @@ import femSolver as sol
 import postProcessor as ppr
 import componentSizer as csz
 import jointSizer as jsz
+import pointsFromCAD as pfc
+import meshSettings as mst
 
 '''preparation for the loop - importing geometry from CATIA and creating the initial mesh'''
-joints, dihedral, skindirs = arp.ray_rib_pattern(asu.jointWidth, asu.startTop, asu.endTop)
+cadData = pfc.PointsFromCAD.decode()
+meshSettings = mst.Meshsettings.default()
+joints, dihedral, skindirs, _, _ = arp.ray_rib_pattern(asu.jointWidth, cadData, asu.startTop, asu.endTop)
 components = ivl.initial_components(joints)
-nodes, ids2track = tqm.mesh(components)
+nodes, ids2track = tqm.mesh(components, meshSettings)
 elements = ecr.eles(nodes, components) #initial final elements
 
 '''preparation for the loop - obtain fixed loads acting on the components'''

@@ -1,5 +1,5 @@
-import pointsFromCAD as pfc
 import geometricClasses as gcl
+import pointsFromCAD as pfc
 import typing as ty
 
 class JointPoints(): 
@@ -10,13 +10,13 @@ class JointPoints():
         self.fo = fo
         self.ro = ro
 
-def ray_rib_pattern(jointWidth:float, startTop=True, endTop=True) -> ty.Tuple[ty.List[JointPoints], gcl.Direction2D, ty.List[gcl.Line2D]]:
+def ray_rib_pattern(jointWidth:float, _pfc:pfc.PointsFromCAD, startTop=True, endTop=True) -> ty.Tuple[ty.List[JointPoints], gcl.Direction2D, ty.List[gcl.Line2D]]:
     '''Generates the diagonal ribs. Return points grouped in joint points plus the dihedral vector, upper and lower spanwise directions'''
     #1) create a 2d trapezoid of the wingbox.
-    ft = gcl.Point2D(pfc.frt.y, pfc.frt.z) #fuselage top, etc.
-    fb = gcl.Point2D(pfc.ffb.y, pfc.ffb.z)
-    tt = gcl.Point2D(pfc.tft.y, pfc.tft.z)
-    tb = gcl.Point2D(pfc.tfb.y, pfc.tfb.z)
+    ft = gcl.Point2D(_pfc.frt.y, _pfc.frt.z) #fuselage top, etc.
+    fb = gcl.Point2D(_pfc.ffb.y, _pfc.ffb.z)
+    tt = gcl.Point2D(_pfc.tft.y, _pfc.tft.z)
+    tb = gcl.Point2D(_pfc.tfb.y, _pfc.tfb.z)
 
     #2) compute the top, bottom, dihedral vectors and +- 60 deg from dihedral
     topLine = gcl.Line2D.from_pts(ft, tt)
@@ -74,10 +74,10 @@ def ray_rib_pattern(jointWidth:float, startTop=True, endTop=True) -> ty.Tuple[ty
     #6) creating a list of 3D joints out of the 2D representations
     joints = list()
     #6.1) a "top view" of the wing
-    ff = gcl.Point2D(pfc.ffb.x, pfc.ffb.y) #fuselage front, etc.
-    fr = gcl.Point2D(pfc.frb.x, pfc.frb.y)
-    tf = gcl.Point2D(pfc.tfb.x, pfc.tfb.y)
-    tr = gcl.Point2D(pfc.trb.x, pfc.trb.y)
+    ff = gcl.Point2D(_pfc.ffb.x, _pfc.ffb.y) #fuselage front, etc.
+    fr = gcl.Point2D(_pfc.frb.x, _pfc.frb.y)
+    tf = gcl.Point2D(_pfc.tfb.x, _pfc.tfb.y)
+    tr = gcl.Point2D(_pfc.trb.x, _pfc.trb.y)
     frontLine = gcl.Line2D.from_pts(ff, tf)
     rearLine = gcl.Line2D.from_pts(fr, tr)
     #6.2) a tool for adding the x dimension to joint points
@@ -95,4 +95,31 @@ def ray_rib_pattern(jointWidth:float, startTop=True, endTop=True) -> ty.Tuple[ty
         foreFar, rearFar = x4joint(farP)
         joints.append(JointPoints(foreNear, rearNear, foreFar, rearFar)) 
 
-    return joints, dihedralDir, [topLine, botLine]
+    return joints, dihedralDir, [topLine, botLine], nearPts, farPts
+
+if __name__ == "__main__":
+    _pfc = pfc.PointsFromCAD.testpoints()
+    import assumptions as asu
+    jointWidth = asu.jointWidth
+
+    joints, dihedralDir, _, nearPts, farPts = ray_rib_pattern(jointWidth, _pfc, True, False)
+    
+    import matplotlib.pyplot as plt
+
+    #plt.plot([_pfc.fft.y, _pfc.tft.y, _pfc.tfb.y, _pfc.ffb.y, _pfc.fft.y],
+             #[_pfc.fft.z, _pfc.tft.z, _pfc.tfb.z, _pfc.ffb.z, _pfc.fft.z])
+
+    for j in joints:
+        xs = [j.fi.x, j.fo.x, j.ro.x, j.ri.x, j.fi.x]
+        ys = [j.fi.y, j.fo.y, j.ro.y, j.ri.y, j.fi.y]
+        zs = [j.fi.z, j.fo.z, j.ro.z, j.ri.z, j.fi.z]
+        plt.subplot(211)
+        plt.plot(ys, zs)
+        plt.subplot(212)
+        plt.plot(ys, xs)
+
+    # for i, nearP in enumerate(nearPts):
+    #     farP = farPts[i]
+    #     plt.plot([nearP.x, farP.x], [nearP.y, farP.y])
+
+    plt.show()
