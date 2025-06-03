@@ -8,6 +8,9 @@ class Point2D():
     @classmethod
     def midpoint(cls, pts):
         return cls(sum([pt.x for pt in pts])/len(pts), sum([pt.y for pt in pts])/len(pts))
+    
+    def pythagoras(self, pt):
+        return((self.x-pt.x)**2+(self.y-pt.y)**2)**.5
 
 class Direction2D():
     def __init__(self, dx:float, dy:float):
@@ -53,6 +56,9 @@ class Point3D():
         self.x = x
         self.y = y
         self.z = z
+
+    def pythagoras(self, pt):
+        return((self.x-pt.x)**2+(self.y-pt.y)**2+(self.z-pt.z)**2)**.5
 
 class Direction3D():
     def __init__(self, dx:float, dy:float, dz:float):
