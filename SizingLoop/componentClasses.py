@@ -80,6 +80,24 @@ class Skin(Component):
     def _getz(line:gcl.Line2D, spanwisePos:float):
         '''getting the z of the top or bottom skin at a given spanwise y'''
         return gcl.Line2D(gcl.Point2D(spanwisePos, 0), gcl.Direction2D(0, 1)).intersect(line).y
+    
+class Battery(Component):
+    def __init__(self, mass, farFront:gcl.Point3D, farRear:gcl.Point3D, projNear:gcl.Point2D, projMid:gcl.Point2D, projFar:gcl.Point2D, settings:mst.Meshsettings):
+        # super().__init__()
+        '''Locates the mass along the centerline of the triangular cross section'''
+        centroid = gcl.Point2D.midpoint([projMid, projNear, projFar])
+        edgeFront = gcl.Point3D(farFront.x, centroid.x, centroid.y)
+        edgeRear = gcl.Point3D(farRear.x, centroid.x, centroid.y)
+        self.__net = edgeFront.pts_between(edgeRear, settings.nc+1)
+        self.massPer = mass/len(self.__net)
+        self.settings = settings
+
+    @property
+    def net(self):
+        return self.__net
+    
+    def shard(self):
+        raise NotImplementedError
 
 
 if __name__ == "__main__":

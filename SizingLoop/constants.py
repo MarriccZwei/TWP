@@ -9,3 +9,6 @@ UTSAL = 485e6 #[Pa], ultimate tensile strength
 YSAL = 450e6 #[Pa], yield strength
 FSAL = 125e6 #[Pa], fatigue strength
 SSAL = 295e6 #[Pa], shear strength
+
+'''De Vries et Al.'''
+HTBM = 34960/2 #[kg], half of the total battery mass
