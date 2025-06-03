@@ -1,4 +1,5 @@
 import numpy as np
+import typing as ty
 
 class Point2D():
     def __init__(self, x:float, y:float):
@@ -59,6 +60,14 @@ class Point3D():
 
     def pythagoras(self, pt):
         return((self.x-pt.x)**2+(self.y-pt.y)**2+(self.z-pt.z)**2)**.5
+    
+    def pt_between(self, pt, ratio):
+        ptr = 1-ratio
+        return Point3D(ratio*self.x+ptr*pt.x, ratio*self.y+ptr*pt.y, ratio*self.z+ptr*pt.z)
+    
+    def pts_between(self, pt, n):
+        ratios = np.linspace(0, 1, n)
+        return [self.pt_between(pt, ratio) for ratio in ratios]
 
 class Direction3D():
     def __init__(self, dx:float, dy:float, dz:float):
@@ -76,3 +85,47 @@ class Direction3D():
         delta_x = p2.x-p1.x
         delta_z = p2.z-p1.z
         return cls(delta_x, delta_y, delta_z)
+
+'''Utility functions with geometric classes'''
+def quad_mesh(pt1:Point3D, pt2:Point3D, pt3:Point3D, pt4:Point3D, ne12:int, ne14:int, end12=True, end34=True):
+    '''PLZ INPUT PTS ALONG THE PERIMETER! USE CONVEX QUADRANGLES!'''
+    '''creates a grid of nodes between the 4 points'''
+    #0)number of elements -> number of nodes
+    n12 = ne12+1
+    n14 = ne14+1
+
+    #1) point creation
+    points12 = pt1.pts_between(pt2, n12)
+    points34 = pt4.pts_between(pt3, n12) #to make it in same direction
+    pts = list()
+    for i in range(n12):
+        newPts = points12[i].pts_between(points34[i], n14)
+        #adjusting the ends
+        if not end12:
+            newPts = newPts[1:]
+        if not end34:
+            newPts = newPts[:-1]
+        pts += newPts
+    
+    return pts
+
+def pts2coords2D(pts:ty.List[Point2D]):
+    return [pt.x for pt in pts], [pt.y for pt in pts]
+
+def pts2coords3D(pts:ty.List[Point3D]):
+    return [pt.x for pt in pts], [pt.y for pt in pts], [pt.z for pt in pts]
+
+if __name__ == "__main__":
+    pt1 = Point3D(0, 0, 0)
+    pt2 = Point3D(1, -1, -1)
+    pt3 = Point3D(-4, -6, -6)
+    pt4 = Point3D(-5, -4, -5)
+    mesh = quad_mesh(pt1, pt2, pt3, pt4, 5, 7)
+    meshne = quad_mesh(pt1, pt2, pt3, pt4, 5, 7, False, False)
+    from mpl_toolkits import mplot3d
+    import matplotlib.pyplot as plt
+    fig = plt.figure()
+    ax = plt.axes(projection='3d')
+    plt.plot(*pts2coords3D(mesh))
+    plt.plot(*pts2coords3D(meshne))
+    plt.show()
