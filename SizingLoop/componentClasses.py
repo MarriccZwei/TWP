@@ -16,7 +16,7 @@ class Component(abc.ABC):
     
     @property
     @abc.abstractmethod
-    def net(self):
+    def net(self)->ty.List[gcl.Point3D]:
         '''returns the mesh on the element'''
         raise NotImplementedError
 
@@ -69,7 +69,7 @@ class Skin(Component):
                 self.botNet.append(gcl.Point3D(pt.x, pt.y, Skin._getz(skinDirs[1], pt.y)))
 
     @property
-    def net(self):
+    def net(self)->ty.List[gcl.Point3D]:
         return self.topNet+self.botNet[::-1]
     
     def shard(self, nodes):
@@ -93,7 +93,7 @@ class Battery(Component):
         self.settings = settings
 
     @property
-    def net(self):
+    def net(self)->ty.List[gcl.Point3D]:
         return self.__net
     
     def shard(self):
