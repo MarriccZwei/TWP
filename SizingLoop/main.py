@@ -14,7 +14,7 @@ import meshSettings as mst
 cadData = pfc.PointsFromCAD.decode()
 meshSettings = mst.Meshsettings.default()
 joints, dihedral, skindirs, _, _ = arp.ray_rib_pattern(asu.jointWidth, cadData, asu.startTop, asu.endTop)
-components, nodes, ids2track = ivl.initial_components(joints, cadData, meshSettings)
+components, nodes, ids2track = ivl.initial_components(joints, cadData, meshSettings, asu.stiffenerTowardsNear, asu.startTop)
 elements = ecr.eles(nodes, components) #initial final elements
 
 '''preparation for the loop - obtain fixed loads acting on the components'''

@@ -51,6 +51,36 @@ class StiffenedRib(Component):
     
     def shard(self):
         raise NotImplementedError
+    
+    def meshForSkin(self)->ty.List[gcl.Point3D]:
+        return self.net
+    
+
+class Skin(Component):
+    '''One class for both the lower and upper skin'''
+    def __init__(self, ribsMainMesh:ty.List[StiffenedRib], skinDirs:ty.List[gcl.Line2D]):
+        #super().__init__() #for now no parent attributes
+        #1) obtaining the mesh
+        self.topNet = list()
+        self.botNet = list()
+        for rib in ribsMainMesh:
+            for pt in rib.meshForSkin():
+                self.topNet.append(gcl.Point3D(pt.x, pt.y, Skin._getz(skinDirs[0], pt.y)))
+                self.botNet.append(gcl.Point3D(pt.x, pt.y, Skin._getz(skinDirs[1], pt.y)))
+
+    @property
+    def net(self):
+        return self.topNet+self.botNet[::-1]
+    
+    def shard(self, nodes):
+        return super().shard(nodes)
+
+
+    @staticmethod
+    def _getz(line:gcl.Line2D, spanwisePos:float):
+        '''getting the z of the top or bottom skin at a given spanwise y'''
+        return gcl.Line2D(gcl.Point2D(spanwisePos, 0), gcl.Direction2D(0, 1)).intersect(line).y
+
 
 if __name__ == "__main__":
     sets = mst.Meshsettings(9, 9, 2)
@@ -63,8 +93,13 @@ if __name__ == "__main__":
     testJointFar = arp.JointPoints(gcl.Point3D(0.3, 4, 1), gcl.Point3D(1.6, 4, 1), 
                                     gcl.Point3D(0.34, 4+jointWidthTest*np.cos(top_angle), 1+jointWidthTest*np.sin(top_angle)),
                                     gcl.Point3D(1.57, 4+jointWidthTest*np.cos(top_angle), 1+jointWidthTest*np.sin(top_angle)))
+    
+    #rib creation
     testSrib = StiffenedRib(testJointNear, testJointFar, sets, True)
     testSribNet = testSrib.net
+
+    #skin creation
+    skin = Skin([testSrib], [gcl.Line2D(gcl.Point2D(4, 1), gcl.Direction2D.by_angle(top_angle)), gcl.Line2D(gcl.Point2D(0, 0), gcl.Direction2D.by_angle(bot_angle))])
 
     from mpl_toolkits import mplot3d
     import matplotlib.pyplot as plt
@@ -75,6 +110,7 @@ if __name__ == "__main__":
     ys = [pt.y for pt in testSribNet]
     zs = [pt.z for pt in testSribNet]
     ax.plot(xs, ys, zs)
+    ax.plot(*gcl.pts2coords3D(skin.net))
     plt.show()
     print()
     

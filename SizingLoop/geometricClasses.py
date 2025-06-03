@@ -22,6 +22,12 @@ class Direction2D():
     def step(self, pt:Point2D, dist:float): #moving a point a certain distance along the direction
         return Point2D(pt.x+self.x*dist, pt.y+self.y*dist)
     
+    @classmethod
+    def by_angle(cls, angle:float, radians=True):
+        if not radians:
+            angle *= np.pi/180
+        return Direction2D(np.cos(angle), np.sin(angle))
+    
     @classmethod #used to obtain directions between adjacent points
     def from_pts(cls, p1:Point2D, p2:Point2D):
         delta_y = p2.y-p1.y
