@@ -1,6 +1,5 @@
 import angledRibPattern as arp
 import initialValues as ivl
-import trigQuadMesh as tqm
 import assumptions as asu
 import elementCreator as ecr
 import loadsInterpreter as lin
@@ -15,8 +14,7 @@ import meshSettings as mst
 cadData = pfc.PointsFromCAD.decode()
 meshSettings = mst.Meshsettings.default()
 joints, dihedral, skindirs, _, _ = arp.ray_rib_pattern(asu.jointWidth, cadData, asu.startTop, asu.endTop)
-components = ivl.initial_components(joints)
-nodes, ids2track = tqm.mesh(components, meshSettings)
+components, nodes, ids2track = ivl.initial_components(joints, cadData, meshSettings)
 elements = ecr.eles(nodes, components) #initial final elements
 
 '''preparation for the loop - obtain fixed loads acting on the components'''

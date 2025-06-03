@@ -62,8 +62,8 @@ class Point3D():
         return((self.x-pt.x)**2+(self.y-pt.y)**2+(self.z-pt.z)**2)**.5
     
     def pt_between(self, pt, ratio):
-        ptr = 1-ratio
-        return Point3D(ratio*self.x+ptr*pt.x, ratio*self.y+ptr*pt.y, ratio*self.z+ptr*pt.z)
+        sr = 1-ratio
+        return Point3D(sr*self.x+ratio*pt.x, sr*self.y+ratio*pt.y, sr*self.z+ratio*pt.z)
     
     def pts_between(self, pt, n):
         ratios = np.linspace(0, 1, n)
@@ -87,7 +87,8 @@ class Direction3D():
         return cls(delta_x, delta_y, delta_z)
 
 '''Utility functions with geometric classes'''
-def quad_mesh(pt1:Point3D, pt2:Point3D, pt3:Point3D, pt4:Point3D, ne12:int, ne14:int, end12=True, end34=True):
+def quad_mesh(pt1:Point3D, pt2:Point3D, pt3:Point3D, pt4:Point3D,
+              ne12:int, ne14:int, end12=True, end23=True, end34=True, end41=True):
     '''PLZ INPUT PTS ALONG THE PERIMETER! USE CONVEX QUADRANGLES!'''
     '''creates a grid of nodes between the 4 points'''
     #0)number of elements -> number of nodes
@@ -96,10 +97,16 @@ def quad_mesh(pt1:Point3D, pt2:Point3D, pt3:Point3D, pt4:Point3D, ne12:int, ne14
 
     #1) point creation
     points12 = pt1.pts_between(pt2, n12)
-    points34 = pt4.pts_between(pt3, n12) #to make it in same direction
+    points43 = pt4.pts_between(pt3, n12) #to make it in same direction
     pts = list()
-    for i in range(n12):
-        newPts = points12[i].pts_between(points34[i], n14)
+    #including 23 and 41 boundaries
+    looprange = range(n12)
+    if not end23:
+        looprange = looprange[:-1]
+    if not end41:
+        looprange = looprange[1:]
+    for i in looprange:
+        newPts = points12[i].pts_between(points43[i], n14)
         #adjusting the ends
         if not end12:
             newPts = newPts[1:]
@@ -121,7 +128,7 @@ if __name__ == "__main__":
     pt3 = Point3D(-4, -6, -6)
     pt4 = Point3D(-5, -4, -5)
     mesh = quad_mesh(pt1, pt2, pt3, pt4, 5, 7)
-    meshne = quad_mesh(pt1, pt2, pt3, pt4, 5, 7, False, False)
+    meshne = quad_mesh(pt1, pt2, pt3, pt4, 5, 7, False, False, False, False)
     from mpl_toolkits import mplot3d
     import matplotlib.pyplot as plt
     fig = plt.figure()

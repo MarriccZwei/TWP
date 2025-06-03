@@ -35,12 +35,12 @@ class StiffenedRib(Component):
 
 
     def net(self, settings:mst.Meshsettings)->ty.List[gcl.Point3D]:
-        nearm = gcl.quad_mesh(self.jointNear.fi, self.jointNear.ri, self.jointNear.ro, self.jointNear.fo,
-                              settings.nc, settings.nbf)
-        dm = gcl.quad_mesh(self.jointNear.fo, self.jointNear.ro, self.jointFar.ri, self.jointFar.fi,
-                           settings.nc, settings.nb, False, False)
-        farm = gcl.quad_mesh(self.jointFar.fi, self.jointFar.ri, self.jointFar.ro, self.jointFar.fo,
-                              settings.nc, settings.nbf)
+        nearm = gcl.quad_mesh(self.jointNear.fi, self.jointNear.fo, self.jointNear.ro, self.jointNear.ri,
+                              settings.nbf, settings.nc)
+        dm = gcl.quad_mesh(self.jointNear.fo, self.jointFar.fi, self.jointFar.ri, self.jointNear.ro,
+                           settings.nb, settings.nc, True, False, True, False)
+        farm = gcl.quad_mesh(self.jointFar.fi, self.jointFar.fo, self.jointFar.ro, self.jointFar.ri,
+                              settings.nbf, settings.nc)
         return  nearm+dm+farm
     
     def shard(self):
@@ -68,7 +68,7 @@ if __name__ == "__main__":
     xs = [pt.x for pt in testSribNet]
     ys = [pt.y for pt in testSribNet]
     zs = [pt.z for pt in testSribNet]
-    ax.scatter(xs, ys, zs)
+    ax.plot(xs, ys, zs)
     plt.show()
     print()
     
