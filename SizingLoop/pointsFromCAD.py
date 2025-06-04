@@ -21,19 +21,19 @@ class PointsFromCAD():
         self.trb:gcl.Point3D = corners["trb"]
 
         '''Engine Locations'''
-        self.engineStarts:ty.List[float] = NotImplemented #spanwise y coordinates
-        self.engineEnds:ty.List[float] = NotImplemented
+        self.engineStarts:ty.List[float] = engineStarts #spanwise y coordinates
+        self.engineEnds:ty.List[float] = engineEnds
 
         '''Landing Gear Locations'''
-        self.lgStart:gcl.Point2D = NotImplemented #x@landing gear end, y@spanwise position
-        self.lgEnd:gcl.Point2D = NotImplemented
+        self.lgStart:gcl.Point2D = lgStart #x@landing gear end, y@spanwise position
+        self.lgEnd:gcl.Point2D = lgEnd
 
     @classmethod
     def testpoints(cls):
         return cls({'rft':gcl.Point3D(0, 0, 0.25), 'rfb':gcl.Point3D(0, 0, -0.25), 'rrt':gcl.Point3D(1, 0, 0.25), 'rrb':gcl.Point3D(1, 0, -0.25),
                     'fft':gcl.Point3D(0.1, 1.2, 0.15), 'ffb':gcl.Point3D(0.1, 1.2, -0.2), 'frt':gcl.Point3D(0.9, 1.2, 0.15), 'frb':gcl.Point3D(0.9, 1.2, -.2),
                     'tft':gcl.Point3D(0.2, 10.2, 0), 'tfb':gcl.Point3D(0.2, 10.2, -0.15), 'trt':gcl.Point3D(0.6, 10.2, 0.15), 'trb':gcl.Point3D(0.6, 10.2, -.15)},
-                    [3., 5., 7., 9.,], [3.2, 5.2, 7.2, 9.2], gcl.Point2D(0.5, 4), gcl.Point2D(0.5, 4.35))
+                    [3., 7.], [3.2, 7.2], gcl.Point2D(0.5, 4), gcl.Point2D(0.5, 4.35))
     
     @classmethod
     def decode(cls):
