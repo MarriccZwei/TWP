@@ -98,6 +98,20 @@ class Battery(Component):
     
     def shard(self):
         raise NotImplementedError
+    
+class Mass(Component):
+    def __init__(self, mass:float, location:gcl.Point3D, connectedTo:ty.List[Component], connectedAt:ty.List[ty.List[int]]):
+        self.mass = mass
+        self.__net = [location]
+        self.connectedTo = connectedTo
+        self.connectedAt = connectedAt
+
+    @property
+    def net(self)->ty.List[gcl.Point3D]:
+        return self.__net
+    
+    def shard(self):
+        raise NotImplementedError
 
 
 if __name__ == "__main__":

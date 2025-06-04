@@ -7,8 +7,9 @@ import geometricClasses as gcl
 import constants as con
 
 '''generating initial values for sizing loop based on created rib geometry and assumptions'''
-def initial_components(joints:ty.List[arp.JointPoints], settings:mst.Meshsettings, cadData:pfc.PointsFromCAD, stiff2Near:bool, skiDirs:ty.List[gcl.Line2D],
-                       startTop:bool)->ty.Tuple[ty.List[ccl.Component], ty.List[int]]:
+def initial_components(joints:ty.List[arp.JointPoints], settings:mst.Meshsettings, cadData:pfc.PointsFromCAD, stiff2Near:bool, 
+                       skiDirs:ty.List[gcl.Line2D], startTop:bool,
+                       weighs:ty.Dict[str, float])->ty.Tuple[ty.List[ccl.Component], ty.List[int]]:
     '''create the spar, skins, ribs, rivets and lump masses of the wing'''
     components:ty.List[ccl.Component] = list()
 
@@ -73,8 +74,15 @@ def initial_components(joints:ty.List[arp.JointPoints], settings:mst.Meshsetting
     #3.3) creating batteries
     for j, mass in enumerate(masses):
         components.append(ccl.Battery(mass, jointsFarUsed[j].fi, xdists[j], projNears[j], projMids[j], projFars[j], settings))
-    #TODO: add the 1st battery, and condition that excludes the engine pts and limits the lg ones
+
+    #4) Engine masses
+    for cg in cadData.engineCgs:
+        components.append(ccl.Mass(weighs['motor'], cg, [], []))
+
     return components, []
+
+
+    
 
 
 if __name__ == "__main__":
@@ -84,7 +92,7 @@ if __name__ == "__main__":
 
     joints, dihedralDir, skinDirs, nearPts, farPts = arp.ray_rib_pattern(jointWidth, _pfc, True, False)
     sets = mst.Meshsettings(10, 10, 2)
-    components, _ = initial_components(joints, sets, _pfc, asu.stiffenerTowardsNear, skinDirs, asu.startTop)
+    components, _ = initial_components(joints, sets, _pfc, asu.stiffenerTowardsNear, skinDirs, asu.startTop, asu.weighs)
     # from mpl_toolkits import mplot3d
     # import matplotlib.pyplot as plt
     # fig = plt.figure()
@@ -96,9 +104,9 @@ if __name__ == "__main__":
     for c in components:
         x, y, z = gcl.pts2coords3D(c.net)
         plt.subplot(211)
-        plt.plot(y, x)
+        plt.plot(y, x) if len(y)>1 else plt.scatter(y,x)
         plt.title("Top View")
         plt.subplot(212)
-        plt.plot(y, z)
+        plt.plot(y, z) if len(y)>1 else plt.scatter(y,z)
         plt.title("Front View")
     plt.show()

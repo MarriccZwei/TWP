@@ -10,3 +10,6 @@ stiffenerTowardsNear = True
 '''ultimate load factors'''
 ns = [4.5, 1.75, -1.5]
 nlgs = [0, 3, 0]
+
+'''weight definition, [kg]'''
+weighs = {'motor':1000, 'hinge':500, 'lg':2500}
