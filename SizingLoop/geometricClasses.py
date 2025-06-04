@@ -67,7 +67,7 @@ class Point3D():
     def pythagoras(self, pt):
         return((self.x-pt.x)**2+(self.y-pt.y)**2+(self.z-pt.z)**2)**.5
     
-    def pt_between(self, pt, ratio):
+    def pt_between(self, pt, ratio=.5):
         sr = 1-ratio
         return Point3D(sr*self.x+ratio*pt.x, sr*self.y+ratio*pt.y, sr*self.z+ratio*pt.z)
     

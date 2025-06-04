@@ -11,15 +11,15 @@ def initial_components(joints:ty.List[arp.JointPoints], settings:mst.Meshsetting
                        skiDirs:ty.List[gcl.Line2D], startTop:bool,
                        weighs:ty.Dict[str, float])->ty.Tuple[ty.List[ccl.Component], ty.List[int]]:
     '''create the spar, skins, ribs, rivets and lump masses of the wing'''
-    components:ty.List[ccl.Component] = list()
+    components:ty.Dict[str, ccl.Component] = dict()
 
     #1) diagonal ribs
     for j, jointFar in enumerate(joints[1:]):
         jointNear = joints[j]
-        components.append(ccl.StiffenedRib(jointNear, jointFar, settings, stiff2Near))
+        components[f'rib{j}'] = ccl.StiffenedRib(jointNear, jointFar, settings, stiff2Near)
 
     #2) skins
-    components.append(ccl.Skin(components, skiDirs))
+    components['skin'] = ccl.Skin(components.values(), skiDirs)
 
     #3) masses
     #3.0) setup
@@ -58,7 +58,7 @@ def initial_components(joints:ty.List[arp.JointPoints], settings:mst.Meshsetting
     #3.1) detrmining the volumes of particular batteries in m^3
     #first battery - using skin dimensions to get the initial corner
     skinRefPtIndex = -1 if startTop else 0 #opposite to where the ribs start
-    skinRefPt = components[-1].net[skinRefPtIndex]
+    skinRefPt = components["skin"].net[skinRefPtIndex]
     jointMid = joints[0]
     jointFar = joints[1]
     trig_area(skinRefPt, jointMid, jointFar)
@@ -73,11 +73,16 @@ def initial_components(joints:ty.List[arp.JointPoints], settings:mst.Meshsetting
     masses = [volume/totVol*con.HTBM for volume in volumes]
     #3.3) creating batteries
     for j, mass in enumerate(masses):
-        components.append(ccl.Battery(mass, jointsFarUsed[j].fi, xdists[j], projNears[j], projMids[j], projFars[j], settings))
+        components[f'bat{j}'] = ccl.Battery(mass, jointsFarUsed[j].fi, xdists[j], projNears[j], projMids[j], projFars[j], settings)
 
-    #4) Engine masses
-    for cg in cadData.engineCgs:
-        components.append(ccl.Mass(weighs['motor'], cg, [], []))
+    #4) Other masses
+    #4.1) motors
+    for j, cg in enumerate(cadData.engineCgs):
+        components[f'eng{j}'] = ccl.Mass(weighs['motor'], cg, [], [])
+    #4.2) lg
+    components['lg'] = ccl.Mass(weighs['lg'], cadData.lgCg, [], [])
+    #4.3) hinge
+    components['hinge'] = ccl.Mass(weighs['hinge'], cadData.tft.pt_between(cadData.trt, .5), [], [])
 
     return components, []
 
@@ -93,20 +98,25 @@ if __name__ == "__main__":
     joints, dihedralDir, skinDirs, nearPts, farPts = arp.ray_rib_pattern(jointWidth, _pfc, True, False)
     sets = mst.Meshsettings(10, 10, 2)
     components, _ = initial_components(joints, sets, _pfc, asu.stiffenerTowardsNear, skinDirs, asu.startTop, asu.weighs)
+
+    '''uncomment for a 3d plot'''
     # from mpl_toolkits import mplot3d
     # import matplotlib.pyplot as plt
     # fig = plt.figure()
     # ax = plt.axes(projection='3d')
-    # for i in range(len(components)-1, -1, -1):
-    #     ax.plot(*gcl.pts2coords3D(components[i].net))
+    # compval = components.values()
+    # for i in range(len(compval)-1, -1, -1):
+    #     ax.plot(*gcl.pts2coords3D(list(compval)[i].net))
     # plt.show()
-    import matplotlib.pyplot as plt
-    for c in components:
-        x, y, z = gcl.pts2coords3D(c.net)
-        plt.subplot(211)
-        plt.plot(y, x) if len(y)>1 else plt.scatter(y,x)
-        plt.title("Top View")
-        plt.subplot(212)
-        plt.plot(y, z) if len(y)>1 else plt.scatter(y,z)
-        plt.title("Front View")
-    plt.show()
+
+    '''uncomment for projected plot'''
+    # import matplotlib.pyplot as plt
+    # for c in components.values():
+    #     x, y, z = gcl.pts2coords3D(c.net)
+    #     plt.subplot(211)
+    #     plt.plot(y, x) if len(y)>1 else plt.scatter(y,x)
+    #     plt.title("Top View")
+    #     plt.subplot(212)
+    #     plt.plot(y, z) if len(y)>1 else plt.scatter(y,z)
+    #     plt.title("Front View")
+    # plt.show()

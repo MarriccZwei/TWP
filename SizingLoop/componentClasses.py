@@ -100,11 +100,11 @@ class Battery(Component):
         raise NotImplementedError
     
 class Mass(Component):
-    def __init__(self, mass:float, location:gcl.Point3D, connectedTo:ty.List[Component], connectedAt:ty.List[ty.List[int]]):
+    def __init__(self, mass:float, location:gcl.Point3D, connectedTo:ty.List[str], connectedAt:ty.List[ty.List[int]]):
         self.mass = mass
         self.__net = [location]
-        self.connectedTo = connectedTo
-        self.connectedAt = connectedAt
+        self.connectedTo = connectedTo #id of what you connect to
+        self.connectedAt = connectedAt #node indics of what you connect to
 
     @property
     def net(self)->ty.List[gcl.Point3D]:
