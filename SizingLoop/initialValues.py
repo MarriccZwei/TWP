@@ -100,14 +100,15 @@ if __name__ == "__main__":
     components, _ = initial_components(joints, sets, _pfc, asu.stiffenerTowardsNear, skinDirs, asu.startTop, asu.weighs)
 
     '''uncomment for a 3d plot'''
-    # from mpl_toolkits import mplot3d
-    # import matplotlib.pyplot as plt
-    # fig = plt.figure()
-    # ax = plt.axes(projection='3d')
-    # compval = components.values()
-    # for i in range(len(compval)-1, -1, -1):
-    #     ax.plot(*gcl.pts2coords3D(list(compval)[i].net))
-    # plt.show()
+    from mpl_toolkits import mplot3d
+    import matplotlib.pyplot as plt
+    fig = plt.figure()
+    ax = plt.axes(projection='3d')
+    compval = components.values()
+    for i in range(len(compval)-1, -1, -1):
+        x, y, z = gcl.pts2coords3D(list(compval)[i].net)
+        ax.plot(x, y, z) if len(y) > 1 else ax.scatter(x, y, z)
+    plt.show()
 
     '''uncomment for projected plot'''
     # import matplotlib.pyplot as plt
