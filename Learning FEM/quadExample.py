@@ -47,7 +47,7 @@ def test_static_plate_quad_point_load(plot=False):
     KC0v = np.zeros(data.KC0_SPARSE_SIZE*num_elements, dtype=DOUBLE)
     N = DOF*nx*ny
 
-    prop = isotropic_plate(thickness=h, E=E, nu=nu, calc_scf=True)
+    prop = isotropic_plate(thickness=h, E=E, nu=nu, calc_scf=True) #not needed for smeard
 
     quads = []
     init_k_KC0 = 0
@@ -73,7 +73,7 @@ def test_static_plate_quad_point_load(plot=False):
         quad.init_k_KC0 = init_k_KC0
         quad.update_rotation_matrix(ncoords_flatten)
         quad.update_probe_xe(ncoords_flatten)
-        quad.update_KC0(KC0r, KC0c, KC0v, prop)
+        quad.update_KC0(KC0r, KC0c, KC0v, prop) #matrix contribution, changing the matrices sent
         quads.append(quad)
         init_k_KC0 += data.KC0_SPARSE_SIZE
 
@@ -81,11 +81,13 @@ def test_static_plate_quad_point_load(plot=False):
 
     print('elements created')
 
+    #@# boundary conditions
     #@# separating interior and boundary elements
     bk = np.zeros(N, dtype=bool)
     check = np.isclose(x, 0.) | np.isclose(x, a) | np.isclose(y, 0) | np.isclose(y, b)
     bk[2::DOF] = check
 
+    #constraining the displacements k-known DOF ~k <=> u - unknown DOF
     bk[0::DOF] = True
     bk[1::DOF] = True
 
