@@ -11,6 +11,7 @@ class RealStiffener(abc.ABC):
     Ixx = NotImplemented
     Iyy = NotImplemented
     Ixy = NotImplemented
+    hmx = NotImplemented #maximum stiffener height used for bending calculations
 
 
 class RealLStiffener(RealStiffener):
@@ -23,6 +24,7 @@ class RealLStiffener(RealStiffener):
         self.Ixx = 5*t*L**3/24
         self.Iyy = self.Ixx
         self.Ixy = t*L**3/8
+        self.hmx = L
 
 
 class RealSheet():
@@ -67,10 +69,14 @@ if __name__=="__main__":
     zs = length*zOverLens
     w, xcentr, ycentr, Ixx, Iyy = sheet.property_arrays(zOverLens)
 
+    #apply the bending formula to get the bending moment for a coint moment at the end
+    M = 1000
+    sigma_max = M*(sheet.h/2+stiff.hmx)/Ixx
+
     import matplotlib.pyplot as plt
     plt.subplot(2,2,1)
-    plt.plot(zs, w)
-    plt.title("w")
+    plt.plot(zs, sigma_max)
+    plt.title("max. tensile stress")
     plt.subplot(2,2,2)
     plt.plot(zs, ycentr)
     plt.title("ycentr")
@@ -82,6 +88,7 @@ if __name__=="__main__":
     plt.title("Iyy")
     plt.show()
 
+    "stress yould increase lengthwise - smaller beam for the same load"
     "Iyy is parabolic - indeed just an object getting squeezed so it's moment of inerti will decrease linearly"
     "Ixx decreases rapidly as for less w the centroid location is closer to stiffeners hence worse"
     "ycentr increases - same amount of stiffener area, less sheet area"
