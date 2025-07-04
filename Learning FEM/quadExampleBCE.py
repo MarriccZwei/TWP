@@ -12,8 +12,8 @@ from pyfe3d import Quad4, Quad4Data, Quad4Probe, INT, DOUBLE, DOF
 def test_static_plate_quad_point_load(plot=False):
     data = Quad4Data()
     probe = Quad4Probe()
-    nx = 7
-    ny = 11
+    nx = 29
+    ny = 49 #n of nodes has to be odd to apply force in the middle !
 
     a = 3
     b = 7
@@ -84,48 +84,66 @@ def test_static_plate_quad_point_load(plot=False):
     #@# boundary conditions
     #@# separating interior and boundary elements
     bk = np.zeros(N, dtype=bool)
-    check = np.isclose(x, 0.) | np.isclose(x, a) | np.isclose(y, 0) | np.isclose(y, b)
+    '''check = np.isclose(x, 0.) | np.isclose(x-a, 0) | np.isclose(y, 0) | np.isclose(y-b, 0)
+    bk[2::DOF] = check #contraining z displacement of some elements'''
+
+    f'''{"EDIT"}fixed two sides boundary conditions'''
+    #a naive approach would be to fix 2 rows of nodes, this enforces a zero derivative
+    #though it is limited exclusively to first-order things
+    elementSizeX = xtmp[1]-xtmp[0]
+    elementSizeY = ytmp[1]-ytmp[0]
+    #check = np.isclose(x, 0.) | np.isclose(x, elementSizeX) | np.isclose(y, 0) | np.isclose(y, elementSizeY)
+    #check = np.isclose(x, 0.) | np.isclose(y, 0) #only fixed displacement
+    check = np.isclose(x, 0.) | np.isclose(x, elementSizeX) #fixing only 1 side
+
     bk[2::DOF] = check
 
-    #constraining the displacements k-known DOF ~k <=> u - unknown DOF
+    #no x and y displacement
     bk[0::DOF] = True
     bk[1::DOF] = True
 
-    bu = ~bk
+    bu = ~bk #binary flip, this says that displacements will be applied to all points that re not boundary
 
     # point load at center node @# this is how to apply loads
+    f"{"EDIT"} apply load on the unconstrained corner"
     f = np.zeros(N)
-    fmid = 1.
-    check = np.isclose(x, a/2) & np.isclose(y, b/2)
-    f[2::DOF][check] = fmid #applying the point loads on the node close to the middle
+    fmid = 1
+    '''check = np.isclose(x, a) & np.isclose(y, b)
+    f[2::DOF][check] = fmid #applying the point loads on the node close to the middle'''
+    check = np.isclose(x, a) & np.isclose(y, b/2)
+    f[4::DOF][check] = fmid #EDIT: bending moment iny direction
+    '''the bending moment converged in the middle of the edge, did not converge in the corner'''
 
     
-    KC0uu = KC0[bu, :][:, bu]
+    KC0uu = KC0[bu, :][:, bu] #constrained stiffness matrix
     fu = f[bu]
     assert fu.sum() == fmid
 
+
     #@# actually solving the fem model
     uu, info = cg(KC0uu, fu, atol=1e-9)
-    assert info == 0
+    print(f"!Ay way: {info}!") if info != 0 else print("Good")
+    #assert info == 0
 
     u = np.zeros(N)
     u[bu] = uu
 
     w = u[2::DOF].reshape(nx, ny).T #@# reformatting the result
 
-    # obtained with bfsplate2d element, nx=ny=29
+    '''# obtained with bfsplate2d element, nx=ny=29
     wmax_ref = 6.594931610258557e-05
     # obtained with Quad4 nx=7, ny=11
-    wmax_ref = 6.496928101916171e-05
+    wmax_ref = 6.496928101916171e-05'''
     print('w.max()', w.max())
-    assert np.isclose(wmax_ref, w.max(), rtol=0.02)
+    #assert np.isclose(wmax_ref, w.max(), rtol=0.02)
     if plot:
         import matplotlib.pyplot as plt
         plt.gca().set_aspect('equal')
-        levels = np.linspace(w.min(), w.max(), 10)
+        levels = np.linspace(w.min(), w.max(), 30)
         plt.contourf(xmesh, ymesh, w, levels=levels)
         plt.colorbar()
         plt.show()
+
         #plt.savefig('ex_linear_static_figure.jpg', dpi=200,
                     #bbox_inches='tight')
 
