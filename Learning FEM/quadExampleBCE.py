@@ -2,7 +2,7 @@ import sys
 sys.path.append('..')
 
 import numpy as np
-from scipy.sparse.linalg import cg
+from scipy.sparse.linalg import spsolve
 from scipy.sparse import coo_matrix
 
 from pyfe3d.shellprop_utils import isotropic_plate
@@ -94,7 +94,7 @@ def test_static_plate_quad_point_load(plot=False):
     elementSizeY = ytmp[1]-ytmp[0]
     #check = np.isclose(x, 0.) | np.isclose(x, elementSizeX) | np.isclose(y, 0) | np.isclose(y, elementSizeY)
     #check = np.isclose(x, 0.) | np.isclose(y, 0) #only fixed displacement
-    check = np.isclose(x, 0.) | np.isclose(x, elementSizeX) #fixing only 1 side
+    check = np.isclose(y, 0.) | np.isclose(y, elementSizeY) #fixing only 1 side
 
     bk[2::DOF] = check
 
@@ -109,7 +109,7 @@ def test_static_plate_quad_point_load(plot=False):
     f = np.zeros(N)
     fmid = 1
     '''check = np.isclose(x, a) & np.isclose(y, b)
-    f[2::DOF][check] = fmid #applying the point loads on the node close to the middle'''
+    f[2::DOF][check] = fmid #applying the point loads on the node close to the unconstr.edge'''
     check = np.isclose(x, a) & np.isclose(y, b/2)
     f[4::DOF][check] = fmid #EDIT: bending moment iny direction
     '''the bending moment converged in the middle of the edge, did not converge in the corner'''
@@ -120,9 +120,10 @@ def test_static_plate_quad_point_load(plot=False):
     assert fu.sum() == fmid
 
 
+
     #@# actually solving the fem model
-    uu, info = cg(KC0uu, fu, atol=1e-9)
-    print(f"!Ay way: {info}!") if info != 0 else print("Good")
+    uu = spsolve(KC0uu, fu)
+    #print(f"!Ay way: {info}!") if info != 0 else print("Good")
     #assert info == 0
 
     u = np.zeros(N)
