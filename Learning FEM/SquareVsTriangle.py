@@ -119,7 +119,7 @@ bu = ~bk #the boundary to switched off
 f = np.zeros(N)
 fmid = M/3
 check = (np.isclose(x, a/2) | np.isclose(x, -a/2) | np.isclose(y, a*np.sqrt(3)/2)) & np.isclose(z, L) 
-f[3::DOF][check] = fmid
+f[1::DOF][check] = fmid
 
 "5) applying loads and BCEs"
 KC0uu = KC0[bu, :][:, bu] #constrained stiffness matrix
@@ -250,7 +250,7 @@ bu = ~bk #the boundary to switched off
 f = np.zeros(N)
 fmid = M/4 #so the same bending moment is applied
 check = (np.isclose(x, a/2) | np.isclose(x, -a/2)) & np.isclose(z, L) & (np.isclose(y, a/2) | np.isclose(y, -a/2)) 
-f[3::DOF][check] = fmid
+f[1::DOF][check] = fmid
 
 "5) applying loads and BCEs"
 KC0uu = KC0[bu, :][:, bu] #constrained stiffness matrix
