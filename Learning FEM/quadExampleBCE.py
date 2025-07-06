@@ -94,9 +94,12 @@ def test_static_plate_quad_point_load(plot=False):
     elementSizeY = ytmp[1]-ytmp[0]
     #check = np.isclose(x, 0.) | np.isclose(x, elementSizeX) | np.isclose(y, 0) | np.isclose(y, elementSizeY)
     #check = np.isclose(x, 0.) | np.isclose(y, 0) #only fixed displacement
-    check = np.isclose(y, 0.) | np.isclose(y, elementSizeY) #fixing only 1 side
+    check = np.isclose(y, 0.) #| np.isclose(y, elementSizeY) #fixing only 1 side
 
     bk[2::DOF] = check
+    bk[3::DOF] = check
+    bk[4::DOF] = check
+    bk[5::DOF] = check
 
     #no x and y displacement
     bk[0::DOF] = True
