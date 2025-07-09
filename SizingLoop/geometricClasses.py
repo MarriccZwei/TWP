@@ -92,7 +92,50 @@ class Direction3D():
         delta_z = p2.z-p1.z
         return cls(delta_x, delta_y, delta_z)
 
+class Mesh3D():
+    def __init__(self):
+        self.nodes:ty.List[Point3D] = list()
+        self.connections:ty.List[int] = list()
+
+    def pyfe3D(self):
+        "here be all the re-formatting of the code so it can be used with pyfe3D"
+        ncoords = np.vstack(([node.x for node in self.nodes],
+                             [node.y for node in self.nodes],
+                             [node.z for node in self.nodes]))
+        x = ncoords[:, 0]
+        y = ncoords[:, 1]
+        z = ncoords[:, 2]
+        ncoords_flatten = ncoords.flatten()
+        return ncoords, x, y, z, ncoords_flatten
+    
+    def register(self, pts:ty.List[Point3D]):
+        "registers a list of points into the mesh, returns the ID space they occupy"
+        "TODO: returns a list of special indices"
+        firstIndex = len(self.nodes)
+        self.nodes += pts
+        lastIndex = len(self.nodes)-1
+        return np.linspace(firstIndex, lastIndex, len(pts))
+    
+    def quad_interconnect(self, ids):
+        "creates a set of quad connections between elements taking the four adjacent elements on the list"
+        "assumes a list where nodes next to each other are next to each other on the array"
+        n1s = ids[:, :-1]
+        n2s = ids[:, 1:]
+        n3s = ids[1:, :]
+        n4s = ids[:-1, :]
+        for i in range(len(n1s)):
+            self.connections.append([n1s[i], n2s[i], n3s[i], n4s[i]])
+    
+    def quad_connect(self, ids1, ids2):
+        pass
+
+    def spring_connect(self, ids1, ids2):
+        pass
+
+
+
 '''Utility functions with geometric classes'''
+
 def quad_mesh(pt1:Point3D, pt2:Point3D, pt3:Point3D, pt4:Point3D,
               ne12:int, ne14:int, end12=True, end23=True, end34=True, end41=True):
     '''PLZ INPUT PTS ALONG THE PERIMETER! USE CONVEX QUADRANGLES!'''
