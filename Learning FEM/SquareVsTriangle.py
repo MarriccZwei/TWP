@@ -14,7 +14,7 @@ a = 0.6
 E = 200e9
 h = 0.01
 nu = 0.3
-na = 45 #number of nodes along a. Corners included. Should be odd. Quadrangle will get a 0.75 n
+na = 19 #number of nodes along a. Corners included. Should be odd. Quadrangle will get a 0.75 n
 nL = int(1*na) #number of elements along the length
 M = 3000 #bending moment applied
 #standard beam coordinate system! y down, z towards free end, x sideways for positively oriented coord!
