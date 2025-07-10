@@ -147,6 +147,13 @@ class Mesh3D():
         for id1, id2 in zip(ids1, ids2):
             self.connections.append(MeshConn3D([id1, id2], "spring", eleid))
 
+    def spring_interconnect(self, ids, eleid):
+        for id1, id2 in zip(ids[:-1], ids[1:]):
+            self.connections.append(MeshConn3D([id1, id2], "spring", eleid))
+
+    def pointmass_attach(self, id_, eleid): #used to attach extra point mass to a given point
+        self.connections.append(MeshConn3D([id_], "mass", eleid))
+
 
 '''Utility functions with geometric classes'''
 
@@ -203,9 +210,19 @@ if __name__ == "__main__":
     idgrid = idspace.reshape(msp.shape)
     #print(idgrid)
     mesh.quad_interconnect(idgrid, 'test')
+    mesh.spring_interconnect(idgrid[0, :], 'test')
+    for i in idspace[::4]: mesh.pointmass_attach(i, 'test') 
+    mesh.quad_connect(idgrid[:4, 0], idgrid[:4, -1], 'test')
+    mesh.spring_connect(idgrid[4:, 0], idgrid[4:, -1], 'test')
 
+    scatter = []
     for conn in mesh.connections[::4]:
         pts = [mesh.nodes[i] for i in conn.ids]
-        plt.plot(*pts2coords3D(pts))
+        if len(pts)>1:
+            plt.plot(*pts2coords3D(pts))
+        else:
+            scatter+=pts
+    plt.scatter(*pts2coords3D(scatter))
+    plt.plot(*pts2coords3D([mesh.nodes[i] for i in mesh.connections[-1].ids]))
 
     plt.show()
