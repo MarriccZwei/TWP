@@ -95,21 +95,20 @@ class Direction3D():
 
 class MeshConn3D():
     "a struct used for connection list by Mesh3D"
-    def __init__(self, ids:ty.List[int], elename:str, eleid:str):
+    def __init__(self, ids:ty.List[int], eleid:str):
         self.ids = ids
-        self.elename = elename
         self.eleid = eleid
 
 class Mesh3D():
     def __init__(self):
         self.nodes:ty.List[Point3D] = list()
-        self.connections:ty.List[MeshConn3D] = list()
+        self.connections:ty.Dict[str, ty.List[MeshConn3D]] = {"quad":list(), "spring":list(), "mass":list()}
 
     def pyfe3D(self):
         "here be all the re-formatting of the code so it can be used with pyfe3D"
-        ncoords = np.vstack(([node.x for node in self.nodes],
-                             [node.y for node in self.nodes],
-                             [node.z for node in self.nodes]))
+        ncoords = np.vstack((np.array([node.x for node in self.nodes]).T,
+                             np.array([node.y for node in self.nodes]).T,
+                             np.array([node.z for node in self.nodes]).T)).T
         x = ncoords[:, 0]
         y = ncoords[:, 1]
         z = ncoords[:, 2]
@@ -133,7 +132,7 @@ class Mesh3D():
         n3s = ids[1:, 1:].flatten()
         n4s = ids[:-1, 1:].flatten()
         for i in range(len(n1s)):
-            self.connections.append(MeshConn3D([n1s[i], n2s[i], n3s[i], n4s[i]], "quad", eleid))
+            self.connections["quad"].append(MeshConn3D([n1s[i], n2s[i], n3s[i], n4s[i]], eleid))
     
     def quad_connect(self, ids1, ids2, eleid):
         n1s = ids1[:-1]
@@ -141,18 +140,18 @@ class Mesh3D():
         n3s = ids2[1:]
         n4s = ids2[:-1]
         for i in range(len(n1s)):
-            self.connections.append(MeshConn3D([n1s[i], n2s[i], n3s[i], n4s[i]], "quad", eleid))
+            self.connections["quad"].append(MeshConn3D([n1s[i], n2s[i], n3s[i], n4s[i]], eleid))
 
     def spring_connect(self, ids1, ids2, eleid):
         for id1, id2 in zip(ids1, ids2):
-            self.connections.append(MeshConn3D([id1, id2], "spring", eleid))
+            self.connections["spring"].append(MeshConn3D([id1, id2], eleid))
 
     def spring_interconnect(self, ids, eleid):
         for id1, id2 in zip(ids[:-1], ids[1:]):
-            self.connections.append(MeshConn3D([id1, id2], "spring", eleid))
+            self.connections["spring"].append(MeshConn3D([id1, id2], eleid))
 
     def pointmass_attach(self, id_, eleid): #used to attach extra point mass to a given point
-        self.connections.append(MeshConn3D([id_], "mass", eleid))
+        self.connections["mass"].append(MeshConn3D([id_], eleid))
 
 
 '''Utility functions with geometric classes'''
@@ -177,7 +176,7 @@ def multi_section_sheet3D(pt1s:ty.List[Point3D], pt2s:ty.List[Point3D], nsect:in
         points.append(pointRow)
     pts = np.array(points)
 
-    assert pts.shape[0] == ns
+    assert pts.shape[0] == nsect
     assert pts.shape[1] == sum(nLs)-len(nLs)+1
     #first dimension is ns, the other is sum of nLs +1 - len(nLs)!
     return pts
@@ -216,13 +215,12 @@ if __name__ == "__main__":
     mesh.spring_connect(idgrid[4:, 0], idgrid[4:, -1], 'test')
 
     scatter = []
-    for conn in mesh.connections[::4]:
+    for conn in mesh.connections["spring"][::2]+mesh.connections["quad"][::4]:
         pts = [mesh.nodes[i] for i in conn.ids]
-        if len(pts)>1:
-            plt.plot(*pts2coords3D(pts))
-        else:
-            scatter+=pts
+        plt.plot(*pts2coords3D(pts))
+    
+    for conn in  mesh.connections["mass"]:
+        scatter+=pts
     plt.scatter(*pts2coords3D(scatter))
-    plt.plot(*pts2coords3D([mesh.nodes[i] for i in mesh.connections[-1].ids]))
 
     plt.show()
