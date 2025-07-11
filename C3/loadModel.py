@@ -142,9 +142,9 @@ if __name__ == "__main__":
     ax.plot_surface(x, y, zt)
     
     import geometricClasses as gcl
-    pts1 = [gcl.Point3D(-5, 0, 1), gcl.Point3D(-3, 5, 1.5), gcl.Point3D(-2.5, 10, 2)]
-    pts2 = [gcl.Point3D(5, 0, 0), gcl.Point3D(3, 5, .5), gcl.Point3D(2.5, 10, 1)]
-    sheet = gcl.multi_section_sheet3D(pts1, pts2, 9, [7, 11])
+    pts1 = [gcl.Point3D(-5, 0, 1), gcl.Point3D(-3, 5, 1.5), gcl.Point3D(-3, 5, 1.5), gcl.Point3D(-2.5, 10, 2)]
+    pts2 = [gcl.Point3D(5, 0, 0), gcl.Point3D(3, 5, .5), gcl.Point3D(3, 5, .5), gcl.Point3D(2.5, 10, 1)]
+    sheet = gcl.multi_section_sheet3D(pts1, pts2, 9, [7, 2, 11])
     x, y, _ = gcl.pts2coords3D(np.ravel(sheet))
     x, y = np.array(x).reshape(sheet.shape), np.array(y).reshape(sheet.shape)
     f, Mx, My, ncxp, ncxm, ncyp, ncym, yPerB2, xPerC = apply_on_wingbox(x, y, (0.1,0.8), (0.2,0.7), True, True)
