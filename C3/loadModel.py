@@ -34,7 +34,7 @@ def integrate(xPerC_min:np.float64, xPerC_max:np.float64, yPerB2_min:np.float64,
     inty = lambda arcyb:.5*(arcyb+np.sin(2*arcyb)/2) # June 26 page in the booklet
     inx = intx(xPerC_max)-intx(xPerC_min) #saving the coefficient integrals for later
     iny = inty(arcmax)-inty(arcmin)
-    integral = 6*sideFactor/(npeak+1)/np.pi*((xPerC_max))*inx*iny # see the booklet page for why is the 6/pi there
+    integral = 6*sideFactor/(npeak+1)/np.pi*inx*iny # see the booklet page for why is the 6/pi there
 
     intQx = lambda xPerC:xPerC**4/4-2*xPerC**3/3+xPerC**2/2 #centroid component in x direction
     intQy = lambda yPerB2:-(1-yPerB2**2)**1.5/3 #see June 27 booklet page for derivation
@@ -144,10 +144,10 @@ if __name__ == "__main__":
     import geometricClasses as gcl
     pts1 = [gcl.Point3D(-5, 0, 1), gcl.Point3D(-3, 5, 1.5), gcl.Point3D(-2.5, 10, 2)]
     pts2 = [gcl.Point3D(5, 0, 0), gcl.Point3D(3, 5, .5), gcl.Point3D(2.5, 10, 1)]
-    sheet = gcl.multi_section_sheet3D(pts1, pts2, 21, [10, 17])
+    sheet = gcl.multi_section_sheet3D(pts1, pts2, 9, [7, 11])
     x, y, _ = gcl.pts2coords3D(np.ravel(sheet))
     x, y = np.array(x).reshape(sheet.shape), np.array(y).reshape(sheet.shape)
-    f, Mx, My, ncxp, ncxm, ncyp, ncym, yPerB2, xPerC = apply_on_wingbox(x, y, (0,0.8), (0.2,0.7), False, True)
+    f, Mx, My, ncxp, ncxm, ncyp, ncym, yPerB2, xPerC = apply_on_wingbox(x, y, (0.1,0.8), (0.2,0.7), True, True)
     bx = fig.add_subplot(222, projection="3d")
     bx.plot_surface(x, y, f)
     bx.set_title('f')
@@ -162,5 +162,6 @@ if __name__ == "__main__":
     for xp, xm, yp, ym, yb, xc in zip(np.ravel(ncxp), np.ravel(ncxm), np.ravel(ncyp), np.ravel(ncym), np.ravel(yPerB2), np.ravel(xPerC)):
         plt.plot([xm, xm, xp, xp, xm], [ym, yp, yp, ym, ym])
         plt.scatter([xc], [yb])
-
+        
+    print(sum(np.ravel(f)), sum(np.ravel(Mx)), sum(np.ravel(My)))
     plt.show()
