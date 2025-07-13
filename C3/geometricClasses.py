@@ -180,14 +180,20 @@ class Mesh3D():
 
 
 '''Utility functions with geometric classes'''
-
 def pts2coords2D(pts:ty.List[Point2D]):
     return [pt.x for pt in pts], [pt.y for pt in pts]
 
 def pts2coords3D(pts:ty.List[Point3D]):
     return [pt.x for pt in pts], [pt.y for pt in pts], [pt.z for pt in pts]
 
-def multi_section_sheet3D(pt1s:ty.List[Point3D], pt2s:ty.List[Point3D], nsect:int, nLs:ty.List[int]):
+def project3D(pt:Point3D, xupdate=lambda x,y,z:x, yupdate=lambda x,y,z:y, zupdate=lambda x,y,z:z):
+    return Point3D(xupdate(pt.x, pt.y, pt.z), yupdate(pt.x, pt.y, pt.z), zupdate(pt.x, pt.y, pt.z))
+
+def project_np3D(pts:nt.ArrayLike, xupdate=lambda x,y,z:x, yupdate=lambda x,y,z:y, zupdate=lambda x,y,z:z):
+    projs = [project3D(pt, xupdate, yupdate, zupdate) for pt in np.ravel(pts)]
+    return np.array(projs).reshape(pts.shape)
+
+def multi_section_sheet3D(pt1s:ty.List[Point3D], pt2s:ty.List[Point3D], nsect:int, nLs:ty.List[int], returnSecIds=False):
     #make sure that all pt1s are on the same side of the sheet, same with pt2s!
     #any n must be greater or equal to 2, one less intem on nLs than on pt1s
     #required list sizes, you need at least 2 segments:
@@ -204,6 +210,15 @@ def multi_section_sheet3D(pt1s:ty.List[Point3D], pt2s:ty.List[Point3D], nsect:in
     assert pts.shape[0] == nsect
     assert pts.shape[1] == sum(nLs)-len(nLs)+1
     #first dimension is ns, the other is sum of nLs +1 - len(nLs)!
+    if returnSecIds: #returning the indexes of the sections if asked for
+        secIndexes = [0] #section index is not id!!!
+        secIdx = 0 #section index is the commond value of array second dimension for the section on the sheet
+        for i, nL in enumerate(nLs):
+            secIdx+=nL-1
+            secIndexes.append(secIdx)
+        assert secIdx == pts.shape[1]-1
+        return pts, secIndexes
+
     return pts
 
 if __name__ == "__main__":
@@ -211,7 +226,8 @@ if __name__ == "__main__":
     pt2s = [Point3D(0, 6, 1), Point3D(2.5, 7, 0), Point3D(3, 6, -.5), Point3D(4, 5, 5)]
     ns = 7
     nLs = [2, 13, 7]
-    msp = multi_section_sheet3D(pt1s, pt2s, ns, nLs)
+    msp, idxs = multi_section_sheet3D(pt1s, pt2s, ns, nLs, True)
+    #msp = project_np3D(msp, zupdate=lambda x,y,z: x)
     from mpl_toolkits import mplot3d
     import matplotlib.pyplot as plt
     # fig = plt.figure()
@@ -243,10 +259,18 @@ if __name__ == "__main__":
     for conn in mesh.connections["spring"][::2]+mesh.connections["quad"][::4]:
         pts = [mesh.nodes[i] for i in conn.ids]
         plt.plot(*pts2coords3D(pts))
+
+    for idx in idxs:
+        ptlist = list()
+        for id_ in idgrid[:, idx]:
+            ptlist.append(mesh.nodes[id_])
+        plt.plot(*pts2coords3D(ptlist))
     
     for conn in  mesh.connections["mass"]:
+        pts = [mesh.nodes[i] for i in conn.ids]
         scatter+=pts
-    plt.scatter(*pts2coords3D(scatter))
+    print([pt.z for pt in scatter])    
+    ax.scatter(*pts2coords3D(scatter))
 
     #testing the 3d line
     pt1 = Point3D(0,1,2)
