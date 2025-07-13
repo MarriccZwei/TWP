@@ -6,32 +6,15 @@ import scipy.interpolate as si
 def decode(inpt:str)->ty.List[ty.List[gcl.Point3D]]:
     return [[gcl.Point3D(*[float(k) for k in ele.split(';')]) for ele in substr.split('|')] for substr in inpt.split('&')]
 
-def regain_surface(pts1:ty.List[gcl.Point3D], pts2:ty.List[gcl.Point3D]):
+def regain_surface(pts1:ty.List[gcl.Point3D], pts2:ty.List[gcl.Point3D], n=8):
     #must be a smooth, function-like surface, one value of z for each x and y pair
     #regains a smooth surface made by cubic interpolation and linear from the airfoil points provided
     #to obtain this we use our knowledge of the geometry -1st we obtain relative choor
-    #1) obtaining thechord fraction
-    c1 = abs(pts1[-1].x-pts1[0].x)
-    c2 = abs(pts2[-1].x-pts2[0].x)
-    interpC = gcl.Line2D.from_pts(gcl.Point2D(pts1[0].y, c1), gcl.Point2D(pts2[0].y, c2))
-    cy = lambda y:interpC.intersect(gcl.Line2D(gcl.Point2D(y, 0), gcl.Direction2D(0, 1))).y
-    interpX0 = gcl.Line2D.from_pts(gcl.Point2D(pts1[0].x, pts1[0].y), gcl.Point2D(pts2[0].x, pts2[0].y))
-    x0 = lambda y:interpX0.intersect(gcl.Line2D(gcl.Point2D(0, y), gcl.Direction2D(1, 1))).x
-    cfrac = lambda x,y:(x-x0(y))/cy(y) 
-    #2)with chord fraction known, we can calculate the zs for both airfoil sections
-    x1, _, z1_ = gcl.pts2coords3D(pts1)
-    interp1 = si.CubicSpline(x1, z1_)
-    x2, _, z2_ = gcl.pts2coords3D(pts2)
-    interp2 = si.CubicSpline(x2, z2_)
-    plt.figure()
-    plt.plot(x1, [interp1(x) for x in x1])
-    plt.plot(x2, [interp1(x) for x in x2])
-    plt.show()
-    z1 = lambda x,y:interp1(c1*cfrac(x,y))
-    z2 = lambda x,y:interp2(c2*cfrac(x,y))
-    #3) using the values to create a linear interpolation in y
-    return lambda x,y:gcl.Line2D.from_pts(gcl.Point2D(pts1[0].y, z1(x,y)), gcl.Point2D(pts2[0].y, z2(x,y))).intersect(
-                    gcl.Line2D(gcl.Point2D(y, 0), gcl.Direction2D(0, 1))).y
+    all_pts = []
+    for p1, p2 in zip(pts1, pts2):
+        all_pts += p1.pts_between(p2, n) #4 so that all coefficients of cubic spline get linear
+    x,y,z = gcl.pts2coords3D(all_pts)
+    return si.CloughTocher2DInterpolator(list(zip(x, y)), z)
      
 
 def divide_foil(foil:ty.List[gcl.Point3D])->ty.Tuple[ty.List[gcl.Point3D]]:
@@ -51,6 +34,7 @@ class UnpackedPoints():
         pts = decode(inpt)
         rt, rb = divide_foil(pts[0])
         tt, tb = divide_foil(pts[1])
+        print(tt[0].z, rt[0].z)
         self.surft = regain_surface(rt, tt)
         self.surfb = regain_surface(rb, tb)
         self.motors = pts[2]
@@ -90,8 +74,8 @@ if __name__ == "__main__":
 
     bx = plt.subplot(122, projection='3d')
     up = UnpackedPoints(data)
-    xs = np.linspace(0, 5000)
-    ys = np.linspace(0, 18000)
+    xs = np.linspace(0, 5000, 1000)
+    ys = np.linspace(0, 18000, 1000)
     X, Y = np.meshgrid(xs, ys)
     bx.plot_surface(X, Y, up.surft(X,Y), label="top_foil")
     bx.plot_surface(X,Y, up.surfb(X,Y), label="bot_foil")
