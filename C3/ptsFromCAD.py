@@ -79,6 +79,13 @@ if __name__ == "__main__":
     X, Y = np.meshgrid(xs, ys)
     bx.plot_surface(X, Y, up.surft(X,Y), label="top_foil")
     bx.plot_surface(X,Y, up.surfb(X,Y), label="bot_foil")
+    bx.scatter(*gcl.pts2coords3D(up.motors))
+    bx.scatter(*gcl.pts2coords3D([up.hinge, up.lg]))
+    bx.scatter(*gcl.pts2coords3D([up.ffb, up.fft, up.frb, up.frt, up.tfb, up.tft, up.trb, up.trt]))
+    lepts = [up.leline.for_y(yval) for yval in ys]
+    plt.plot(*gcl.pts2coords3D(lepts), color="black")
+    tepts = [up.teline.for_y(yval) for yval in ys]
+    plt.plot(*gcl.pts2coords3D(tepts), color="brown")
 
     plt.legend()
     plt.show()
