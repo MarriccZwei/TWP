@@ -54,7 +54,7 @@ class Line2D():
     def from_pts(cls, pt1:Point2D, pt2:Point2D):
         return cls(pt1, Direction2D.from_pts(pt1, pt2))
     
-    def intersect(self, line):
+    def intersect(self, line)->Point2D:
         m = (-line.dir.x*(line.pt.y-self.pt.y)+line.dir.y*(line.pt.x-self.pt.x))/(-self.dir.y*line.dir.x+self.dir.x*line.dir.y)
         return self.dir.step(self.pt, m)
     
@@ -92,6 +92,31 @@ class Direction3D():
         delta_x = p2.x-p1.x
         delta_z = p2.z-p1.z
         return cls(delta_x, delta_y, delta_z)
+    
+class Line3D():
+    def __init__(self, pt:Point3D, dir:Direction3D):
+        self.linexy = Line2D(Point2D(pt.x, pt.y), Direction2D(dir.x, dir.y))
+        self.linexz = Line2D(Point2D(pt.x, pt.z), Direction2D(dir.x, dir.z))
+        self.lineyz = Line2D(Point2D(pt.y, pt.z), Direction2D(dir.y, dir.z))
+
+    @classmethod
+    def from_pts(cls, pt1:Point3D, pt2:Point3D):
+        return cls(pt1, Direction3D.from_pts(pt1, pt2))
+    
+    def for_x(self, x:float):
+        ixy = self.linexy.intersect(Line2D(Point2D(x, 0), Direction2D(0, 1)))
+        ixz = self.linexz.intersect(Line2D(Point2D(x, 0), Direction2D(0, 1)))
+        return Point3D(x, ixy.y, ixz.y) #.y is just the 2nd coord
+    
+    def for_y(self, y:float):
+        ixy = self.linexy.intersect(Line2D(Point2D(0, y), Direction2D(1, 0)))
+        iyz = self.lineyz.intersect(Line2D(Point2D(y, 0), Direction2D(0, 1)))
+        return Point3D(ixy.x, y, iyz.y) #.y is just the 2nd coord
+    
+    def for_z(self, z:float):
+        ixz = self.linexz.intersect(Line2D(Point2D(0, z), Direction2D(1, 0)))
+        iyz = self.lineyz.intersect(Line2D(Point2D(0, z), Direction2D(1, 0)))
+        return Point3D(ixz.x, iyz.x, z) #.x is just the 1st coord
 
 class MeshConn3D():
     "a struct used for connection list by Mesh3D"
@@ -222,5 +247,21 @@ if __name__ == "__main__":
     for conn in  mesh.connections["mass"]:
         scatter+=pts
     plt.scatter(*pts2coords3D(scatter))
+
+    #testing the 3d line
+    pt1 = Point3D(0,1,2)
+    pt2 = Point3D(-1,7,3.5)
+    line3D = Line3D.from_pts(pt1, pt2)
+    ys = np.linspace(pt1.y, pt2.y, 100)
+    ptsLine = [line3D.for_y(yval) for yval in ys]
+    plt.plot(*pts2coords3D(ptsLine))
+    zs = np.linspace(pt1.z, pt2.z, 100)
+    ptsLine = [line3D.for_z(zval) for zval in zs]
+    plt.plot(*pts2coords3D(ptsLine))
+    xs = np.linspace(pt1.x, pt2.x, 100)
+    ptsLine = [line3D.for_x(xval) for xval in xs]
+    plt.plot(*pts2coords3D(ptsLine))
+    plt.plot(*pts2coords3D([pt1, pt2]), label="correct")
+    plt.legend()
 
     plt.show()
