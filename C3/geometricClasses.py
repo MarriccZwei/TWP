@@ -127,7 +127,7 @@ class MeshConn3D():
 class Mesh3D():
     def __init__(self):
         self.nodes:ty.List[Point3D] = list()
-        self.connections:ty.Dict[str, ty.List[MeshConn3D]] = {"quad":list(), "spring":list(), "mass":list()}
+        self.connections:ty.Dict[str, ty.List[MeshConn3D]] = {"quad":list(), "spring":list(), "beam":list(), "mass":list()}
 
     def pyfe3D(self):
         "here be all the re-formatting of the code so it can be used with pyfe3D"

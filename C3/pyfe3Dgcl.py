@@ -8,9 +8,9 @@ import geometricClasses as gcl
 
 def eles_from_gcl(mesh:gcl.Mesh3D, eleDict:ty.Dict[str, ty.Dict[str, object]]):
     #currently only for the elements we have used, same goes to gcl connections
-    probes = {"quad": pf3.Quad4Probe(), "spring": pf3.SpringProbe(), "mass":None}
-    data = {"quad": pf3.Quad4Data(), "spring": pf3.SpringData(), "mass":None}
-    created_eles = {"quad":[], "spring":[], "mass":[]}
+    probes = {"quad": pf3.Quad4Probe(), "spring": pf3.SpringProbe(), "beam":pf3.BeamCProbe(), "mass":None}
+    data = {"quad": pf3.Quad4Data(), "spring": pf3.SpringData(), "beam":pf3.BeamCData(), "mass":None}
+    created_eles = {"quad":[], "spring":[], "beam":[], "mass":[]}
 
     #obtaining nodes geometry
     ncoords, x, y, z, ncoords_flatten = mesh.pyfe3D()
@@ -21,18 +21,24 @@ def eles_from_gcl(mesh:gcl.Mesh3D, eleDict:ty.Dict[str, ty.Dict[str, object]]):
 
     #calculating matrix size based on element data sizes
     sparse_size = 0
+    mass_size = 0
     for key, val in mesh.connections.items():
         if key!="mass": #mass does not contribute here, it's assigned to the mass matrix
             sparse_size += data[key].KC0_SPARSE_SIZE*len(val)
+            mass_size += data[key].M_SPARSE_SIZE*len(val)
 
     #initialising system matrices
     KC0r = np.zeros(sparse_size, dtype=pf3.INT)
     KC0c = np.zeros(sparse_size, dtype=pf3.INT)
     KC0v = np.zeros(sparse_size, dtype=pf3.DOUBLE)
+    Mr = np.zeros(mass_size, dtype=pf3.INT)
+    Mc = np.zeros(mass_size, dtype=pf3.INT)
+    Mv = np.zeros(mass_size, dtype=pf3.DOUBLE)
     N = pf3.DOF*len(mesh.nodes)
 
     #Element creation based on the connection matrix
-    init_k_KC0=0
+    init_k_KC0 = 0
+    init_k_M = 0
     #Quad elements
     for conn in mesh.connections["quad"]:
         shellprop = eleDict["quad"][conn.eleid]
@@ -46,11 +52,14 @@ def eles_from_gcl(mesh:gcl.Mesh3D, eleDict:ty.Dict[str, ty.Dict[str, object]]):
         quad.c3 = pf3.DOF*nid_pos[quad.n3]
         quad.c4 = pf3.DOF*nid_pos[quad.n4]
         quad.init_k_KC0 = init_k_KC0
+        quad.init_k_M = init_k_M
         quad.update_rotation_matrix(ncoords_flatten)
         quad.update_probe_xe(ncoords_flatten)
         quad.update_KC0(KC0r, KC0c, KC0v, shellprop) #matrix contribution, changing the matrices sent
+        quad.update_M(Mr, Mc, Mv, shellprop)
         created_eles["quad"].append(quad)
         init_k_KC0 += data["quad"].KC0_SPARSE_SIZE
+        init_k_M += data["quad"].M_SPARSE_SIZE
     #Spring elements
     for conn in mesh.connections["spring"]:
         spring = pf3.Spring(probes["spring"])
@@ -60,10 +69,16 @@ def eles_from_gcl(mesh:gcl.Mesh3D, eleDict:ty.Dict[str, ty.Dict[str, object]]):
         spring.c2 = pf3.DOF*nid_pos[spring.n2]
         spring.kxe, spring.kye, spring.kze, spring.krxe, spring.krye, spring.krze = eleDict["spring"][conn.eleid]
         spring.init_k_KC0 = init_k_KC0
-        spring.update_rotation_matrix(0, 1, 0, 1, 1, 0)
+        spring.init_k_M = init_k_M
+        spring.update_rotation_matrix(0, 1, 0, 1, 1, 0) #TODO: make this make sense
         spring.update_KC0(KC0r, KC0c, KC0v)
+        #spring.update_M(Mr, Mc, Mv, shellprop)
         created_eles["spring"].append(spring)
         init_k_KC0 += data["spring"].KC0_SPARSE_SIZE
+        init_k_M += data["spring"].M_SPARSE_SIZE
+    #Beam elements
+    for conn in mesh.connections["beam"]:
+        beam = pf3.BeamC(probes["beam"])
 
 
     #TODO: Other eles
