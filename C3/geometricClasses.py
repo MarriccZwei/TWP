@@ -209,7 +209,7 @@ class Mesh3D():
                     labels_used[conn.eleid] = col
                 else:
                     ax.plot(*pts2coords3D([self.nodes[conn.ids[0]], self.nodes[conn.ids[1]], self.nodes[conn.ids[0]]]), color=col)
-                    ax.scatter(*pts2coords3D([self.nodes[conn.ids[0]], self.nodes[conn.ids[1]]]), color=col)
+                    ax.scatter(*pts2coords3D([self.nodes[conn.ids[0]], self.nodes[conn.ids[1]]]), color=labels_used[conn.eleid])
         for conn in self.connections["beam"]:
             if conn.eleid[0:4]!= "/EXCL": #exclusion from plotting marker
                 if not (conn.eleid in labels_used.keys()):
@@ -217,7 +217,7 @@ class Mesh3D():
                     ax.plot(*pts2coords3D([self.nodes[conn.ids[0]], self.nodes[conn.ids[1]], self.nodes[conn.ids[0]]]), label=conn.eleid, color=col)
                     labels_used[conn.eleid] = col
                 else:
-                    ax.plot(*pts2coords3D([self.nodes[conn.ids[0]], self.nodes[conn.ids[1]], self.nodes[conn.ids[0]]]), color=col)
+                    ax.plot(*pts2coords3D([self.nodes[conn.ids[0]], self.nodes[conn.ids[1]], self.nodes[conn.ids[0]]]), color=labels_used[conn.eleid])
 
         ax.legend()
 

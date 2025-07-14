@@ -4,6 +4,7 @@ import numpy as np
 import scipy.interpolate as si
 
 def decode(inpt:str)->ty.List[ty.List[gcl.Point3D]]:
+    #MILIMETERS->METERS
     return [[gcl.Point3D(*[float(k)/1000 for k in ele.split(';')]) for ele in substr.split('|')] for substr in inpt.split('&')]
 
 def regain_surface(pts1:ty.List[gcl.Point3D], pts2:ty.List[gcl.Point3D], n=8):
