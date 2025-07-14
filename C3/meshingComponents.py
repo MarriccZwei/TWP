@@ -69,16 +69,42 @@ def trigspars(mesh:gcl.Mesh3D, nb:int, na:int, nf2:int, ntrig:int,
 
 
 def bat_rail(mesh:gcl.Mesh3D, ntrig:int, a1:float, a2:float, f:float, 
-             din:float, dz:float, midflids:ty.List[int], rail:str, 
-             railmount:str, batmount:str)->ty.Tuple[ty.List[int]]:
+             din:float, dz:float, midflids:ty.List[int], rail:str, bat:str,
+             railmount:str, batmount:str, totmass:float)->ty.Tuple[ty.List[int]]:
+    '''nodes for midflids have to be oriented from y=0 to y=ymax'''
     zaxis = gcl.Direction3D(0,0,1)
     #translated points to serve as center of the rails
     transl = [zaxis.step(mesh.nodes[i], dz) for i in midflids] 
     beamids = mesh.register(transl)
     mesh.beam_interconnect(beamids, rail)
     mesh.spring_connect(beamids, midflids, railmount)
-    #batteries - harder job. We need to define the local battery area
 
+    #batteries - harder job. We need to define the local battery area
+    #continuous attachment for now - subject to change
+    props = dict()
+    dzs = dict()
+    for i in beamids:
+        y = mesh.nodes[i].y
+        y0 = mesh.nodes[midflids[0]].y
+        ymax = mesh.nodes[midflids[-1]].y
+        yfrac = (y-y0)/(y-ymax)
+        a = a2*yfrac+(1-yfrac)*a1 #linear interpolation of battery a
+        #battery volume proportionality - july 10th page
+        prop = a**2*np.sqrt(3)/4+a*np.sqrt(3)/2*f-(2*abs(dz)+din)**2*np.sqrt(3)/12
+        assert prop>0 #if prop<0, then we have a prob - foil too thin at the tip
+        props[i] = prop
+        dzs = np.sign(dz)*a*np.sqrt(3)/3-dz #oriented distance from the rail to the battery centroid
+    propmass = totmass/sum(props.values()) #how much mass a unit prop means
+    batids = list()
+    for i in beamids:
+        batpt = zaxis.step(mesh.nodes[i], dzs[i])
+        batid = mesh.register(batpt)
+        #assigning the variable mass to the battery using protocol
+        mesh.pointmass_attach(batid, bat, props[i]*propmass)
+        mesh.spring_connect([i, batid], batmount)
+        batids.append(batids)
+
+    return beamids, batids
 
 
 if __name__ == "__main__":
@@ -90,9 +116,13 @@ if __name__ == "__main__":
     na = 7
     nf2 = 3
     ntrig = 2
+    dz = 15
+    din = 10
     sheets, idgrids, _, _, _ = trigspars(mesh, nb, na, nf2, ntrig, "tr", "ts", 
                                 up.ffb, up.frb, up.frt, up.fft,
-                                up.tfb, up.trb, up.trt, up.tft) 
+                                up.tfb, up.trb, up.trt, up.tft)
+    for igrid in idgrids[::2]:
+        edgeids = igrid[-1, :]
     #comparison of what is registered in the mesh and what the sheets are
     from mpl_toolkits import mplot3d
     import matplotlib.pyplot as plt

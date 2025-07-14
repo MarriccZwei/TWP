@@ -4,7 +4,7 @@ import numpy as np
 import scipy.interpolate as si
 
 def decode(inpt:str)->ty.List[ty.List[gcl.Point3D]]:
-    return [[gcl.Point3D(*[float(k) for k in ele.split(';')]) for ele in substr.split('|')] for substr in inpt.split('&')]
+    return [[gcl.Point3D(*[float(k)/1000 for k in ele.split(';')]) for ele in substr.split('|')] for substr in inpt.split('&')]
 
 def regain_surface(pts1:ty.List[gcl.Point3D], pts2:ty.List[gcl.Point3D], n=8):
     #must be a smooth, function-like surface, one value of z for each x and y pair
@@ -73,8 +73,8 @@ if __name__ == "__main__":
 
     bx = plt.subplot(122, projection='3d')
     up = UnpackedPoints(data)
-    xs = np.linspace(0, 5000, 1000)
-    ys = np.linspace(0, 18000, 1000)
+    xs = np.linspace(0, 5, 1000)
+    ys = np.linspace(0, 18, 1000)
     X, Y = np.meshgrid(xs, ys)
     bx.plot_surface(X, Y, up.surft(X,Y), label="top_foil")
     bx.plot_surface(X,Y, up.surfb(X,Y), label="bot_foil")
