@@ -178,6 +178,28 @@ class Mesh3D():
     def pointmass_attach(self, id_, eleid): #used to attach extra point mass to a given point
         self.connections["mass"].append(MeshConn3D([id_], eleid))
 
+    def visualise(self, ax):
+        labels_used = dict()
+        basic_cmap = ["blue", "orange", "black", "green", "red", "yellow", "pink", "purple", "gray"]
+        for conn in self.connections["quad"]:
+            if not (conn.eleid in labels_used.keys()):
+                col = basic_cmap.pop(0)
+                ax.plot(*pts2coords3D([self.nodes[conn.ids[0]], self.nodes[conn.ids[1]], self.nodes[conn.ids[2]], self.nodes[conn.ids[3]], self.nodes[conn.ids[0]]]),
+                    label=conn.eleid, color=col)
+                labels_used[conn.eleid] = col
+            else:
+                ax.plot(*pts2coords3D([self.nodes[conn.ids[0]], self.nodes[conn.ids[1]], self.nodes[conn.ids[2]], self.nodes[conn.ids[3]], self.nodes[conn.ids[0]]]),
+                    color=labels_used[conn.eleid])
+        for conn in self.connections["spring"]:
+            if not (conn.eleid in labels_used.keys()):
+                col = basic_cmap.pop(0)
+                ax.plot(*pts2coords3D([self.nodes[conn.ids[0]], self.nodes[conn.ids[1]], self.nodes[conn.ids[0]]]), label=conn.eleid, color=col)
+                ax.scatter(*pts2coords3D([self.nodes[conn.ids[0]], self.nodes[conn.ids[1]]]), color=col)
+                labels_used[conn.eleid] = col
+            else:
+                ax.plot(*pts2coords3D([self.nodes[conn.ids[0]], self.nodes[conn.ids[1]], self.nodes[conn.ids[0]]]), color=col)
+                ax.scatter(*pts2coords3D([self.nodes[conn.ids[0]], self.nodes[conn.ids[1]]]), color=col)
+
 
 '''Utility functions with geometric classes'''
 def pts2coords2D(pts:ty.List[Point2D]):
