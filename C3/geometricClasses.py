@@ -175,6 +175,14 @@ class Mesh3D():
         for id1, id2 in zip(ids[:-1], ids[1:]):
             self.connections["spring"].append(MeshConn3D([id1, id2], eleid))
 
+    def beam_connect(self, ids1, ids2, eleid):
+        for id1, id2 in zip(ids1, ids2):
+            self.connections["beam"].append(MeshConn3D([id1, id2], eleid))
+
+    def beam_interconnect(self, ids, eleid):
+        for id1, id2 in zip(ids[:-1], ids[1:]):
+            self.connections["beam"].append(MeshConn3D([id1, id2], eleid))
+
     def pointmass_attach(self, id_, eleid): #used to attach extra point mass to a given point
         self.connections["mass"].append(MeshConn3D([id_], eleid))
 
