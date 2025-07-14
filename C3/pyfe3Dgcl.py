@@ -78,8 +78,23 @@ def eles_from_gcl(mesh:gcl.Mesh3D, eleDict:ty.Dict[str, ty.Dict[str, object]]):
         init_k_M += data["spring"].M_SPARSE_SIZE
     #Beam elements
     for conn in mesh.connections["beam"]:
+        prop = eleDict["beam"][conn.eleid]
         beam = pf3.BeamC(probes["beam"])
-
+        beam.n1 = nids[conn.ids[0]]
+        beam.n2 = nids[conn.ids[1]]
+        pos1 = nid_pos[beam.n1]
+        pos2 = nid_pos[beam.n2]
+        beam.init_k_KC0 = init_k_KC0
+        beam.init_k_M = init_k_M
+        beam.c1 = pf3.DOF*pos1
+        beam.c2 = pf3.DOF*pos2
+        beam.update_rotation_matrix(1., 1., 0, ncoords_flatten) #TODO: make this make sense
+        beam.update_probe_xe(ncoords_flatten)
+        beam.update_KC0(KC0r, KC0c, KC0v, prop)
+        beam.update_M(Mr, Mc, Mv, prop) #TODO: mtype?
+        created_eles["beam"].append(spring)
+        init_k_KC0 += data["beam"].KC0_SPARSE_SIZE
+        init_k_M += data["beam"].M_SPARSE_SIZE
 
     #TODO: Other eles
 
@@ -107,6 +122,10 @@ if __name__ == "__main__":
     #springs at the boundary
     mesh.spring_connect(idgrid1[-1, :], idgrid2[0, :], "spring1")
 
+    #beam through the middle of the y coord
+    beamnodeids = list(idgrid1[:-1, 10])+list(idgrid2[1:, 10])
+    mesh.beam_interconnect(beamnodeids, "beam1")
+
     #checking the mesh
     import matplotlib.pyplot as plt
     plt.subplot(121)
@@ -123,11 +142,30 @@ if __name__ == "__main__":
     h = 0.005 # m
     E = 200e9
     nu = 0.3
+    rho = 7.83e3 # kg/m3
+
+    #copypasted beam prop
+    import pyfe3d.beamprop as pbp
+    prop = pbp.BeamProp()
+    b = 0.05 # m
+    A = h*b
+    Izz = b*h**3/12
+    Iyy = b**3*h/12
+    prop.A = A
+    prop.E = E
+    scf = 5/6.
+    prop.G = scf*E/2/(1+0.3)
+    prop.Izz = Izz
+    prop.Iyy = Iyy
+    prop.intrho = rho*A
+    prop.intrhoy2 = rho*Izz
+    prop.intrhoz2 = rho*Iyy
+    prop.J = Izz + Iyy
 
     #dictionaries for the element types
     import pyfe3d.shellprop_utils as psu
-    ele_prop = {'quad':{'quad1':psu.isotropic_plate(thickness=h, E=E, nu=nu, calc_scf=True)},
-                'spring':{'spring1':(1e2, 1e2, 1e2, 1e2, 1e2, 1e2)}}
+    ele_prop = {'quad':{'quad1':psu.isotropic_plate(thickness=h, E=E, nu=nu, rho=rho, calc_scf=True)},
+                'spring':{'spring1':(1e2, 1e2, 1e2, 1e2, 1e2, 1e2)}, 'beam':{'beam1':prop}, 'mass':{}}
 
     #exporting mesh to pyfe3D
     KC0, N, x, y, z, _ = eles_from_gcl(mesh, ele_prop)
@@ -149,14 +187,14 @@ if __name__ == "__main__":
 
     # point load at center node @# this is how to apply loads
     f = np.zeros(N)
-    fmid = 1.
+    fmid = 5.
     check = np.isclose(x, 0) & np.isclose(y, 5)
-    f[2::pf3.DOF][check] = fmid #applying the point loads on the node close to the middle
+    f[2::pf3.DOF][check] = fmid/np.count_nonzero(check) #applying the point loads on the node close to the middle
 
     
     KC0uu = KC0[bu, :][:, bu]
     fu = f[bu]
-    assert fu.sum() == 2*fmid
+    assert np.isclose(fu.sum(), fmid)
 
     #@# actually solving the fem model
     from scipy.sparse.linalg import spsolve
