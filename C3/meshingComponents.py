@@ -45,11 +45,11 @@ def trigspars(mesh:gcl.Mesh3D, nb:int, na:int, nf2:int, ntrig:int,
         #again, an inwards-facing flange
         pts.append([tfp, rt, rb, dirc.step(rb, -f2)])
 
-        return pts
+        return pts, a, f
     
     #appling the cross section generation to get sheets
-    pts1s = trig_crossec(ffb, frb, frt, fft)
-    pts2s = trig_crossec(tfb, trb, trt, tft)
+    pts1s, a1, f = trig_crossec(ffb, frb, frt, fft)
+    pts2s, a2, _ = trig_crossec(tfb, trb, trt, tft)
     sheets = list()
     idgrids = list()
     for pt1s, pt2s in zip(pts1s, pts2s):
@@ -65,7 +65,20 @@ def trigspars(mesh:gcl.Mesh3D, nb:int, na:int, nf2:int, ntrig:int,
     for ids1, ids2 in zip(idgrids[:-1], idgrids[1:]):
         mesh.spring_connect(ids1[:, -1], ids2[:, 0], rivet)
 
-    return sheets, idgrids
+    return sheets, idgrids, a1, a2, f
+
+
+def bat_rail(mesh:gcl.Mesh3D, ntrig:int, a1:float, a2:float, f:float, 
+             din:float, dz:float, midflids:ty.List[int], rail:str, 
+             railmount:str, batmount:str)->ty.Tuple[ty.List[int]]:
+    zaxis = gcl.Direction3D(0,0,1)
+    #translated points to serve as center of the rails
+    transl = [zaxis.step(mesh.nodes[i], dz) for i in midflids] 
+    beamids = mesh.register(transl)
+    mesh.beam_interconnect(beamids, rail)
+    mesh.spring_connect(beamids, midflids, railmount)
+    #batteries - harder job. We need to define the local battery area
+
 
 
 if __name__ == "__main__":
@@ -77,7 +90,7 @@ if __name__ == "__main__":
     na = 7
     nf2 = 3
     ntrig = 2
-    sheets, idgrids = trigspars(mesh, nb, na, nf2, ntrig, "tr", "ts", 
+    sheets, idgrids, _, _, _ = trigspars(mesh, nb, na, nf2, ntrig, "tr", "ts", 
                                 up.ffb, up.frb, up.frt, up.fft,
                                 up.tfb, up.trb, up.trt, up.tft) 
     #comparison of what is registered in the mesh and what the sheets are

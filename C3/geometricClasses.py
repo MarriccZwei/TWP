@@ -120,9 +120,10 @@ class Line3D():
 
 class MeshConn3D():
     "a struct used for connection list by Mesh3D"
-    def __init__(self, ids:ty.List[int], eleid:str):
+    def __init__(self, ids:ty.List[int], eleid:str, protocol=""):
         self.ids = ids
         self.eleid = eleid
+        self.protocol = protocol #arguments for function if the object pointed by eleid is a function. Doesn't have to be an str
 
 class Mesh3D():
     def __init__(self):
@@ -149,7 +150,7 @@ class Mesh3D():
         lastIndex = len(self.nodes)-1
         return np.linspace(firstIndex, lastIndex, len(pts), dtype=int)
     
-    def quad_interconnect(self, ids, eleid):
+    def quad_interconnect(self, ids, eleid, protocol=""):
         "creates a set of quad connections between elements taking the four adjacent elements on the list"
         "assumes a list where nodes next to each other are next to each other on the array"
         n1s = ids[:-1, :-1].flatten()
@@ -157,56 +158,68 @@ class Mesh3D():
         n3s = ids[1:, 1:].flatten()
         n4s = ids[:-1, 1:].flatten()
         for i in range(len(n1s)):
-            self.connections["quad"].append(MeshConn3D([n1s[i], n2s[i], n3s[i], n4s[i]], eleid))
+            self.connections["quad"].append(MeshConn3D([n1s[i], n2s[i], n3s[i], n4s[i]], eleid, protocol))
     
-    def quad_connect(self, ids1, ids2, eleid):
+    def quad_connect(self, ids1, ids2, eleid, protocol=""):
         n1s = ids1[:-1]
         n2s = ids1[1:]
         n3s = ids2[1:]
         n4s = ids2[:-1]
         for i in range(len(n1s)):
-            self.connections["quad"].append(MeshConn3D([n1s[i], n2s[i], n3s[i], n4s[i]], eleid))
+            self.connections["quad"].append(MeshConn3D([n1s[i], n2s[i], n3s[i], n4s[i]], eleid, protocol))
 
-    def spring_connect(self, ids1, ids2, eleid):
+    def spring_connect(self, ids1, ids2, eleid, protocol=""):
         for id1, id2 in zip(ids1, ids2):
-            self.connections["spring"].append(MeshConn3D([id1, id2], eleid))
+            self.connections["spring"].append(MeshConn3D([id1, id2], eleid, protocol))
 
-    def spring_interconnect(self, ids, eleid):
+    def spring_interconnect(self, ids, eleid, protocol=""):
         for id1, id2 in zip(ids[:-1], ids[1:]):
-            self.connections["spring"].append(MeshConn3D([id1, id2], eleid))
+            self.connections["spring"].append(MeshConn3D([id1, id2], eleid, protocol))
 
-    def beam_connect(self, ids1, ids2, eleid):
+    def beam_connect(self, ids1, ids2, eleid, protocol=""):
         for id1, id2 in zip(ids1, ids2):
-            self.connections["beam"].append(MeshConn3D([id1, id2], eleid))
+            self.connections["beam"].append(MeshConn3D([id1, id2], eleid, protocol))
 
-    def beam_interconnect(self, ids, eleid):
+    def beam_interconnect(self, ids, eleid, protocol=""):
         for id1, id2 in zip(ids[:-1], ids[1:]):
-            self.connections["beam"].append(MeshConn3D([id1, id2], eleid))
+            self.connections["beam"].append(MeshConn3D([id1, id2], eleid, protocol))
 
-    def pointmass_attach(self, id_, eleid): #used to attach extra point mass to a given point
-        self.connections["mass"].append(MeshConn3D([id_], eleid))
+    def pointmass_attach(self, id_, eleid, protocol=""): #used to attach extra point mass to a given point
+        self.connections["mass"].append(MeshConn3D([id_], eleid, protocol))
 
     def visualise(self, ax):
         labels_used = dict()
         basic_cmap = ["blue", "orange", "black", "green", "red", "yellow", "pink", "purple", "gray"]
         for conn in self.connections["quad"]:
-            if not (conn.eleid in labels_used.keys()):
-                col = basic_cmap.pop(0)
-                ax.plot(*pts2coords3D([self.nodes[conn.ids[0]], self.nodes[conn.ids[1]], self.nodes[conn.ids[2]], self.nodes[conn.ids[3]], self.nodes[conn.ids[0]]]),
-                    label=conn.eleid, color=col)
-                labels_used[conn.eleid] = col
-            else:
-                ax.plot(*pts2coords3D([self.nodes[conn.ids[0]], self.nodes[conn.ids[1]], self.nodes[conn.ids[2]], self.nodes[conn.ids[3]], self.nodes[conn.ids[0]]]),
-                    color=labels_used[conn.eleid])
+            if conn.eleid[0:4]!= "/EXCL": #exclusion from plotting marker
+                if not (conn.eleid in labels_used.keys()):
+                    col = basic_cmap.pop(0)
+                    ax.plot(*pts2coords3D([self.nodes[conn.ids[0]], self.nodes[conn.ids[1]], self.nodes[conn.ids[2]], self.nodes[conn.ids[3]], self.nodes[conn.ids[0]]]),
+                        label=conn.eleid, color=col)
+                    labels_used[conn.eleid] = col
+                else:
+                    ax.plot(*pts2coords3D([self.nodes[conn.ids[0]], self.nodes[conn.ids[1]], self.nodes[conn.ids[2]], self.nodes[conn.ids[3]], self.nodes[conn.ids[0]]]),
+                        color=labels_used[conn.eleid])
         for conn in self.connections["spring"]:
-            if not (conn.eleid in labels_used.keys()):
-                col = basic_cmap.pop(0)
-                ax.plot(*pts2coords3D([self.nodes[conn.ids[0]], self.nodes[conn.ids[1]], self.nodes[conn.ids[0]]]), label=conn.eleid, color=col)
-                ax.scatter(*pts2coords3D([self.nodes[conn.ids[0]], self.nodes[conn.ids[1]]]), color=col)
-                labels_used[conn.eleid] = col
-            else:
-                ax.plot(*pts2coords3D([self.nodes[conn.ids[0]], self.nodes[conn.ids[1]], self.nodes[conn.ids[0]]]), color=col)
-                ax.scatter(*pts2coords3D([self.nodes[conn.ids[0]], self.nodes[conn.ids[1]]]), color=col)
+            if conn.eleid[0:4]!= "/EXCL": #exclusion from plotting marker
+                if not (conn.eleid in labels_used.keys()):
+                    col = basic_cmap.pop(0)
+                    ax.plot(*pts2coords3D([self.nodes[conn.ids[0]], self.nodes[conn.ids[1]], self.nodes[conn.ids[0]]]), label=conn.eleid, color=col)
+                    ax.scatter(*pts2coords3D([self.nodes[conn.ids[0]], self.nodes[conn.ids[1]]]), color=col)
+                    labels_used[conn.eleid] = col
+                else:
+                    ax.plot(*pts2coords3D([self.nodes[conn.ids[0]], self.nodes[conn.ids[1]], self.nodes[conn.ids[0]]]), color=col)
+                    ax.scatter(*pts2coords3D([self.nodes[conn.ids[0]], self.nodes[conn.ids[1]]]), color=col)
+        for conn in self.connections["beam"]:
+            if conn.eleid[0:4]!= "/EXCL": #exclusion from plotting marker
+                if not (conn.eleid in labels_used.keys()):
+                    col = basic_cmap.pop(0)
+                    ax.plot(*pts2coords3D([self.nodes[conn.ids[0]], self.nodes[conn.ids[1]], self.nodes[conn.ids[0]]]), label=conn.eleid, color=col)
+                    labels_used[conn.eleid] = col
+                else:
+                    ax.plot(*pts2coords3D([self.nodes[conn.ids[0]], self.nodes[conn.ids[1]], self.nodes[conn.ids[0]]]), color=col)
+
+        ax.legend()
 
 
 '''Utility functions with geometric classes'''

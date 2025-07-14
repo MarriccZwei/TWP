@@ -41,7 +41,10 @@ def eles_from_gcl(mesh:gcl.Mesh3D, eleDict:ty.Dict[str, ty.Dict[str, object]]):
     init_k_M = 0
     #Quad elements
     for conn in mesh.connections["quad"]:
-        shellprop = eleDict["quad"][conn.eleid]
+        if conn.protocol=="":
+            shellprop = eleDict["quad"][conn.eleid]
+        else:
+            shellprop = eleDict["quad"][conn.eleid](conn.protocol)
         quad = pf3.Quad4(probes["quad"])
         quad.n1 = nids[conn.ids[0]]
         quad.n2 = nids[conn.ids[1]]
@@ -67,7 +70,10 @@ def eles_from_gcl(mesh:gcl.Mesh3D, eleDict:ty.Dict[str, ty.Dict[str, object]]):
         spring.n2 = nids[conn.ids[1]]
         spring.c1 = pf3.DOF*nid_pos[spring.n1]
         spring.c2 = pf3.DOF*nid_pos[spring.n2]
-        spring.kxe, spring.kye, spring.kze, spring.krxe, spring.krye, spring.krze = eleDict["spring"][conn.eleid]
+        if conn.protocol=="":
+            spring.kxe, spring.kye, spring.kze, spring.krxe, spring.krye, spring.krze = eleDict["spring"][conn.eleid]
+        else:
+            spring.kxe, spring.kye, spring.kze, spring.krxe, spring.krye, spring.krze = eleDict["spring"][conn.eleid](conn.protocol)
         spring.init_k_KC0 = init_k_KC0
         spring.init_k_M = init_k_M
         spring.update_rotation_matrix(0, 1, 0, 1, 1, 0) #TODO: make this make sense
@@ -78,7 +84,10 @@ def eles_from_gcl(mesh:gcl.Mesh3D, eleDict:ty.Dict[str, ty.Dict[str, object]]):
         init_k_M += data["spring"].M_SPARSE_SIZE
     #Beam elements
     for conn in mesh.connections["beam"]:
-        prop = eleDict["beam"][conn.eleid]
+        if conn.protocol=="":
+            prop = eleDict["beam"][conn.eleid]
+        else:
+            prop = eleDict["beam"][conn.eleid](conn.protocol)
         beam = pf3.BeamC(probes["beam"])
         beam.n1 = nids[conn.ids[0]]
         beam.n2 = nids[conn.ids[1]]
@@ -123,20 +132,23 @@ if __name__ == "__main__":
     mesh.spring_connect(idgrid1[-1, :], idgrid2[0, :], "spring1")
 
     #beam through the middle of the y coord
-    beamnodeids = list(idgrid1[:-1, 10])+list(idgrid2[1:, 10])
+    beamnodeids = list(idgrid1[:, 10])
+    mesh.beam_interconnect(beamnodeids, "beam1")
+    beamnodeids = list(idgrid2[:, 10])
     mesh.beam_interconnect(beamnodeids, "beam1")
 
     #checking the mesh
-    import matplotlib.pyplot as plt
-    plt.subplot(121)
-    for conn in mesh.connections["quad"]:
-        pts = [mesh.nodes[i] for i in conn.ids]
-        x_, y_, _ = gcl.pts2coords3D(pts)
-        plt.plot(x_, y_)
-    for conn in mesh.connections["spring"]:
-        pts = [mesh.nodes[i] for i in conn.ids]
-        x_, y_, _ = gcl.pts2coords3D(pts)
-        plt.scatter(x_, y_)
+    import matplotlib.pyplot as plt 
+    ax = plt.subplot(121, projection='3d')
+    # for conn in mesh.connections["quad"]:
+    #     pts = [mesh.nodes[i] for i in conn.ids]
+    #     x_, y_, _ = gcl.pts2coords3D(pts)
+    #     plt.plot(x_, y_)
+    # for conn in mesh.connections["spring"]:
+    #     pts = [mesh.nodes[i] for i in conn.ids]
+    #     x_, y_, _ = gcl.pts2coords3D(pts)
+    #     plt.scatter(x_, y_)
+    mesh.visualise(ax)
 
     #standard test data for the elements
     h = 0.005 # m
@@ -148,9 +160,10 @@ if __name__ == "__main__":
     import pyfe3d.beamprop as pbp
     prop = pbp.BeamProp()
     b = 0.05 # m
-    A = h*b
-    Izz = b*h**3/12
-    Iyy = b**3*h/12
+    hb = 0.05
+    A = hb*b
+    Izz = b*hb**3/12
+    Iyy = b**3*hb/12
     prop.A = A
     prop.E = E
     scf = 5/6.
