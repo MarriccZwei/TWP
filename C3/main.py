@@ -11,6 +11,7 @@ import pyfe3Dgcl as p3g
 import numpy as np
 from mpl_toolkits import mplot3d
 import matplotlib.pyplot as plt
+import scipy.sparse.linalg as ssl
 
 #constants/givens
 BAT_MASS_1WING = 17480 #kg
@@ -109,3 +110,22 @@ check = np.isclose(y, up.ffb.y)
 for i in range(pf3.DOF):
     bk[i::pf3.DOF] = check
 bu = ~bk
+
+#loads TODO: add real ones
+f = np.zeros(N)
+check = np.isclose(y, up.tfb.y)
+f[2::pf3.DOF][check] = 10000/np.count_nonzero(check)
+
+#checks and solution
+KC0uu = KC0[bu, :][:, bu]
+fu = f[bu]
+assert np.isclose(fu.sum(), 10000)
+uu = ssl.spsolve(KC0uu, fu)
+u = np.zeros(N)
+u[bu] = uu
+
+w = u[2::pf3.DOF]
+
+#provisorical scatterplot to see if the solution ain't complete trash
+plt.scatter(y[::25], w[::25])
+plt.show()
