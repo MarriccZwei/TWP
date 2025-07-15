@@ -106,6 +106,47 @@ def bat_rail(mesh:gcl.Mesh3D, ntrig:int, a1:float, a2:float, f:float,
 
     return beamids, batids
 
+def panel(mesh:gcl.Mesh3D, ff:gcl.Point3D, fr:gcl.Point3D, tf:gcl.Point3D, tr:gcl.Point3D, nb:int, nip:int, 
+          floor:str, skin:str, rib:str, rivet:str, panelz:ty.Callable, ribconnids:ty.List[nt.NDArray[np.int64]]):
+    #1) lower sheet
+    ribconnpt1s = [mesh.nodes[ptids[0]] for ptids in ribconnids]
+    ribconnpt2s = [mesh.nodes[ptids[-1]] for ptids in ribconnids]
+    floorsh, secs = gcl.multi_section_sheet3D([ff]+ribconnpt1s+[fr], [tf]+ribconnpt2s+[tr], nb,
+                                                 [nip]*(len(ribconnpt1s)+1), True)
+    flidspace = mesh.register(list(floorsh.flatten()))
+    flidgrid = flidspace.reshape(floorsh.shape)
+    mesh.quad_interconnect(flidgrid, floor)
+    for i, ids in enumerate(ribconnids): #riveting the lower sheet to the spars
+        panelPts = flidgrid[:, secs[i+1]] #skip the edge subsecs, which are only connected to the top panel
+        mesh.spring_connect(panelPts, ids, rivet)
+
+    #2) upper sheet
+    upsh = gcl.project_np3D(floorsh, zupdate=lambda x,y,z:panelz(x,y))
+    upidspace = mesh.register(list(upsh.flatten()))
+    upidgrid = upidspace.reshape(upsh.shape)
+    mesh.quad_interconnect(upidgrid, skin)    
+
+    #3) obligatory stiffeners
+    mainribidlist = list()
+    for sec in secs: #sections are same-number for both sheets due to projection
+        #preparing points
+        floorids = [flidgrid[i, sec] for i in range(flidgrid.shape[0])]
+        upids = [upidgrid[i, sec] for i in range(upidgrid.shape[0])]
+        floorpts = floorsh[:, sec]
+        upts = upsh[:, sec]
+
+        #stiffener beams
+        ribpts = [flp.pt_between(upp) for flp, upp in zip(floorpts, upts)]
+        ribids = mesh.register(ribpts)
+        #connecting the beam so that a heighte is saved
+        for id1, id2, pt2 in zip(ribids[:-1], ribids[1:], floorpts[1:]):
+            #taking point 2, so further spanwise, this results in smaller Is, so conservative
+            mesh.beam_connect([id1], [id2], rib, abs(panelz(pt2.x, pt2.y)-pt2.z))
+        mesh.spring_connect(ribids, floorids, rivet)
+        mesh.spring_connect(ribids, upids, rivet)
+
+    return flidgrid, upidgrid, mainribidlist
+    
 
 if __name__ == "__main__":
     import ptsFromCAD as pfc
@@ -118,14 +159,21 @@ if __name__ == "__main__":
     ntrig = 2
     dz = .015
     din = .010
+    nip = 4
     sheets, idgrids, a1, a2, f = trigspars(mesh, nb, na, nf2, ntrig, "tr", "ts", 
                                 up.ffb, up.frb, up.frt, up.fft,
                                 up.tfb, up.trb, up.trt, up.tft)
     beamids, batids = [[]]*len(idgrids), [[]]*len(idgrids)
+    rivetingids = list()
     for igrid, idx in zip(idgrids[::2], range(0,len(idgrids),2)):
         #bats on the upper side go down
         edgeids = igrid[:, -1]
+        rivetingids.append(edgeids)
         beamids[idx], batids[idx] = bat_rail(mesh, ntrig, a1, a2, f, din, -dz, edgeids, "rail", "bat", "rm", "bm", 17480)
+    
+    floorids, skinids, ribids = panel(mesh, up.fft, up.frt, up.tft, up.trt, nb, nip, 
+                                      "panfl", "skin", "rib", "tr", up.surft, rivetingids)
+    
 
     #comparison of what is registered in the mesh and what the sheets are
     from mpl_toolkits import mplot3d

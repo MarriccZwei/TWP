@@ -189,7 +189,7 @@ class Mesh3D():
 
     def visualise(self, ax):
         labels_used = dict()
-        basic_cmap = ["blue", "orange", "black", "green", "red", "yellow", "pink", "purple", "gray"]
+        basic_cmap = ["blue", "orange", "black", "green", "red", "yellow", "pink", "purple", "gray", "magenta"]
         for conn in self.connections["quad"]:
             if conn.eleid[0:4]!= "/EXCL": #exclusion from plotting marker
                 if not (conn.eleid in labels_used.keys()):
@@ -208,7 +208,8 @@ class Mesh3D():
                     ax.scatter(*pts2coords3D([self.nodes[conn.ids[0]], self.nodes[conn.ids[1]]]), color=col)
                     labels_used[conn.eleid] = col
                 else:
-                    ax.plot(*pts2coords3D([self.nodes[conn.ids[0]], self.nodes[conn.ids[1]], self.nodes[conn.ids[0]]]), color=col)
+                    ax.plot(*pts2coords3D([self.nodes[conn.ids[0]], self.nodes[conn.ids[1]], self.nodes[conn.ids[0]]]), 
+                            color=labels_used[conn.eleid])
                     ax.scatter(*pts2coords3D([self.nodes[conn.ids[0]], self.nodes[conn.ids[1]]]), color=labels_used[conn.eleid])
         for conn in self.connections["beam"]:
             if conn.eleid[0:4]!= "/EXCL": #exclusion from plotting marker
