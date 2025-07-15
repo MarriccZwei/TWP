@@ -181,10 +181,10 @@ def panel(mesh:gcl.Mesh3D, ff:gcl.Point3D, fr:gcl.Point3D, tf:gcl.Point3D, tr:gc
         for regnear, regfar, sec1, sec2 in zip(ribnear, ribfar, secs[:-1], secs[1:]):
             regdist = mesh.nodes[regnear[-1]].x-mesh.nodes[regnear[0]].x
             cribcount = int(np.ceil(regdist/cspacing))
-            assert nip/(cribcount+1)>=4 #otherwise mesh refinment insufficient for buckling
             cribIds[-1].append([])
 
             if cribcount>1:
+                assert nip/(cribcount+1)>=4 #otherwise mesh refinment insufficient for buckling
                 assert regdist > 0 #if we did not loose our coordinate system midway
                 #getting indices for brib connections and sheet connections
                 #we don't take into account the sides, as they are the obligatory ribs, already created
@@ -222,7 +222,7 @@ if __name__ == "__main__":
     nip = 18
     cspacing = .25
     bspacing = 2
-    sheets, idgrids, a1, a2, f = trigspars(mesh, nb, na, nf2, ntrig, "/EXCLtr", "/EXCLts", 
+    sheets, idgrids, a1, a2, f = trigspars(mesh, nb, na, nf2, ntrig, "tr", "ts", 
                                 up.ffb, up.frb, up.frt, up.fft,
                                 up.tfb, up.trb, up.trt, up.tft)
     beamids, batids = [[]]*len(idgrids), [[]]*len(idgrids)
@@ -232,10 +232,21 @@ if __name__ == "__main__":
         edgeids = igrid[:, -1]
         rivetingids.append(edgeids)
         beamids[idx], batids[idx] = bat_rail(mesh, ntrig, a1, a2, f, din, -dz, edgeids, 
-                                             "/EXCLrail", "/EXCLbat", "/EXCLrm", "/EXCLbm", 17480)
+                                             "rail", "bat", "rm", "bm", 17480)
     
     floorids, skinids, ribids, ribIdbs, ribIdcs = panel(mesh, up.fft, up.frt, up.tft, up.trt, nb, nip, nf2, 
-                                      "panfl", "skin", "rib", "tr", up.surft, rivetingids, cspacing, bspacing)
+                                     "panfl", "skin", "rib", "tr", up.surft, rivetingids, cspacing, bspacing)
+    
+    rivetedbot = [idgrids[0][:, 0]]
+    for igrid, idx in zip(idgrids[1:-1:2], range(1,len(idgrids)-1,2)):
+        #bats on the upper side go down
+        edgeidsN = igrid[:, -1]
+        rivetedbot.append(edgeidsN)
+        beamids[idx], batids[idx] = bat_rail(mesh, ntrig, a1, a2, f, din, dz, edgeidsN, 
+                                             "rail", "bat", "rm", "bm", 17480)
+    rivetedbot.append(idgrids[-1][:, -1])
+    fib, sib, rib, rbib, rcib = panel(mesh, up.ffb, up.frb, up.tfb, up.trb, nb, nip, nf2, 
+                                      "panfl", "skin", "rib", "tr", up.surfb, rivetedbot, cspacing, bspacing)
     
 
     #comparison of what is registered in the mesh and what the sheets are
