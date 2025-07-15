@@ -2,6 +2,7 @@ import geometricClasses as gcl
 import typing as ty
 import numpy.typing as nt
 import numpy as np
+import ptsFromCAD as pfc
 
 '''Here be a file with meshings of given components. 
 Inside-component connections will be completed in this file, 
@@ -168,7 +169,7 @@ def panel(mesh:gcl.Mesh3D, ff:gcl.Point3D, fr:gcl.Point3D, tf:gcl.Point3D, tr:gc
             ribIdb = mesh.register(ribptsb)
             ribIdbs[-1].append(ribIdb)
             #connections
-            mesh.beam_interconnect(ribIdb, rib, hbs[1:]) #chordwise you have to skip one h, you cannot guarantee conservativeness
+            mesh.beam_protocolize(ribIdb, rib, hbs[1:]) #chordwise you have to skip one h, you cannot guarantee conservativeness
             mesh.beam_connect([ribIdb[0]], [mainribidlist[i][ribNb]], rib, hbs[0])
             mesh.beam_connect([ribIdb[-1]], [mainribidlist[i+1][ribNb]], rib, hbs[-1])
             mesh.spring_connect(ribIdb, flooridsb, rivet)
@@ -205,8 +206,40 @@ def panel(mesh:gcl.Mesh3D, ff:gcl.Point3D, fr:gcl.Point3D, tf:gcl.Point3D, tr:gc
                     cribIds[-1].append(cribids)
 
 
-    return flidgrid, upidgrid, mainribidlist, ribIdbs, cribIds
+    return floorsh, upsh, flidgrid, upidgrid, mainribidlist, ribIdbs, cribIds
+
+
+def all_components(mesh:gcl.Mesh3D, up:pfc.UnpackedPoints, nb:int, na:int, nf2:int, nipCoeff:int, ntrig:int, dzRail:float, dinRail:float, cspacing:float, bspacing:float, totmass:float,
+                   rivet:str, spar:str, plate:str, rib:str, skin:str, rail:str, bat:str, batmount:str, railmount:str):
+    sparsh, sparigrids, a1, a2, f = trigspars(mesh, nb, na, nf2, ntrig, rivet, spar, up.ffb, up.frb, up.frt, up.fft, up.tfb, up.trb, up.trt, up.tft)
+
+    nip = int(np.ceil(nipCoeff*(4*((a1+2*f)/cspacing+1)))) #obtaining nip so that we get the minimal required amount of elements
+
+    beamids, batids = [[]]*len(sparigrids), [[]]*len(sparigrids)
+    rivetingids = list()
+    for igrid, idx in zip(sparigrids[::2], range(0,len(sparigrids),2)):
+        #bats on the upper side go down
+        edgeids = igrid[:, -1]
+        rivetingids.append(edgeids)
+        beamids[idx], batids[idx] = bat_rail(mesh, ntrig, a1, a2, f, dinRail, -dzRail, edgeids, 
+                                             rail, bat, railmount, batmount, totmass)
     
+    floorsh, upsh, floorids, skinids, ribids, ribIdbs, ribIdcs = panel(mesh, up.fft, up.frt, up.tft, up.trt, nb, nip, nf2, 
+                                     plate, skin, rib, rivet, up.surft, rivetingids, cspacing, bspacing)
+    
+    rivetedbot = [sparigrids[0][:, 0]]
+    for igrid, idx in zip(sparigrids[1:-1:2], range(1,len(sparigrids)-1,2)):
+        #bats on the upper side go down
+        edgeidsN = igrid[:, -1]
+        rivetedbot.append(edgeidsN)
+        beamids[idx], batids[idx] = bat_rail(mesh, ntrig, a1, a2, f, dinRail, dzRail, edgeidsN, 
+                                             rail, bat, railmount, batmount, totmass)
+    rivetedbot.append(sparigrids[-1][:, -1])
+    fshb, sshb, fib, sib, rib_, rbib, rcib = panel(mesh, up.ffb, up.frb, up.tfb, up.trb, nb, nip, nf2, 
+                                      plate, skin, rib, rivet, up.surfb, rivetedbot, cspacing, bspacing)
+
+    return {"spars":sparsh, "plateTop":floorsh, "skinTop":upsh, "plateBot":fshb, "skinBot":sshb}, {"spars":sparigrids, "plateTop":floorids, "skinTop":skinids, "plateBot":fib,
+         "skinBot":sib, "ribsTop":(ribids, ribIdbs, ribIdcs), "ribsBot":(rib_, rbib, rcib), "rails":beamids, "bats":batids}
 
 if __name__ == "__main__":
     import ptsFromCAD as pfc
@@ -219,35 +252,36 @@ if __name__ == "__main__":
     ntrig = 2
     dz = .015
     din = .010
-    nip = 18
+    #nip = 18
     cspacing = .25
     bspacing = 2
-    sheets, idgrids, a1, a2, f = trigspars(mesh, nb, na, nf2, ntrig, "tr", "ts", 
-                                up.ffb, up.frb, up.frt, up.fft,
-                                up.tfb, up.trb, up.trt, up.tft)
-    beamids, batids = [[]]*len(idgrids), [[]]*len(idgrids)
-    rivetingids = list()
-    for igrid, idx in zip(idgrids[::2], range(0,len(idgrids),2)):
-        #bats on the upper side go down
-        edgeids = igrid[:, -1]
-        rivetingids.append(edgeids)
-        beamids[idx], batids[idx] = bat_rail(mesh, ntrig, a1, a2, f, din, -dz, edgeids, 
-                                             "rail", "bat", "rm", "bm", 17480)
+    totmass = 17480
+    # sheets, idgrids, a1, a2, f = trigspars(mesh, nb, na, nf2, ntrig, "tr", "ts", 
+    #                             up.ffb, up.frb, up.frt, up.fft,
+    #                             up.tfb, up.trb, up.trt, up.tft)
+    # beamids, batids = [[]]*len(idgrids), [[]]*len(idgrids)
+    # rivetingids = list()
+    # for igrid, idx in zip(idgrids[::2], range(0,len(idgrids),2)):
+    #     #bats on the upper side go down
+    #     edgeids = igrid[:, -1]
+    #     rivetingids.append(edgeids)
+    #     beamids[idx], batids[idx] = bat_rail(mesh, ntrig, a1, a2, f, din, -dz, edgeids, 
+    #                                          "rail", "bat", "rm", "bm", 17480)
     
-    floorids, skinids, ribids, ribIdbs, ribIdcs = panel(mesh, up.fft, up.frt, up.tft, up.trt, nb, nip, nf2, 
-                                     "panfl", "skin", "rib", "tr", up.surft, rivetingids, cspacing, bspacing)
+    # floorsh, upsh, floorids, skinids, ribids, ribIdbs, ribIdcs = panel(mesh, up.fft, up.frt, up.tft, up.trt, nb, nip, nf2, 
+    #                                  "panfl", "skin", "rib", "tr", up.surft, rivetingids, cspacing, bspacing)
     
-    rivetedbot = [idgrids[0][:, 0]]
-    for igrid, idx in zip(idgrids[1:-1:2], range(1,len(idgrids)-1,2)):
-        #bats on the upper side go down
-        edgeidsN = igrid[:, -1]
-        rivetedbot.append(edgeidsN)
-        beamids[idx], batids[idx] = bat_rail(mesh, ntrig, a1, a2, f, din, dz, edgeidsN, 
-                                             "rail", "bat", "rm", "bm", 17480)
-    rivetedbot.append(idgrids[-1][:, -1])
-    fib, sib, rib, rbib, rcib = panel(mesh, up.ffb, up.frb, up.tfb, up.trb, nb, nip, nf2, 
-                                      "panfl", "skin", "rib", "tr", up.surfb, rivetedbot, cspacing, bspacing)
-    
+    # rivetedbot = [idgrids[0][:, 0]]
+    # for igrid, idx in zip(idgrids[1:-1:2], range(1,len(idgrids)-1,2)):
+    #     #bats on the upper side go down
+    #     edgeidsN = igrid[:, -1]
+    #     rivetedbot.append(edgeidsN)
+    #     beamids[idx], batids[idx] = bat_rail(mesh, ntrig, a1, a2, f, din, dz, edgeidsN, 
+    #                                          "rail", "bat", "rm", "bm", 17480)
+    # rivetedbot.append(idgrids[-1][:, -1])
+    # fshb, sshb, fib, sib, rib, rbib, rcib = panel(mesh, up.ffb, up.frb, up.tfb, up.trb, nb, nip, nf2, 
+    #                                   "panfl", "skin", "rib", "tr", up.surfb, rivetedbot, cspacing, bspacing)
+    pts, ids = all_components(mesh, up, nb, na, nf2, 1, ntrig, dz, din, cspacing, bspacing, totmass, "rv", "sp", "pl", "rb", "sk", "rl", "bt", "bm", "rm")
 
     #comparison of what is registered in the mesh and what the sheets are
     from mpl_toolkits import mplot3d
