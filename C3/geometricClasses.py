@@ -184,6 +184,10 @@ class Mesh3D():
         for id1, id2 in zip(ids[:-1], ids[1:]):
             self.connections["beam"].append(MeshConn3D([id1, id2], eleid, protocol))
 
+    def beam_protocolize(self, ids, eleid, protocols):
+        for id1, id2, prot in zip(ids[:-1], ids[1:], protocols):
+            self.connections["beam"].append(MeshConn3D([id1, id2], eleid, prot))
+
     def pointmass_attach(self, id_, eleid, protocol=""): #used to attach extra point mass to a given point
         self.connections["mass"].append(MeshConn3D([id_], eleid, protocol))
 
@@ -191,7 +195,7 @@ class Mesh3D():
         labels_used = dict()
         basic_cmap = ["blue", "orange", "black", "green", "red", "yellow", "pink", "purple", "gray", "magenta"]
         for conn in self.connections["quad"]:
-            if conn.eleid[0:4]!= "/EXCL": #exclusion from plotting marker
+            if conn.eleid[0:5]!= "/EXCL": #exclusion from plotting marker
                 if not (conn.eleid in labels_used.keys()):
                     col = basic_cmap.pop(0)
                     ax.plot(*pts2coords3D([self.nodes[conn.ids[0]], self.nodes[conn.ids[1]], self.nodes[conn.ids[2]], self.nodes[conn.ids[3]], self.nodes[conn.ids[0]]]),
@@ -201,7 +205,7 @@ class Mesh3D():
                     ax.plot(*pts2coords3D([self.nodes[conn.ids[0]], self.nodes[conn.ids[1]], self.nodes[conn.ids[2]], self.nodes[conn.ids[3]], self.nodes[conn.ids[0]]]),
                         color=labels_used[conn.eleid])
         for conn in self.connections["spring"]:
-            if conn.eleid[0:4]!= "/EXCL": #exclusion from plotting marker
+            if conn.eleid[0:5]!= "/EXCL": #exclusion from plotting marker
                 if not (conn.eleid in labels_used.keys()):
                     col = basic_cmap.pop(0)
                     ax.plot(*pts2coords3D([self.nodes[conn.ids[0]], self.nodes[conn.ids[1]], self.nodes[conn.ids[0]]]), label=conn.eleid, color=col)
@@ -212,7 +216,7 @@ class Mesh3D():
                             color=labels_used[conn.eleid])
                     ax.scatter(*pts2coords3D([self.nodes[conn.ids[0]], self.nodes[conn.ids[1]]]), color=labels_used[conn.eleid],s=5)
         for conn in self.connections["beam"]:
-            if conn.eleid[0:4]!= "/EXCL": #exclusion from plotting marker
+            if conn.eleid[0:5]!= "/EXCL": #exclusion from plotting marker
                 if not (conn.eleid in labels_used.keys()):
                     col = basic_cmap.pop(0)
                     ax.plot(*pts2coords3D([self.nodes[conn.ids[0]], self.nodes[conn.ids[1]], self.nodes[conn.ids[0]]]), label=conn.eleid, color=col)
@@ -220,7 +224,7 @@ class Mesh3D():
                 else:
                     ax.plot(*pts2coords3D([self.nodes[conn.ids[0]], self.nodes[conn.ids[1]], self.nodes[conn.ids[0]]]), color=labels_used[conn.eleid])
         for conn in self.connections["mass"]:
-            if conn.eleid[0:4] != "/EXCL": #exclusion from plotting marker
+            if conn.eleid[0:5] != "/EXCL": #exclusion from plotting marker
                 if not (conn.eleid in labels_used.keys()):
                    col = basic_cmap.pop(0)
                    ax.scatter(*pts2coords3D([self.nodes[conn.ids[0]]]), label=conn.eleid, color=col)

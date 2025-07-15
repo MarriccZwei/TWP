@@ -106,14 +106,14 @@ def bat_rail(mesh:gcl.Mesh3D, ntrig:int, a1:float, a2:float, f:float,
 
     return beamids, batids
 
-def panel(mesh:gcl.Mesh3D, ff:gcl.Point3D, fr:gcl.Point3D, tf:gcl.Point3D, tr:gcl.Point3D, nb:int, nip:int, 
+def panel(mesh:gcl.Mesh3D, ff:gcl.Point3D, fr:gcl.Point3D, tf:gcl.Point3D, tr:gcl.Point3D, nb:int, nip:int, nf:int, 
           floor:str, skin:str, rib:str, rivet:str, panelz:ty.Callable, ribconnids:ty.List[nt.NDArray[np.int64]],
           cspacing:float, bspacing:float)->ty.Tuple[ty.List[int]]:
     #1) lower sheet
     ribconnpt1s = [mesh.nodes[ptids[0]] for ptids in ribconnids]
     ribconnpt2s = [mesh.nodes[ptids[-1]] for ptids in ribconnids]
     floorsh, secs = gcl.multi_section_sheet3D([ff]+ribconnpt1s+[fr], [tf]+ribconnpt2s+[tr], nb,
-                                                 [nip]*(len(ribconnpt1s)+1), True)
+                                                 [nf]+[nip]*(len(ribconnpt1s)-1)+[nf], True)
     flidspace = mesh.register(list(floorsh.flatten()))
     flidgrid = flidspace.reshape(floorsh.shape)
     mesh.quad_interconnect(flidgrid, floor)
@@ -151,7 +151,7 @@ def panel(mesh:gcl.Mesh3D, ff:gcl.Point3D, fr:gcl.Point3D, tf:gcl.Point3D, tr:gc
     #we use bspacing - spacing along the span, as chordwise stiffeners are
     bcount = int(np.ceil((tf.y-ff.y)/bspacing)) #more stiffeners chosen if not exact match
     assert nb/bcount >= 4 #elese you have insufficient mesh size and buckling cannot be captured
-    ribNbs = [int(np.rint(i)) for i in np.linspace(0, nb-1, bcount)]
+    ribNbs = [int(np.rint(i)) for i in np.linspace(0, nb-1, bcount+1)] #plus 1 as you have to close the panel
     ribIdbs = []
     for ribNb in ribNbs:
         ribIdbs.append([]) #creating a list for this spanwise position
@@ -174,9 +174,38 @@ def panel(mesh:gcl.Mesh3D, ff:gcl.Point3D, fr:gcl.Point3D, tf:gcl.Point3D, tr:gc
             mesh.spring_connect(ribIdb, flooridsb, rivet)
             mesh.spring_connect(ribIdb, upidsb, rivet)
 
-    
+    #5) extra spanwise stiffeners - again those use cspacing!
+    cribIds = list()
+    for ribnear, ribfar, ribNbf, ribNbt in zip(ribIdbs[:-1], ribIdbs[1:], ribNbs[:-1], ribNbs[1:]):
+        cribIds.append([])
+        for regnear, regfar, sec1, sec2 in zip(ribnear, ribfar, secs[:-1], secs[1:]):
+            regdist = mesh.nodes[regnear[-1]].x-mesh.nodes[regnear[0]].x
+            cribcount = int(np.ceil(regdist/cspacing))
+            assert nip/(cribcount+1)>=4 #otherwise mesh refinment insufficient for buckling
+            cribIds[-1].append([])
 
-    return flidgrid, upidgrid, mainribidlist, ribIdbs
+            if cribcount>1:
+                assert regdist > 0 #if we did not loose our coordinate system midway
+                #getting indices for brib connections and sheet connections
+                #we don't take into account the sides, as they are the obligatory ribs, already created
+                idxcs = [int(np.rint(i)) for i in np.linspace(sec1, sec2, cribcount+1)[1:-1]] #indices in c along sheet
+                idxregs = [ic-sec1-1 for ic in idxcs] #indices along brib regions
+                for idxc, idxr in zip(idxcs, idxregs): #rib creation
+                    cribpts = [fpc.pt_between(upc) for fpc, upc in zip(
+                        floorsh[(ribNbf+1):(ribNbt), idxc], upsh[ribNbf+1:ribNbt, idxc])]
+                    hcs = [abs(fpc.z-upc.z) for fpc, upc in zip(
+                        floorsh[(ribNbf+1):(ribNbt), idxc], upsh[ribNbf+1:ribNbt, idxc])]
+                    cribids = mesh.register(cribpts)
+                    mesh.beam_protocolize(cribids, rib, hcs[1:]) #again heights closer to tip to stay conservative
+                    mesh.beam_connect([cribids[0]], [regnear[idxr]], rib, hcs[0])
+                    htip = abs(upsh[ribNbt, idxc].z-floorsh[ribNbt, idxc].z) #stay conservative
+                    mesh.beam_connect([cribids[-1]], [regfar[idxr]], rib, htip)
+                    mesh.spring_connect(cribids, flidgrid[ribNbf+1:ribNbt, idxc], rivet)
+                    mesh.spring_connect(cribids, upidgrid[ribNbf+1:ribNbt, idxc], rivet)
+                    cribIds[-1].append(cribids)
+
+
+    return flidgrid, upidgrid, mainribidlist, ribIdbs, cribIds
     
 
 if __name__ == "__main__":
@@ -190,10 +219,10 @@ if __name__ == "__main__":
     ntrig = 2
     dz = .015
     din = .010
-    nip = 4
-    cspacing = .5
-    bspacing = 5
-    sheets, idgrids, a1, a2, f = trigspars(mesh, nb, na, nf2, ntrig, "tr", "ts", 
+    nip = 18
+    cspacing = .25
+    bspacing = 2
+    sheets, idgrids, a1, a2, f = trigspars(mesh, nb, na, nf2, ntrig, "/EXCLtr", "/EXCLts", 
                                 up.ffb, up.frb, up.frt, up.fft,
                                 up.tfb, up.trb, up.trt, up.tft)
     beamids, batids = [[]]*len(idgrids), [[]]*len(idgrids)
@@ -202,9 +231,10 @@ if __name__ == "__main__":
         #bats on the upper side go down
         edgeids = igrid[:, -1]
         rivetingids.append(edgeids)
-        beamids[idx], batids[idx] = bat_rail(mesh, ntrig, a1, a2, f, din, -dz, edgeids, "rail", "bat", "rm", "bm", 17480)
+        beamids[idx], batids[idx] = bat_rail(mesh, ntrig, a1, a2, f, din, -dz, edgeids, 
+                                             "/EXCLrail", "/EXCLbat", "/EXCLrm", "/EXCLbm", 17480)
     
-    floorids, skinids, ribids, ribIdbs = panel(mesh, up.fft, up.frt, up.tft, up.trt, nb, nip, 
+    floorids, skinids, ribids, ribIdbs, ribIdcs = panel(mesh, up.fft, up.frt, up.tft, up.trt, nb, nip, nf2, 
                                       "panfl", "skin", "rib", "tr", up.surft, rivetingids, cspacing, bspacing)
     
 
