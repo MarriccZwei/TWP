@@ -36,6 +36,8 @@ def integrate(xPerC_min:np.float64, xPerC_max:np.float64, yPerB2_min:np.float64,
     iny = inty(arcmax)-inty(arcmin)
     integral = 6*sideFactor/(npeak+1)/np.pi*inx*iny # see the booklet page for why is the 6/pi there
 
+    # assert not np.isclose(inx, 0)
+    # assert not np.isclose(iny, 0)
     intQx = lambda xPerC:xPerC**4/4-2*xPerC**3/3+xPerC**2/2 #centroid component in x direction
     intQy = lambda yPerB2:-(1-yPerB2**2)**1.5/3 #see June 27 booklet page for derivation
     Qx = intQx(xPerC_max)-intQx(xPerC_min)
@@ -57,6 +59,7 @@ def apply_on_wingbox(xmesh:nt.NDArray[np.float64], ymesh:nt.NDArray[np.float64],
     xPerC = np.zeros(xmesh.shape) #obtaining the chordwise normalised coords is more involved due to taper
     acs = np.zeros(xmesh.shape[1]) #save the slopes for later - for moment arm calculations
     for j in range(xmesh.shape[1]): #in the chordwise direction, we have a different a at each spanwise coordinate
+        assert not np.isclose(xmesh[-1,j], xmesh[0,j])
         acs[j] = (crange[1]-crange[0])/(xmesh[-1,j]-xmesh[0,j]) #repeating the procedure for y, but for each chord locally
         xPerC[:,j] = acs[j]*(xmesh[:,j]-xmesh[0,j])+crange[0]
 

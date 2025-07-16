@@ -52,6 +52,16 @@ class UnpackedPoints():
         self.trb = pts[7][1]
         self.trt = pts[7][2]
         self.tft = pts[7][3]
+        #x boundaries of the wing
+        ttxmax = max([pt.x for pt in tt])
+        ttxmin = min([pt.x for pt in tt])
+        #the overall chord length same for top/bot, but we have more space taken at the bot
+        xc = lambda x:(x-ttxmin)/(ttxmax-ttxmin)
+        self.xcft = xc(self.tft.x)
+        self.xcrt = xc(self.trt.x)
+        self.xcfb = xc(self.tfb.x)
+        self.xcrb = xc(self.trb.x)
+
     
 
     
