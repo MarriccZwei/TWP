@@ -208,9 +208,32 @@ def panel(mesh:gcl.Mesh3D, ff:gcl.Point3D, fr:gcl.Point3D, tf:gcl.Point3D, tr:gc
 
     return floorsh, upsh, flidgrid, upidgrid, mainribidlist, ribIdbs, cribIds
 
+def motors(mesh:gcl.Mesh3D, motors:ty.List[gcl.Point3D], mountwidth:float, panshTop:nt.ArrayLike, panidTop:nt.NDArray[np.int64], panshBot:nt.ArrayLike, panidBot:nt.NDArray[np.int64],
+           motor:str, motormount:str):
+    mids = list()
+    for mtr in motors:
+        #motor generation
+        mids+=list(mesh.register([mtr])) #it returns a list, so +=
+        mesh.pointmass_attach(mids[-1], motor)
+        #boundaries for motormount
+        motmount_ymin = mtr.y-mountwidth/2
+        motmount_ymax = mtr.y+mountwidth/2
+        #connecting the top sheet
+        yTop = np.array([pt.y for pt in panshTop[:, 0]])
+        checkTop = (yTop>=motmount_ymin) & (yTop<=motmount_ymax)
+        ids_2conn_top = panidTop[:, 0][checkTop]
+        mesh.spring_connect([mids[-1]]*len(ids_2conn_top), ids_2conn_top, motormount)
+        #connecting the bottom sheet
+        yBot = np.array([pt.y for pt in panshBot[:, 0]])
+        checkBot = (yBot>=motmount_ymin) & (yBot<=motmount_ymax)
+        ids_2conn_bot = panidBot[:, 0][checkBot]
+        mesh.spring_connect([mids[-1]]*len(ids_2conn_bot), ids_2conn_bot, motormount)
+    
+    return mids
 
-def all_components(mesh:gcl.Mesh3D, up:pfc.UnpackedPoints, nb:int, na:int, nf2:int, nipCoeff:int, ntrig:int, dzRail:float, dinRail:float, cspacing:float, bspacing:float, totmass:float,
-                   rivet:str, spar:str, plate:str, rib:str, skin:str, rail:str, bat:str, batmount:str, railmount:str):
+
+def all_components(mesh:gcl.Mesh3D, up:pfc.UnpackedPoints, nb:int, na:int, nf2:int, nipCoeff:int, ntrig:int, dzRail:float, dinRail:float, cspacing:float, bspacing:float, totmass:float, 
+                   mountwidth:float, rivet:str, spar:str, plate:str, rib:str, skin:str, rail:str, bat:str, batmount:str, railmount:str, motor:str, motormount:str):
     sparsh, sparigrids, a1, a2, f = trigspars(mesh, nb, na, nf2, ntrig, rivet, spar, up.ffb, up.frb, up.frt, up.fft, up.tfb, up.trb, up.trt, up.tft)
 
     nip = int(np.ceil(nipCoeff*(4*((a1+2*f)/cspacing+1)))) #obtaining nip so that we get the minimal required amount of elements
@@ -237,9 +260,12 @@ def all_components(mesh:gcl.Mesh3D, up:pfc.UnpackedPoints, nb:int, na:int, nf2:i
     rivetedbot.append(sparigrids[-1][:, -1])
     fshb, sshb, fib, sib, rib_, rbib, rcib = panel(mesh, up.ffb, up.frb, up.tfb, up.trb, nb, nip, nf2, 
                                       plate, skin, rib, rivet, up.surfb, rivetedbot, cspacing, bspacing)
+    
+    #motors
+    mids = motors(mesh, up.motors, mountwidth, floorsh, floorids, fshb, fib, motor, motormount)
 
     return {"spars":sparsh, "plateTop":floorsh, "skinTop":upsh, "plateBot":fshb, "skinBot":sshb}, {"spars":sparigrids, "plateTop":floorids, "skinTop":skinids, "plateBot":fib,
-         "skinBot":sib, "ribsTop":(ribids, ribIdbs, ribIdcs), "ribsBot":(rib_, rbib, rcib), "rails":beamids, "bats":batids}
+         "skinBot":sib, "ribsTop":(ribids, ribIdbs, ribIdcs), "ribsBot":(rib_, rbib, rcib), "rails":beamids, "bats":batids, "motors":mids}
 
 if __name__ == "__main__":
     import ptsFromCAD as pfc
@@ -256,6 +282,7 @@ if __name__ == "__main__":
     cspacing = .25
     bspacing = 2
     totmass = 17480
+    mountwidth = 1
     # sheets, idgrids, a1, a2, f = trigspars(mesh, nb, na, nf2, ntrig, "tr", "ts", 
     #                             up.ffb, up.frb, up.frt, up.fft,
     #                             up.tfb, up.trb, up.trt, up.tft)
@@ -281,7 +308,7 @@ if __name__ == "__main__":
     # rivetedbot.append(idgrids[-1][:, -1])
     # fshb, sshb, fib, sib, rib, rbib, rcib = panel(mesh, up.ffb, up.frb, up.tfb, up.trb, nb, nip, nf2, 
     #                                   "panfl", "skin", "rib", "tr", up.surfb, rivetedbot, cspacing, bspacing)
-    pts, ids = all_components(mesh, up, nb, na, nf2, 1, ntrig, dz, din, cspacing, bspacing, totmass, "rv", "sp", "pl", "rb", "sk", "rl", "bt", "bm", "rm")
+    pts, ids = all_components(mesh, up, nb, na, nf2, 1, ntrig, dz, din, cspacing, bspacing, totmass, mountwidth, "rv", "sp", "pl", "rb", "sk", "rl", "bt", "bm", "rm", "mo", "mm")
 
     #comparison of what is registered in the mesh and what the sheets are
     from mpl_toolkits import mplot3d

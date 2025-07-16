@@ -193,7 +193,7 @@ class Mesh3D():
 
     def visualise(self, ax):
         labels_used = dict()
-        basic_cmap = ["blue", "orange", "black", "green", "red", "yellow", "pink", "purple", "gray", "magenta"]
+        basic_cmap = ["blue", "orange", "black", "green", "red", "yellow", "pink", "purple", "gray", "magenta", "indigo", "gold"]
         for conn in self.connections["quad"]:
             if conn.eleid[0:5]!= "/EXCL": #exclusion from plotting marker
                 if not (conn.eleid in labels_used.keys()):
