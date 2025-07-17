@@ -138,12 +138,13 @@ def panel(mesh:gcl.Mesh3D, ff:gcl.Point3D, fr:gcl.Point3D, tf:gcl.Point3D, tr:gc
         upts = upsh[:, sec]
 
         #stiffener beams
+        dir=(1,0,0)
         ribpts = [flp.pt_between(upp) for flp, upp in zip(floorpts, upts)]
         ribids = mesh.register(ribpts)
         #connecting the beam so that a heighte is saved
         for id1, id2, pt2 in zip(ribids[:-1], ribids[1:], floorpts[1:]):
             #taking point 2, so further spanwise, this results in smaller Is, so conservative
-            mesh.beam_connect([id1], [id2], rib, abs(panelz(pt2.x, pt2.y)-pt2.z))
+            mesh.beam_connect([id1], [id2], rib, (abs(panelz(pt2.x, pt2.y)-pt2.z), dir))
         mesh.spring_connect(ribids, floorids, rivet)
         mesh.spring_connect(ribids, upids, rivet)
         mainribidlist.append(ribids)
@@ -169,9 +170,10 @@ def panel(mesh:gcl.Mesh3D, ff:gcl.Point3D, fr:gcl.Point3D, tf:gcl.Point3D, tr:gc
             ribIdb = mesh.register(ribptsb)
             ribIdbs[-1].append(ribIdb)
             #connections
-            mesh.beam_protocolize(ribIdb, rib, hbs[1:]) #chordwise you have to skip one h, you cannot guarantee conservativeness
-            mesh.beam_connect([ribIdb[0]], [mainribidlist[i][ribNb]], rib, hbs[0])
-            mesh.beam_connect([ribIdb[-1]], [mainribidlist[i+1][ribNb]], rib, hbs[-1])
+            dir = (0, tf.y-ff.y, tf.z-ff.z)
+            mesh.beam_protocolize(ribIdb, rib, [(h, dir) for h in hbs[1:]]) #chordwise you have to skip one h, you cannot guarantee conservativeness
+            mesh.beam_connect([ribIdb[0]], [mainribidlist[i][ribNb]], rib, (hbs[0], dir))
+            mesh.beam_connect([ribIdb[-1]], [mainribidlist[i+1][ribNb]], rib, (hbs[-1], dir))
             mesh.spring_connect(ribIdb, flooridsb, rivet)
             mesh.spring_connect(ribIdb, upidsb, rivet)
 
@@ -197,10 +199,11 @@ def panel(mesh:gcl.Mesh3D, ff:gcl.Point3D, fr:gcl.Point3D, tf:gcl.Point3D, tr:gc
                     hcs = [abs(fpc.z-upc.z) for fpc, upc in zip(
                         floorsh[(ribNbf+1):(ribNbt), idxc], upsh[ribNbf+1:ribNbt, idxc])]
                     cribids = mesh.register(cribpts)
-                    mesh.beam_protocolize(cribids, rib, hcs[1:]) #again heights closer to tip to stay conservative
-                    mesh.beam_connect([cribids[0]], [regnear[idxr]], rib, hcs[0])
+                    dir=(1,0,0)
+                    mesh.beam_protocolize(cribids, rib, [(h, dir) for h in hbs[1:]]) #again heights closer to tip to stay conservative
+                    mesh.beam_connect([cribids[0]], [regnear[idxr]], rib, (hcs[0], dir))
                     htip = abs(upsh[ribNbt, idxc].z-floorsh[ribNbt, idxc].z) #stay conservative
-                    mesh.beam_connect([cribids[-1]], [regfar[idxr]], rib, htip)
+                    mesh.beam_connect([cribids[-1]], [regfar[idxr]], rib, (htip, dir))
                     mesh.spring_connect(cribids, flidgrid[ribNbf+1:ribNbt, idxc], rivet)
                     mesh.spring_connect(cribids, upidgrid[ribNbf+1:ribNbt, idxc], rivet)
                     cribIds[-1].append(cribids)

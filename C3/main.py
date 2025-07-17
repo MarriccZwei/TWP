@@ -77,7 +77,7 @@ t_rib = 0.002 #panel rib thickness
 ks_rivet = p3g.SpringProp(1e5, 1e7, 1e7, 1e5, 1e5, 1e5, 0, 0, 1, 0, 1, 1) #rivets are all oriented along z axis
 # ks_railmount = (1e7, 1e7, 1e7, 1e7, 1e7, 1e7) #rail to flange mount also oriented along z
 # ks_batmount = (1e6, 1e6, 1e6, 1e6, 1e6, 1e6) #battery to rail mount also oriented along z
-ks_motmount =  p3g.SpringProp(1e8, 1e8, 1e8, 1e8, 1e8, 1e8) #TODO: here orientation will be "fun"
+ks_motmount =  p3g.SpringProp(1e12, 1e12, 1e12, 1e12, 1e12, 1e12) #TODO: here orientation will be "fun"
 
 #3) beams
 prop_rail = p3g.OrientedBeamProp(1, 0, 0)
@@ -91,9 +91,11 @@ prop_rail.intrho = RHO_STEEL*prop_rail.A
 prop_rail.intrhoy2 = RHO_STEEL*prop_rail.Izz
 prop_rail.intrhoz2 = RHO_STEEL*prop_rail.Iyy
 
-def prop_beam(Hpanel:float):
+def prop_beam(arg):
+    Hpanel=arg[0]
+    dir = arg[1]
     dH = Hpanel-2*t_rib-t_skin-t_plate
-    prop_rib = p3g.OrientedBeamProp(1, 0, 0)
+    prop_rib = p3g.OrientedBeamProp(*dir)
     prop_rib.A = t_rib*(2*ribflange+dH)
     #July 11th and July 7th pages
     centroid = ribflange*(ribflange+t_rib)/(2*ribflange+dH)
