@@ -13,7 +13,7 @@ class OrientedBeamProp(pbp.BeamProp):
         self.xyey = xyey
         self.xyez = xyez
 
-class SpringProp():
+class SpringProp(): #a spring prop class missing from pyfe3d with added rotation matrix arguments and mass to be spread between nodes
     def __init__(self, kxe, kye=0., kze=0., krxe=0., krye=0., krze=0., xex=1., xey=0., xez=0., xyex=1., xyey=1., xyez=0., m=0.):
         self.kxe = kxe
         self.kye = kye
@@ -30,6 +30,13 @@ class SpringProp():
         self.xyez = xyez
         self.nodem = m/2 #at each node shall go half of the mass
 
+    @property
+    def stiffs(self): #to make assingning stiffnesses less ugly
+        return self.kxe, self.kye, self.kze, self.krxe, self.krye, self.krze
+    
+    @property
+    def rots(self): #to make passing args to update_rotation_matrix less ugly
+        return self.xex, self.xey, self.xez, self.xyex, self.xyey, self.xyez
 
 def eles_from_gcl(mesh:gcl.Mesh3D, eleDict:ty.Dict[str, ty.Dict[str, object]]):
     #currently only for the elements we have used, same goes to gcl connections
@@ -96,12 +103,14 @@ def eles_from_gcl(mesh:gcl.Mesh3D, eleDict:ty.Dict[str, ty.Dict[str, object]]):
         spring.c1 = pf3.DOF*nid_pos[spring.n1]
         spring.c2 = pf3.DOF*nid_pos[spring.n2]
         if conn.protocol=="":
-            spring.kxe, spring.kye, spring.kze, spring.krxe, spring.krye, spring.krze = eleDict["spring"][conn.eleid]
+            sprop = eleDict["spring"][conn.eleid] #has to be in a SpringProp format
+            spring.kxe, spring.kye, spring.kze, spring.krxe, spring.krye, spring.krze = sprop.stiffs
         else:
-            spring.kxe, spring.kye, spring.kze, spring.krxe, spring.krye, spring.krze = eleDict["spring"][conn.eleid](conn.protocol)
+            sprop = eleDict["spring"][conn.eleid](conn.protocol)
+            spring.kxe, spring.kye, spring.kze, spring.krxe, spring.krye, spring.krze = sprop.stiffs
         spring.init_k_KC0 = init_k_KC0
         spring.init_k_M = init_k_M
-        spring.update_rotation_matrix(0, 0, 1, 1, 1, 0) #TODO: make this make sense
+        spring.update_rotation_matrix(*sprop.rots)
         spring.update_KC0(KC0r, KC0c, KC0v)
         #spring.update_M(Mr, Mc, Mv, shellprop)
         created_eles["spring"].append(spring)
@@ -110,7 +119,7 @@ def eles_from_gcl(mesh:gcl.Mesh3D, eleDict:ty.Dict[str, ty.Dict[str, object]]):
     #Beam elements
     for conn in mesh.connections["beam"]:
         if conn.protocol=="":
-            prop = eleDict["beam"][conn.eleid]
+            prop = eleDict["beam"][conn.eleid] #prop is an OrientedBeamProp
         else:
             prop = eleDict["beam"][conn.eleid](conn.protocol)
         beam = pf3.BeamC(probes["beam"])
@@ -122,7 +131,7 @@ def eles_from_gcl(mesh:gcl.Mesh3D, eleDict:ty.Dict[str, ty.Dict[str, object]]):
         beam.init_k_M = init_k_M
         beam.c1 = pf3.DOF*pos1
         beam.c2 = pf3.DOF*pos2
-        beam.update_rotation_matrix(1., 1., 0, ncoords_flatten) #TODO: make this make sense
+        beam.update_rotation_matrix(prop.xyex, prop.xyey, prop.xyez, ncoords_flatten) #OrientedBeamProp features used here
         beam.update_probe_xe(ncoords_flatten)
         beam.update_KC0(KC0r, KC0c, KC0v, prop)
         beam.update_M(Mr, Mc, Mv, prop) #TODO: mtype?
@@ -133,8 +142,9 @@ def eles_from_gcl(mesh:gcl.Mesh3D, eleDict:ty.Dict[str, ty.Dict[str, object]]):
     #TODO: Other eles
 
     KC0 = ss.coo_matrix((KC0v, (KC0r, KC0c)), shape=(N, N)).tocsc() #@# stiffness matrix in sparse format
+    M = ss.coo_matrix((Mv, (Mr, Mc)), shape=(N,N)).tocsc() #mass_matrix
 
-    return KC0, N, x, y, z, {'probes': probes, 'data':data, 'elements':created_eles, 'nids':nids, 
+    return KC0, M, N, x, y, z, {'probes': probes, 'data':data, 'elements':created_eles, 'nids':nids, 
                              'nid_pos':nid_pos, 'ncoords_flatten':ncoords_flatten, 'ncoords':ncoords}
 
 if __name__ == "__main__":
@@ -182,8 +192,7 @@ if __name__ == "__main__":
     rho = 7.83e3 # kg/m3
 
     #copypasted beam prop
-    import pyfe3d.beamprop as pbp
-    prop = pbp.BeamProp()
+    prop = OrientedBeamProp(1, 1,0)
     b = 0.05 # m
     hb = 0.05
     A = hb*b
@@ -203,10 +212,10 @@ if __name__ == "__main__":
     #dictionaries for the element types
     import pyfe3d.shellprop_utils as psu
     ele_prop = {'quad':{'quad1':psu.isotropic_plate(thickness=h, E=E, nu=nu, rho=rho, calc_scf=True)},
-                'spring':{'spring1':(1e2, 1e2, 1e2, 1e2, 1e2, 1e2)}, 'beam':{'beam1':prop}, 'mass':{}}
+                'spring':{'spring1':SpringProp(1e2, 1e3, 1e4, 1e5, 1e6, 1e7, 0,0,1, 0,1,1)}, 'beam':{'beam1':prop}, 'mass':{}}
 
     #exporting mesh to pyfe3D
-    KC0, N, x, y, z, _ = eles_from_gcl(mesh, ele_prop)
+    KC0, M, N, x, y, z, _ = eles_from_gcl(mesh, ele_prop)
 
     '''#copypast of applying loads etc'''
     print('elements created')
