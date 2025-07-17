@@ -3,8 +3,33 @@ import pyfe3d as pf3
 import scipy.sparse as ss
 import typing as ty
 import geometricClasses as gcl
+import pyfe3d.beamprop as pbp
 
 """The file containing an interpreter of the gcl connection matrix into pyfe3D elements"""
+class OrientedBeamProp(pbp.BeamProp):
+    def __init__(self, xyex, xyey, xyez):
+        super().__init__()
+        self.xyex = xyex
+        self.xyey = xyey
+        self.xyez = xyez
+
+class SpringProp():
+    def __init__(self, kxe, kye=0., kze=0., krxe=0., krye=0., krze=0., xex=1., xey=0., xez=0., xyex=1., xyey=1., xyez=0., m=0.):
+        self.kxe = kxe
+        self.kye = kye
+        self.kze = kze
+        self.krxe = krxe
+        self.krye = krye
+        self.krze = krze
+        self.xex = xex
+        self.xey = xey
+        self.xez = xez
+        self.xyex = xyex
+        self.xyex = xyex
+        self.xyey = xyey
+        self.xyez = xyez
+        self.nodem = m/2 #at each node shall go half of the mass
+
 
 def eles_from_gcl(mesh:gcl.Mesh3D, eleDict:ty.Dict[str, ty.Dict[str, object]]):
     #currently only for the elements we have used, same goes to gcl connections
@@ -76,7 +101,7 @@ def eles_from_gcl(mesh:gcl.Mesh3D, eleDict:ty.Dict[str, ty.Dict[str, object]]):
             spring.kxe, spring.kye, spring.kze, spring.krxe, spring.krye, spring.krze = eleDict["spring"][conn.eleid](conn.protocol)
         spring.init_k_KC0 = init_k_KC0
         spring.init_k_M = init_k_M
-        spring.update_rotation_matrix(0, 1, 0, 1, 1, 0) #TODO: make this make sense
+        spring.update_rotation_matrix(0, 0, 1, 1, 1, 0) #TODO: make this make sense
         spring.update_KC0(KC0r, KC0c, KC0v)
         #spring.update_M(Mr, Mc, Mv, shellprop)
         created_eles["spring"].append(spring)
@@ -206,7 +231,8 @@ if __name__ == "__main__":
 
     
     KC0uu = KC0[bu, :][:, bu]
-    fu = f[bu]
+    # KC0uk = KC0[bu, :][:, bk]
+    fu = f[bu]#-KC0uk@uk #uk would be with precribed displacements
     assert np.isclose(fu.sum(), fmid)
 
     #@# actually solving the fem model
