@@ -42,7 +42,7 @@ din = .010 #inner diameter of (threaded) battery rail
 cspacing = .25 #chordwise panel rib spacing
 bspacing = 2 #spanwise panel rib spacing
 ribflange = 0.0125 #rib flange length, excluding bends at corners
-motmountwidth = 0.7 #width of the motor mount along y
+# motmountwidth = 0.7 #width of the motor mount along y
 
 #loads
 n = 2.5 #[-], load factor
@@ -54,8 +54,8 @@ spar = "sp"
 rivet = "rv"
 battery = "bt"
 batteryRail = "br"
-batteryMount = "bm"
-railMount = "rm"
+# batteryMount = "bm"
+# railMount = "rm"
 panelPlate = "pl"
 panelRib = "rb"
 skin = "sk"
@@ -63,8 +63,8 @@ motor = "mo"
 motorMount = "mm"
 
 #geometry loading
-pts, ids = mc.all_components(mesh, up, nb, na, nf2, nipCoeff, ntrig, dz, din, cspacing, bspacing, BAT_MASS_1WING, motmountwidth, 
-                             rivet, spar, panelPlate, panelRib, skin, batteryRail, battery, batteryMount, railMount, motor, motorMount)
+pts, ids = mc.all_components(mesh, up, nb, na, nf2, nipCoeff, ntrig, dz, din, cspacing, bspacing, BAT_MASS_1WING,
+                             rivet, spar, panelPlate, panelRib, skin, batteryRail, battery, motor, motorMount)
 
 #element definitions
 #1) thicknesses
@@ -74,13 +74,13 @@ t_plate = 0.0025 #panel plate thickness
 t_rib = 0.002 #panel rib thickness
 
 #2) springs
-ks_rivet = (1e5, 1e5, 1e5, 1e5, 1e5, 1e5) #rivets are all oriented along z axis
-ks_railmount = (1e7, 1e7, 1e7, 1e7, 1e7, 1e7) #rail to flange mount also oriented along z
-ks_batmount = (1e6, 1e6, 1e6, 1e6, 1e6, 1e6) #battery to rail mount also oriented along z
-ks_motmount = (1e8, 1e8, 1e8, 1e8, 1e8, 1e8) #TODO: here orientation will be "fun"
+ks_rivet = p3g.SpringProp(1e5, 1e7, 1e7, 1e5, 1e5, 1e5, 0, 0, 1, 0, 1, 1) #rivets are all oriented along z axis
+# ks_railmount = (1e7, 1e7, 1e7, 1e7, 1e7, 1e7) #rail to flange mount also oriented along z
+# ks_batmount = (1e6, 1e6, 1e6, 1e6, 1e6, 1e6) #battery to rail mount also oriented along z
+ks_motmount =  p3g.SpringProp(1e8, 1e8, 1e8, 1e8, 1e8, 1e8) #TODO: here orientation will be "fun"
 
 #3) beams
-prop_rail = pbp.BeamProp()
+prop_rail = p3g.OrientedBeamProp(1, 0, 0)
 prop_rail.A = np.pi/4*din**2
 prop_rail.Iyy = np.pi/64*din**4
 prop_rail.Izz = prop_rail.Iyy
@@ -93,7 +93,7 @@ prop_rail.intrhoz2 = RHO_STEEL*prop_rail.Iyy
 
 def prop_beam(Hpanel:float):
     dH = Hpanel-2*t_rib-t_skin-t_plate
-    prop_rib = pbp.BeamProp()
+    prop_rib = p3g.OrientedBeamProp(1, 0, 0)
     prop_rib.A = t_rib*(2*ribflange+dH)
     #July 11th and July 7th pages
     centroid = ribflange*(ribflange+t_rib)/(2*ribflange+dH)
@@ -111,11 +111,11 @@ eleProps = {"quad":{spar:psp.isotropic_plate(thickness=t_spar, E=E, nu=NU, rho=R
                     skin:psp.isotropic_plate(thickness=t_skin, E=E, nu=NU, rho=RHO, calc_scf=True),
                     panelPlate:psp.isotropic_plate(thickness=t_plate, E=E, nu=NU, rho=RHO, calc_scf=True), 
                     panelRib:psp.isotropic_plate(thickness=t_rib, E=E, nu=NU, rho=RHO, calc_scf=True)},
-            "spring":{rivet:ks_rivet, railMount:ks_railmount, batteryMount:ks_batmount, motorMount:ks_motmount},
+            "spring":{rivet:ks_rivet, motorMount:ks_motmount},
             "beam":{batteryRail:prop_rail, panelRib:prop_beam}, "mass":{}}
 
 #exporting mesh to pyfe3d
-KC0, N, x, y, z, outdict = p3g.eles_from_gcl(mesh, eleProps)
+KC0, M, N, x, y, z, outdict = p3g.eles_from_gcl(mesh, eleProps)
 
 #boundary conditions = fix at y of fuselage boundary
 bk = np.zeros(N, dtype=bool)
@@ -156,11 +156,8 @@ assert np.isclose(f[2::pf3.DOF].sum(), L/2) #we have to compare with f not fu, c
 
 #applying thrust
 for mtr, mid in zip(up.motors, ids["motors"]): #checking coordinate correspondence
-    assert np.isclose(mtr.x, x[mid])
-    assert np.isclose(mtr.y, y[mid])
-    assert np.isclose(mtr.z, z[mid])
-    f[0::pf3.DOF][mid] = FT
-    f[3::pf3.DOF][mid] = TT
+    f[0::pf3.DOF][mid[0]] = TT/2
+    f[3::pf3.DOF][mid[1]] = TT/2
 
 # plt.figure()
 # for xp, xm, yp, ym, yb, xc in zip(np.ravel(ncxp), np.ravel(ncxm), np.ravel(ncyp), np.ravel(ncym), np.ravel(yPerB2), np.ravel(xPerC)):
