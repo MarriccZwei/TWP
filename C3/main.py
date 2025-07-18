@@ -42,6 +42,7 @@ din = .010 #inner diameter of (threaded) battery rail
 cspacing = .25 #chordwise panel rib spacing
 bspacing = 2 #spanwise panel rib spacing
 ribflange = 0.0125 #rib flange length, excluding bends at corners
+motormass =1000
 # motmountwidth = 0.7 #width of the motor mount along y
 
 #loads
@@ -114,7 +115,7 @@ eleProps = {"quad":{spar:psp.isotropic_plate(thickness=t_spar, E=E, nu=NU, rho=R
                     panelPlate:psp.isotropic_plate(thickness=t_plate, E=E, nu=NU, rho=RHO, calc_scf=True), 
                     panelRib:psp.isotropic_plate(thickness=t_rib, E=E, nu=NU, rho=RHO, calc_scf=True)},
             "spring":{rivet:ks_rivet, motorMount:ks_motmount},
-            "beam":{batteryRail:prop_rail, panelRib:prop_beam}, "mass":{}}
+            "beam":{batteryRail:prop_rail, panelRib:prop_beam}, "mass":{battery:lambda m:m, motor:motormass}}
 
 #exporting mesh to pyfe3d
 KC0, M, N, x, y, z, outdict = p3g.eles_from_gcl(mesh, eleProps)
@@ -160,6 +161,9 @@ assert np.isclose(f[2::pf3.DOF].sum(), L/2) #we have to compare with f not fu, c
 for mtr, mid in zip(up.motors, ids["motors"]): #checking coordinate correspondence
     f[0::pf3.DOF][mid[0]] = TT/2
     f[3::pf3.DOF][mid[1]] = TT/2
+
+#applying weight
+f+=p3g.weight(M, n*G0, N, pf3.DOF, gcl.Direction3D(0,0,-1))
 
 # plt.figure()
 # for xp, xm, yp, ym, yb, xc in zip(np.ravel(ncxp), np.ravel(ncxm), np.ravel(ncyp), np.ravel(ncym), np.ravel(yPerB2), np.ravel(xPerC)):
