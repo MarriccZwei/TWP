@@ -60,7 +60,7 @@ def eles_from_gcl(mesh:gcl.Mesh3D, eleDict:ty.Dict[str, ty.Dict[str, object]]):
             sparse_size += data[key].KC0_SPARSE_SIZE*len(val)
             mass_size += data[key].M_SPARSE_SIZE*len(val)
         else:
-            mass_size += PM_SPARSE_SIZE #a mass in the translational DOF on the diagonal
+            mass_size += PM_SPARSE_SIZE*len(val) #a mass in the translational DOF on the diagonal
 
     #initialising system matrices
     KC0r = np.zeros(sparse_size, dtype=pf3.INT)
@@ -173,12 +173,12 @@ def eles_from_gcl(mesh:gcl.Mesh3D, eleDict:ty.Dict[str, ty.Dict[str, object]]):
                              'nid_pos':nid_pos, 'ncoords_flatten':ncoords_flatten, 'ncoords':ncoords}
 
 def weight(M:ss.coo_matrix, g:float, N:int, DOF:int, wd:gcl.Direction3D):
-    Md = np.diag(M.diagonal()) #the diagonal terms simbolising the actual masses of the elements
-    gvec = np.zeros(N)
-    gvec[0::DOF] = g*wd.x
-    gvec[1::DOF] = g*wd.y
-    gvec[2::DOF] = g*wd.z
-    return Md@gvec
+    diag = M.diagonal()
+    Wvec = np.zeros(N)
+    Wvec[0::DOF] = g*wd.x*diag[0::DOF]
+    Wvec[1::DOF] = g*wd.y*diag[0::DOF]
+    Wvec[2::DOF] = g*wd.z*diag[0::DOF]
+    return Wvec
 
 if __name__ == "__main__":
     pts1 = [gcl.Point3D(-5, 0, 0), gcl.Point3D(-2.5, 10, 0)]
