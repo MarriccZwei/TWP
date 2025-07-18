@@ -6,6 +6,8 @@ import geometricClasses as gcl
 import pyfe3d.beamprop as pbp
 
 """The file containing an interpreter of the gcl connection matrix into pyfe3D elements"""
+PM_SPARSE_SIZE = 3
+
 class OrientedBeamProp(pbp.BeamProp):
     def __init__(self, xyex, xyey, xyez):
         super().__init__()
@@ -14,7 +16,7 @@ class OrientedBeamProp(pbp.BeamProp):
         self.xyez = xyez
 
 class SpringProp(): #a spring prop class missing from pyfe3d with added rotation matrix arguments and mass to be spread between nodes
-    def __init__(self, kxe, kye=0., kze=0., krxe=0., krye=0., krze=0., xex=1., xey=0., xez=0., xyex=1., xyey=1., xyez=0., m=0.):
+    def __init__(self, kxe, kye=0., kze=0., krxe=0., krye=0., krze=0., xex=1., xey=0., xez=0., xyex=1., xyey=1., xyez=0.):
         self.kxe = kxe
         self.kye = kye
         self.kze = kze
@@ -28,7 +30,6 @@ class SpringProp(): #a spring prop class missing from pyfe3d with added rotation
         self.xyex = xyex
         self.xyey = xyey
         self.xyez = xyez
-        self.nodem = m/2 #at each node shall go half of the mass
 
     @property
     def stiffs(self): #to make assingning stiffnesses less ugly
@@ -58,6 +59,8 @@ def eles_from_gcl(mesh:gcl.Mesh3D, eleDict:ty.Dict[str, ty.Dict[str, object]]):
         if key!="mass": #mass does not contribute here, it's assigned to the mass matrix
             sparse_size += data[key].KC0_SPARSE_SIZE*len(val)
             mass_size += data[key].M_SPARSE_SIZE*len(val)
+        else:
+            mass_size += PM_SPARSE_SIZE #a mass in the translational DOF on the diagonal
 
     #initialising system matrices
     KC0r = np.zeros(sparse_size, dtype=pf3.INT)
@@ -138,6 +141,28 @@ def eles_from_gcl(mesh:gcl.Mesh3D, eleDict:ty.Dict[str, ty.Dict[str, object]]):
         created_eles["beam"].append(spring)
         init_k_KC0 += data["beam"].KC0_SPARSE_SIZE
         init_k_M += data["beam"].M_SPARSE_SIZE
+    #Point masses
+    for conn in mesh.connections["mass"]:
+        if conn.protocol=="":
+            mass = eleDict["mass"][conn.eleid]
+        else:
+            mass = eleDict["mass"][conn.eleid](conn.protocol)
+        #accessing the mass matrix directly
+        k = init_k_M
+        id_ = conn.ids[0]
+        pos = pf3.DOF*id_ #position based on the id of the element
+        Mr[k] = 0+pos
+        Mc[k] = 0+pos
+        Mv[k] += mass
+        k+=1
+        Mr[k] = 1+pos
+        Mc[k] = 1+pos
+        Mv[k] += mass
+        k+=1
+        Mr[k] =2+pos
+        Mc[k] = 2+pos
+        Mv[k] += mass
+        init_k_M += PM_SPARSE_SIZE
 
     #TODO: Other eles
 
@@ -146,6 +171,14 @@ def eles_from_gcl(mesh:gcl.Mesh3D, eleDict:ty.Dict[str, ty.Dict[str, object]]):
 
     return KC0, M, N, x, y, z, {'probes': probes, 'data':data, 'elements':created_eles, 'nids':nids, 
                              'nid_pos':nid_pos, 'ncoords_flatten':ncoords_flatten, 'ncoords':ncoords}
+
+def weight(M:ss.coo_matrix, g:float, N:int, DOF:int, wd:gcl.Direction3D):
+    Md = np.diag(M.diagonal()) #the diagonal terms simbolising the actual masses of the elements
+    gvec = np.zeros(N)
+    gvec[0::DOF] = g*wd.x
+    gvec[1::DOF] = g*wd.y
+    gvec[2::DOF] = g*wd.z
+    return Md@gvec
 
 if __name__ == "__main__":
     pts1 = [gcl.Point3D(-5, 0, 0), gcl.Point3D(-2.5, 10, 0)]
@@ -171,6 +204,7 @@ if __name__ == "__main__":
     mesh.beam_interconnect(beamnodeids, "beam1")
     beamnodeids = list(idgrid2[:, 10])
     mesh.beam_interconnect(beamnodeids, "beam1")
+    mesh.pointmass_attach(27, "m1")
 
     #checking the mesh
     import matplotlib.pyplot as plt 
@@ -212,13 +246,14 @@ if __name__ == "__main__":
     #dictionaries for the element types
     import pyfe3d.shellprop_utils as psu
     ele_prop = {'quad':{'quad1':psu.isotropic_plate(thickness=h, E=E, nu=nu, rho=rho, calc_scf=True)},
-                'spring':{'spring1':SpringProp(1e2, 1e3, 1e4, 1e5, 1e6, 1e7, 0,0,1, 0,1,1)}, 'beam':{'beam1':prop}, 'mass':{}}
+                'spring':{'spring1':SpringProp(1e2, 1e3, 1e4, 1e5, 1e6, 1e7, 0,0,1, 0,1,1)}, 'beam':{'beam1':prop}, 'mass':{'m1':20}}
 
     #exporting mesh to pyfe3D
     KC0, M, N, x, y, z, _ = eles_from_gcl(mesh, ele_prop)
 
     '''#copypast of applying loads etc'''
     print('elements created')
+    print(max(M.diagonal()), (M.diagonal()).argmax())
 
     #@# boundary conditions
     #@# separating interior and boundary elements
@@ -237,12 +272,15 @@ if __name__ == "__main__":
     fmid = 5.
     check = np.isclose(x, 0) & np.isclose(y, 5)
     f[2::pf3.DOF][check] = fmid/np.count_nonzero(check) #applying the point loads on the node close to the middle
+    assert np.isclose(f.sum(), fmid)
 
+    #applying weight
+    f+=weight(M, 9.81, N, pf3.DOF, gcl.Direction3D(0,0,1))
     
     KC0uu = KC0[bu, :][:, bu]
     # KC0uk = KC0[bu, :][:, bk]
     fu = f[bu]#-KC0uk@uk #uk would be with precribed displacements
-    assert np.isclose(fu.sum(), fmid)
+
 
     #@# actually solving the fem model
     from scipy.sparse.linalg import spsolve
