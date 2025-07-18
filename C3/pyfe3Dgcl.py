@@ -15,8 +15,14 @@ class OrientedBeamProp(pbp.BeamProp):
         self.xyey = xyey
         self.xyez = xyez
 
+class SpringData(): #spring data with reserved mass matrix for mass at nodes
+    def __init__(self):
+        self.KC0_SPARSE_SIZE = 72
+        self.KG_SPARSE_SIZE = 0
+        self.M_SPARSE_SIZE = 6 #2*3 masses for translational DOF
+
 class SpringProp(): #a spring prop class missing from pyfe3d with added rotation matrix arguments and mass to be spread between nodes
-    def __init__(self, kxe, kye=0., kze=0., krxe=0., krye=0., krze=0., xex=1., xey=0., xez=0., xyex=1., xyey=1., xyez=0.):
+    def __init__(self, kxe, kye=0., kze=0., krxe=0., krye=0., krze=0., xex=1., xey=0., xez=0., xyex=1., xyey=1., xyez=0., m=0.):
         self.kxe = kxe
         self.kye = kye
         self.kze = kze
@@ -30,6 +36,7 @@ class SpringProp(): #a spring prop class missing from pyfe3d with added rotation
         self.xyex = xyex
         self.xyey = xyey
         self.xyez = xyez
+        self.nodem = m/2 #half of the spring mass shall go to each node
 
     @property
     def stiffs(self): #to make assingning stiffnesses less ugly
@@ -38,11 +45,42 @@ class SpringProp(): #a spring prop class missing from pyfe3d with added rotation
     @property
     def rots(self): #to make passing args to update_rotation_matrix less ugly
         return self.xex, self.xey, self.xez, self.xyex, self.xyey, self.xyez
+    
+class Spring(pf3.Spring):
+    def __init__(self, probe:pf3.SpringProbe):
+        super(Spring, self).__init__()
+        self.probe=probe
+
+    def update_M(self, Mr, Mc, Mv, prop:SpringProp, init_M):
+        k = init_M
+        Mr[k] = 0+self.c1
+        Mc[k] = 0+self.c1
+        Mv[k] = prop.nodem
+        k+=1
+        Mr[k] = 1+self.c1
+        Mc[k] = 1+self.c1
+        Mv[k] = prop.nodem
+        k+=1
+        Mr[k] = 2+self.c1
+        Mc[k] = 2+self.c1
+        Mv[k] = prop.nodem
+        k+=1
+        Mr[k] = 0+self.c2
+        Mc[k] = 0+self.c2
+        Mv[k] = prop.nodem
+        k+=1
+        Mr[k] = 1+self.c2
+        Mc[k] = 1+self.c2
+        Mv[k] = prop.nodem
+        k+=1
+        Mr[k] = 2+self.c2
+        Mc[k] = 2+self.c2
+        Mv[k] = prop.nodem
 
 def eles_from_gcl(mesh:gcl.Mesh3D, eleDict:ty.Dict[str, ty.Dict[str, object]]):
     #currently only for the elements we have used, same goes to gcl connections
     probes = {"quad": pf3.Quad4Probe(), "spring": pf3.SpringProbe(), "beam":pf3.BeamCProbe(), "mass":None}
-    data = {"quad": pf3.Quad4Data(), "spring": pf3.SpringData(), "beam":pf3.BeamCData(), "mass":None}
+    data = {"quad": pf3.Quad4Data(), "spring":SpringData(), "beam":pf3.BeamCData(), "mass":None}
     created_eles = {"quad":[], "spring":[], "beam":[], "mass":[]}
 
     #obtaining nodes geometry
@@ -100,7 +138,7 @@ def eles_from_gcl(mesh:gcl.Mesh3D, eleDict:ty.Dict[str, ty.Dict[str, object]]):
         init_k_M += data["quad"].M_SPARSE_SIZE
     #Spring elements
     for conn in mesh.connections["spring"]:
-        spring = pf3.Spring(probes["spring"])
+        spring = Spring(probes["spring"])
         spring.n1 = nids[conn.ids[0]]
         spring.n2 = nids[conn.ids[1]]
         spring.c1 = pf3.DOF*nid_pos[spring.n1]
@@ -115,7 +153,7 @@ def eles_from_gcl(mesh:gcl.Mesh3D, eleDict:ty.Dict[str, ty.Dict[str, object]]):
         spring.init_k_M = init_k_M
         spring.update_rotation_matrix(*sprop.rots)
         spring.update_KC0(KC0r, KC0c, KC0v)
-        #spring.update_M(Mr, Mc, Mv, shellprop)
+        spring.update_M(Mr, Mc, Mv, sprop, init_k_M)
         created_eles["spring"].append(spring)
         init_k_KC0 += data["spring"].KC0_SPARSE_SIZE
         init_k_M += data["spring"].M_SPARSE_SIZE
