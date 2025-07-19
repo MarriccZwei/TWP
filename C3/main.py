@@ -75,10 +75,10 @@ t_plate = 0.0025 #panel plate thickness
 t_rib = 0.002 #panel rib thickness
 
 #2) springs
-ks_rivet = p3g.SpringProp(1e5, 1e7, 1e7, 1e5, 1e5, 1e5, 0, 0, 1, 0, 1, 1) #rivets are all oriented along z axis
+ks_rivet = p3g.SpringProp(1e12, 1e14, 1e14, 1e5, 1e5, 1e5, 0, 0, 1, 0, 1, 1, .01) #rivets are all oriented along z axis
 # ks_railmount = (1e7, 1e7, 1e7, 1e7, 1e7, 1e7) #rail to flange mount also oriented along z
 # ks_batmount = (1e6, 1e6, 1e6, 1e6, 1e6, 1e6) #battery to rail mount also oriented along z
-ks_motmount =  p3g.SpringProp(1e12, 1e12, 1e12, 1e12, 1e12, 1e12) #TODO: here orientation will be "fun"
+ks_motmount =  p3g.SpringProp(1e16, 1e16, 1e16, 1e16, 1e16, 1e16, 2) #TODO: here orientation will be "fun"
 
 #3) beams
 prop_rail = p3g.OrientedBeamProp(1, 0, 0)
