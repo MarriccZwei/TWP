@@ -95,7 +95,7 @@ def bat_rail(mesh:gcl.Mesh3D, ntrig:int, a1:float, a2:float, f:float,
         #assigning the variable mass to the battery using protocol
         mesh.pointmass_attach(batid[0], bat, props[i]*propmass)
         mesh.spring_connect([i], batid, batmount)
-        batids.append(batids)
+        batids.append(batid)
 
     return beamids, batids
 
