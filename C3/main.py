@@ -13,6 +13,7 @@ import numpy as np
 from mpl_toolkits import mplot3d
 import matplotlib.pyplot as plt
 import scipy.sparse.linalg as ssl
+import copy
 
 #constants/givens
 BAT_MASS_1WING = 17480 #kg
@@ -43,7 +44,9 @@ din = .010 #inner diameter of (threaded) battery rail
 cspacing = .25 #chordwise panel rib spacing
 bspacing = 2 #spanwise panel rib spacing
 ribflange = 0.0125 #rib flange length, excluding bends at corners
-motormass =1000
+motormass = 1000
+lgmass = 5000
+hingemass = 500
 # motmountwidth = 0.7 #width of the motor mount along y
 
 #loads
@@ -53,20 +56,22 @@ TT = 1400 #Nm, per motor, can be negative depends on direction of spinning
 
 #eleids
 spar = "sp"
-rivet = "rv"
 battery = "bt"
 batteryRail = "br"
 # batteryMount = "bm"
 # railMount = "rm"
 panelPlate = "pl"
+panelFlange = "fl"
 panelRib = "rb"
 skin = "sk"
 motor = "mo"
-motorMount = "mm"
+lg ="lg"
+hinge ="hn"
+mount = "mm"
 
 #geometry loading
 pts, ids = mc.all_components(mesh, up, nb, na, nf2, nipCoeff, ntrig, dz, din, cspacing, bspacing, BAT_MASS_1WING,
-                             rivet, spar, panelPlate, panelRib, skin, batteryRail, battery, motor, motorMount)
+                             spar, panelPlate, panelRib, panelFlange, skin, batteryRail, battery, motor, lg, hinge, mount)
 
 #element definitions
 #1) thicknesses
@@ -76,7 +81,7 @@ t_plate = 0.0025 #panel plate thickness
 t_rib = 0.002 #panel rib thickness
 
 #2) springs
-ks_rivet = p3g.SpringProp(INFTY_STIFF, INFTY_STIFF, INFTY_STIFF, 1e5, 1e5, 1e5, 0, 0, 1, 0, 1, 1, .01) #rivets are all oriented along z axis
+ks_rivet = p3g.SpringProp(1e5, 1e7, 1e7, 1e5, 1e5, 1e5, 0, 0, 1, 0, 1, 1, .01) #rivets are all oriented along z axis
 # ks_railmount = (1e7, 1e7, 1e7, 1e7, 1e7, 1e7) #rail to flange mount also oriented along z
 # ks_batmount = (1e6, 1e6, 1e6, 1e6, 1e6, 1e6) #battery to rail mount also oriented along z
 ks_motmount =  p3g.SpringProp(INFTY_STIFF, INFTY_STIFF, INFTY_STIFF, INFTY_STIFF, INFTY_STIFF, INFTY_STIFF, 2) #TODO: here orientation will be "fun"
@@ -93,30 +98,32 @@ prop_rail.intrho = RHO_STEEL*prop_rail.A
 prop_rail.intrhoy2 = RHO_STEEL*prop_rail.Izz
 prop_rail.intrhoz2 = RHO_STEEL*prop_rail.Iyy
 
-def prop_beam(arg):
-    Hpanel=arg[0]
-    dir = arg[1]
-    dH = Hpanel-2*t_rib-t_skin-t_plate
-    prop_rib = p3g.OrientedBeamProp(*dir)
-    prop_rib.A = t_rib*(2*ribflange+dH)
-    #July 11th and July 7th pages
-    centroid = ribflange*(ribflange+t_rib)/(2*ribflange+dH)
-    prop_rib.Izz = 2*(t_rib*ribflange**3/12+((t_rib+ribflange)/2-centroid)**2*t_rib*ribflange)+dH*t_rib**3/12+centroid**2*dH*t_rib
-    prop_rib.Iyy = t_rib*dH**3/12+2*(ribflange*t_rib**3/12+((dH+t_rib)/2)**2*ribflange*t_rib)
-    scf = 5/6 #ASSUMPTION, TODO: verify
-    prop_rib.G = scf*E/2/(1+0.3)
-    prop_rib.intrho = RHO_STEEL*prop_rib.A
-    prop_rib.intrhoy2 = RHO_STEEL*prop_rib.Izz
-    prop_rib.intrhoz2 = RHO_STEEL*prop_rib.Iyy
-    return prop_rib
+#template for the flange prop
+prop_flange = p3g.OrientedBeamProp(0, 0, 0)
+prop_flange.A = t_rib*ribflange
+prop_flange.Izz = t_rib*ribflange**3/12
+prop_flange.Iyy = ribflange*t_rib**3/12
+scf = 5/6 #ASSUMPTION, TODO: verify
+prop_flange.G = scf*E/2/(1+0.3)
+prop_flange.intrho = RHO*prop_flange.A
+prop_flange.intrhoy2 = RHO*prop_flange.Izz
+prop_flange.intrhoz2 = RHO*prop_flange.Iyy
+
+def prop_flange_or(dir): #oriented flange prop
+    pfor = copy.deepcopy(prop_flange)
+    pfor.xyex = dir[0]
+    pfor.xyey = dir[1]
+    pfor.xyez = dir[2]
+    return pfor
 
 #element dictionary
 eleProps = {"quad":{spar:psp.isotropic_plate(thickness=t_spar, E=E, nu=NU, rho=RHO, calc_scf=True), 
                     skin:psp.isotropic_plate(thickness=t_skin, E=E, nu=NU, rho=RHO, calc_scf=True),
                     panelPlate:psp.isotropic_plate(thickness=t_plate, E=E, nu=NU, rho=RHO, calc_scf=True), 
                     panelRib:psp.isotropic_plate(thickness=t_rib, E=E, nu=NU, rho=RHO, calc_scf=True)},
-            "spring":{rivet:ks_rivet, motorMount:ks_motmount},
-            "beam":{batteryRail:prop_rail, panelRib:prop_beam}, "mass":{battery:lambda m:m, motor:motormass}}
+            "spring":{mount:ks_motmount},
+            "beam":{batteryRail:prop_rail, panelFlange:prop_flange_or}, 
+            "mass":{battery:lambda m:m, motor:motormass, lg:lgmass, hinge:hingemass}}
 
 #exporting mesh to pyfe3d
 KC0, M, N, x, y, z, outdict = p3g.eles_from_gcl(mesh, eleProps)
@@ -186,11 +193,30 @@ w = u[2::pf3.DOF]
 v = u[0::pf3.DOF]
 
 #provisorical scatterplot to see if the solution ain't complete trash
+
+
+
 plt.figure()
-plt.subplot(121)
-plt.scatter(y, w)
-plt.title("Vertical displacement")
-plt.subplot(122)
-plt.scatter(y, v)
-plt.title("Horizontal displacement")
+levels = np.linspace(w.min(), w.max(), 50)
+
+def contourp(loc:int, compId:str):
+    plt.subplot(loc)
+    selection = ids[compId]
+    sf = selection.flatten()
+    plt.contourf(x[sf].reshape(selection.shape), y[sf].reshape(selection.shape), w[sf].reshape(selection.shape), levels=levels)
+
+contourp(231, "plateTop")
+contourp(232, "skinTop")
+contourp(233, "spars")
+
+contourp(234, "plateBot")
+contourp(235, "skinBot")
+
+plt.subplot(236)
+x = [0,0,1,1,2,2,3,3,4,5]
+y = [w[ids["motors"][0][0]], w[ids["motors"][0][1]], w[ids["motors"][1][0]], w[ids["motors"][1][1]],
+     w[ids["motors"][2][0]], w[ids["motors"][2][1]], w[ids["motors"][3][0]], w[ids["motors"][3][1]],
+     w[ids["lg"]], w[ids["hinge"]]]
+plt.scatter(x, y)
+plt.xticks([0,1,2,3,4,5], ["m1","m2", "m3", "m4", "lg", "hn"])
 plt.show()

@@ -8,12 +8,12 @@ import ptsFromCAD as pfc
 Inside-component connections will be completed in this file, 
 some connections might have to be applied in main'''
 def trigspars(mesh:gcl.Mesh3D, nb:int, na:int, nf2:int, ntrig:int, 
-              rivet:str, shell:str, ffb:gcl.Point3D, frb:gcl.Point3D, 
+              shell:str, ffb:gcl.Point3D, frb:gcl.Point3D, 
               frt:gcl.Point3D, fft:gcl.Point3D,tfb:gcl.Point3D, 
               trb:gcl.Point3D, trt:gcl.Point3D, tft:gcl.Point3D
               )->ty.Tuple[ty.List[nt.ArrayLike]]:
     def trig_crossec(fb:gcl.Point3D, rb:gcl.Point3D, rt:gcl.Point3D, 
-                     ft:gcl.Point3D)->ty.List[ty.List[gcl.Point3D]]:
+                     ft:gcl.Point3D)->ty.List[gcl.Point3D]:
         a = fb.pythagoras(ft) #the side of the battery triangle
         f = (ft.pythagoras(rt)-a*ntrig)/(2*ntrig+1) #the full flange width
         f2 = f/2 #half flange wit=dth used for until-rivet modelling
@@ -24,7 +24,7 @@ def trigspars(mesh:gcl.Mesh3D, nb:int, na:int, nf2:int, ntrig:int,
         #1) first sheet, the inwards curved
         inf = dirc.step(fb, f2) #inwards flange midpoint
         tfp = dirc.step(ft, f2) #top flange midpoint - updated later
-        pts = [[inf, fb, ft, tfp]] #output - list of lists of points
+        pts = [inf, fb, ft, tfp] #output - list of lists of points
 
         #2) creating all the middle sheets
         for i in range(ntrig):
@@ -32,41 +32,33 @@ def trigspars(mesh:gcl.Mesh3D, nb:int, na:int, nf2:int, ntrig:int,
             cpt = dirc.step(tfp, f2) #corner point top
             cpb = dird.step(cpt, a) #corner point bottom
             bfp = dirc.step(cpb, f2) #bottom flange midpoint
-            pts.append([tfp, cpt, cpb, bfp])
+            pts+=[cpt, cpb, bfp]
             #2.2) uphill sheet
             cpb = dirc.step(bfp, f2) #the pts get updated
             cpt = diru.step(cpb, a)
             tfp2 = dirc.step(cpt, f2) #update with check
             assert np.isclose(tfp2.x, tfp.x+a+f*2)
             tfp = tfp2
-            pts.append([bfp, cpb, cpt, tfp])
+            pts+=[cpb, cpt, tfp]
         
         #3) creating the final sheet
         assert np.isclose(tfp.x, rt.x-f2)
         #again, an inwards-facing flange
-        pts.append([tfp, rt, rb, dirc.step(rb, -f2)])
+        pts+=[rt, rb, dirc.step(rb, -f2)]
 
         return pts, a, f
     
     #appling the cross section generation to get sheets
-    pts1s, a1, f = trig_crossec(ffb, frb, frt, fft)
-    pts2s, a2, _ = trig_crossec(tfb, trb, trt, tft)
-    sheets = list()
-    idgrids = list()
-    for pt1s, pt2s in zip(pts1s, pts2s):
-        sheet = gcl.multi_section_sheet3D(pt1s, pt2s, nb, [nf2, na, nf2])
-        idspace = mesh.register(list(sheet.flatten()))
-        idgrid = idspace.reshape(sheet.shape)
-        sheets.append(sheet)
-        idgrids.append(idgrid)
-        #interconnection of sheets
-        mesh.quad_interconnect(idgrid, shell)
-    
-    #riveting sheet boundaries with rivets
-    for ids1, ids2 in zip(idgrids[:-1], idgrids[1:]):
-        mesh.spring_connect(ids1[:, -1], ids2[:, 0], rivet)
+    pt1s, a1, f = trig_crossec(ffb, frb, frt, fft)
+    pt2s, a2, _ = trig_crossec(tfb, trb, trt, tft)
 
-    return sheets, idgrids, a1, a2, f
+    sheet, secIdxs = gcl.multi_section_sheet3D(pt1s, pt2s, nb, [nf2, na, nf2]*(2*ntrig+2), True)
+    idspace = mesh.register(list(sheet.flatten()))
+    idgrid = idspace.reshape(sheet.shape)
+    #interconnection of sheets
+    mesh.quad_interconnect(idgrid, shell)
+
+    return sheet, idgrid, secIdxs, a1, a2, f
 
 
 def bat_rail(mesh:gcl.Mesh3D, ntrig:int, a1:float, a2:float, f:float, 
@@ -108,19 +100,24 @@ def bat_rail(mesh:gcl.Mesh3D, ntrig:int, a1:float, a2:float, f:float,
     return beamids, batids
 
 def panel(mesh:gcl.Mesh3D, ff:gcl.Point3D, fr:gcl.Point3D, tf:gcl.Point3D, tr:gcl.Point3D, nb:int, nip:int, nf:int, 
-          floor:str, skin:str, rib:str, rivet:str, panelz:ty.Callable, ribconnids:ty.List[nt.NDArray[np.int64]],
+          floor:str, skin:str, rib:str, flange:str, panelz:ty.Callable, ribconnids:ty.List[nt.NDArray[np.int64]],
           cspacing:float, bspacing:float)->ty.Tuple[ty.List[int]]:
     #1) lower sheet
     ribconnpt1s = [mesh.nodes[ptids[0]] for ptids in ribconnids]
     ribconnpt2s = [mesh.nodes[ptids[-1]] for ptids in ribconnids]
     floorsh, secs = gcl.multi_section_sheet3D([ff]+ribconnpt1s+[fr], [tf]+ribconnpt2s+[tr], nb,
-                                                 [nf]+[nip]*(len(ribconnpt1s)-1)+[nf], True)
-    flidspace = mesh.register(list(floorsh.flatten()))
-    flidgrid = flidspace.reshape(floorsh.shape)
+                                              [nf]+[nip]*(len(ribconnpt1s)-1)+[nf], True)
+    #1.1) sheet registration without the already registered connection points
+    ribconnIdsTospend = ribconnids.copy()
+    flidgrid = np.zeros(floorsh.shape, np.int32)
+    for i in range(floorsh.shape[1]):
+        if i in secs[1:-1]: #we have to replace with the original connection points
+            flidgrid[:, i] = ribconnIdsTospend.pop(0)
+            floorsh[:, i] = [mesh.nodes[id_] for id_ in flidgrid[:, i]]
+        else:
+            flidgrid[:, i] = mesh.register(list(floorsh[:, i]))
+    
     mesh.quad_interconnect(flidgrid, floor)
-    for i, ids in enumerate(ribconnids): #riveting the lower sheet to the spars
-        panelPts = flidgrid[:, secs[i+1]] #skip the edge subsecs, which are only connected to the top panel
-        mesh.spring_connect(panelPts, ids, rivet)
 
     #2) upper sheet
     upsh = gcl.project_np3D(floorsh, zupdate=lambda x,y,z:panelz(x,y))
@@ -129,109 +126,36 @@ def panel(mesh:gcl.Mesh3D, ff:gcl.Point3D, fr:gcl.Point3D, tf:gcl.Point3D, tr:gc
     mesh.quad_interconnect(upidgrid, skin)    
 
     #3) obligatory stiffeners
-    mainribidlist = list()
-    for sec in secs: #sections are same-number for both sheets due to projection
-        #preparing points
-        floorids = [flidgrid[i, sec] for i in range(flidgrid.shape[0])]
-        upids = [upidgrid[i, sec] for i in range(upidgrid.shape[0])]
-        floorpts = floorsh[:, sec]
-        upts = upsh[:, sec]
+    def stiffener(pt1s, pt2s, dir):
+        mesh.quad_connect(pt1s, pt2s, rib)
+        mesh.beam_interconnect(pt1s, flange, dir)
+        mesh.beam_interconnect(pt2s,flange, dir)
 
-        #stiffener beams
-        dir=(1,0,0)
-        ribpts = [flp.pt_between(upp) for flp, upp in zip(floorpts, upts)]
-        ribids = mesh.register(ribpts)
-        #connecting the beam so that a heighte is saved
-        for id1, id2, pt2 in zip(ribids[:-1], ribids[1:], floorpts[1:]):
-            #taking point 2, so further spanwise, this results in smaller Is, so conservative
-            mesh.beam_connect([id1], [id2], rib, (abs(panelz(pt2.x, pt2.y)-pt2.z), dir))
-        mesh.spring_connect(ribids, floorids, rivet)
-        mesh.spring_connect(ribids, upids, rivet)
-        mainribidlist.append(ribids)
+    [stiffener(upidgrid[:, sec], flidgrid[:, sec], (1, 0, 0)) for sec in secs]
+
 
     #4) chordwise stiffeners
     #we use bspacing - spacing along the span, as chordwise stiffeners are
     bcount = int(np.ceil((tf.y-ff.y)/bspacing)) #more stiffeners chosen if not exact match
     assert nb/bcount >= 4 #elese you have insufficient mesh size and buckling cannot be captured
     ribNbs = [int(np.rint(i)) for i in np.linspace(0, nb-1, bcount+1)] #plus 1 as you have to close the panel
-    ribIdbs = []
-    for ribNb in ribNbs:
-        ribIdbs.append([]) #creating a list for this spanwise position
-        #creating extra beams between the obligatory ones
-        for sec1, sec2, i in zip(secs[:-1], secs[1:], range(len(mainribidlist)-1)):
-            #preparing points, ids and protocols
-            floorptsb = floorsh[ribNb, (sec1+1):sec2]
-            uptsb = upsh[ribNb, (sec1+1):sec2]
-            flooridsb = flidgrid[ribNb, (sec1+1):sec2]
-            upidsb = upidgrid[ribNb, (sec1+1):sec2]
-            hbs = [abs(upb.z-fpb.z) for upb, fpb in zip(floorptsb, uptsb)]
-            #rib creation
-            ribptsb = [upb.pt_between(fpb) for upb, fpb in zip(floorptsb, uptsb)]
-            ribIdb = mesh.register(ribptsb)
-            ribIdbs[-1].append(ribIdb)
-            #connections
-            dir = (0, tf.y-ff.y, tf.z-ff.z)
-            mesh.beam_protocolize(ribIdb, rib, [(h, dir) for h in hbs[1:]]) #chordwise you have to skip one h, you cannot guarantee conservativeness
-            mesh.beam_connect([ribIdb[0]], [mainribidlist[i][ribNb]], rib, (hbs[0], dir))
-            mesh.beam_connect([ribIdb[-1]], [mainribidlist[i+1][ribNb]], rib, (hbs[-1], dir))
-            mesh.spring_connect(ribIdb, flooridsb, rivet)
-            mesh.spring_connect(ribIdb, upidsb, rivet)
+    [stiffener(upidgrid[ribNb, :], flidgrid[ribNb, :], (0, tf.y-ff.y, tf.z-ff.z)) for ribNb in ribNbs] #creating the stiffeners
+    
+    #5) extra spanwise stiffeners
+    for ribNb1, ribNb2 in zip(ribNbs[:-1], ribNbs[1:]):
+        for sec1, sec2 in zip(secs[:-1], secs[1:]):
+            ccount = int(np.ceil((mesh.nodes[flidgrid[ribNb1, sec2]].x-mesh.nodes[flidgrid[ribNb1, sec1]].x)/cspacing))
+            assert nip/(ccount) >= 4
+            if ccount>1:
+                ribNcs = [int(np.rint(i)) for i in np.linspace(sec1, sec2, ccount+1)[1:-1]]
+                [stiffener(upidgrid[ribNb1:(ribNb2+1), ribNc], flidgrid[ribNb1:(ribNb2+1), ribNc], (1, 0, 0)) for ribNc in ribNcs]
 
-    #5) extra spanwise stiffeners - again those use cspacing!
-    cribIds = list()
-    for ribnear, ribfar, ribNbf, ribNbt in zip(ribIdbs[:-1], ribIdbs[1:], ribNbs[:-1], ribNbs[1:]):
-        cribIds.append([])
-        for regnear, regfar, sec1, sec2 in zip(ribnear, ribfar, secs[:-1], secs[1:]):
-            regdist = mesh.nodes[regnear[-1]].x-mesh.nodes[regnear[0]].x
-            cribcount = int(np.ceil(regdist/cspacing))
-            cribIds[-1].append([])
+    return floorsh, upsh, flidgrid, upidgrid
 
-            if cribcount>1:
-                assert nip/(cribcount+1)>=4 #otherwise mesh refinment insufficient for buckling
-                assert regdist > 0 #if we did not loose our coordinate system midway
-                #getting indices for brib connections and sheet connections
-                #we don't take into account the sides, as they are the obligatory ribs, already created
-                idxcs = [int(np.rint(i)) for i in np.linspace(sec1, sec2, cribcount+1)[1:-1]] #indices in c along sheet
-                idxregs = [ic-sec1-1 for ic in idxcs] #indices along brib regions
-                for idxc, idxr in zip(idxcs, idxregs): #rib creation
-                    cribpts = [fpc.pt_between(upc) for fpc, upc in zip(
-                        floorsh[(ribNbf+1):(ribNbt), idxc], upsh[ribNbf+1:ribNbt, idxc])]
-                    hcs = [abs(fpc.z-upc.z) for fpc, upc in zip(
-                        floorsh[(ribNbf+1):(ribNbt), idxc], upsh[ribNbf+1:ribNbt, idxc])]
-                    cribids = mesh.register(cribpts)
-                    dir=(1,0,0)
-                    mesh.beam_protocolize(cribids, rib, [(h, dir) for h in hbs[1:]]) #again heights closer to tip to stay conservative
-                    mesh.beam_connect([cribids[0]], [regnear[idxr]], rib, (hcs[0], dir))
-                    htip = abs(upsh[ribNbt, idxc].z-floorsh[ribNbt, idxc].z) #stay conservative
-                    mesh.beam_connect([cribids[-1]], [regfar[idxr]], rib, (htip, dir))
-                    mesh.spring_connect(cribids, flidgrid[ribNbf+1:ribNbt, idxc], rivet)
-                    mesh.spring_connect(cribids, upidgrid[ribNbf+1:ribNbt, idxc], rivet)
-                    cribIds[-1].append(cribids)
-
-
-    return floorsh, upsh, flidgrid, upidgrid, mainribidlist, ribIdbs, cribIds
 
 def motors(mesh:gcl.Mesh3D, motors:ty.List[gcl.Point3D], panshTop:nt.ArrayLike, panidTop:nt.NDArray[np.int64], panshBot:nt.ArrayLike, panidBot:nt.NDArray[np.int64],
            motor:str, motormount:str):
     mids = list()
-    # <add mountwidth:float after motors>
-    # for mtr in motors:
-    #     #motor generation
-    #     mids+=list(mesh.register([mtr])) #it returns a list, so +=
-    #     mesh.pointmass_attach(mids[-1], motor)
-    #     #boundaries for motormount
-    #     motmount_ymin = mtr.y-mountwidth/2
-    #     motmount_ymax = mtr.y+mountwidth/2
-    #     #connecting the top sheet
-    #     yTop = np.array([pt.y for pt in panshTop[:, 0]])
-    #     checkTop = (yTop>=motmount_ymin) & (yTop<=motmount_ymax)
-    #     ids_2conn_top = panidTop[:, 0][checkTop]
-    #     mesh.spring_connect([mids[-1]]*len(ids_2conn_top), ids_2conn_top, motormount)
-    #     #connecting the bottom sheet
-    #     yBot = np.array([pt.y for pt in panshBot[:, 0]])
-    #     checkBot = (yBot>=motmount_ymin) & (yBot<=motmount_ymax)
-    #     ids_2conn_bot = panidBot[:, 0][checkBot]
-    #     mesh.spring_connect([mids[-1]]*len(ids_2conn_bot), ids_2conn_bot, motormount)
     for mtr in motors:
         #bottom mount
         yBot = np.array([pt.y for pt in panshBot[:, 0]])
@@ -243,55 +167,75 @@ def motors(mesh:gcl.Mesh3D, motors:ty.List[gcl.Point3D], panshTop:nt.ArrayLike, 
         #top mount
         yTop = np.array([pt.y for pt in panshTop[:, 0]])
         idxt = (np.abs(yTop-mtr.y)).argmin() #looking for the closest point on the sheet to connect the motor to
-        motorPtTop = gcl.Point3D(mtr.x, panshTop[idxb, 0].y, panshTop[idxb, 0].z)
+        motorPtTop = gcl.Point3D(mtr.x, panshTop[idxt, 0].y, panshTop[idxt, 0].z)
         midt = mesh.register([motorPtTop])[0] #returns a list!
         mesh.pointmass_attach(midt, motor)
-        mesh.spring_connect([midt], [panidTop[idxb, 0]], motormount)
+        mesh.spring_connect([midt], [panidTop[idxt, 0]], motormount)
         #storing motor ids at (top, bot)
         mids.append((midt, midb))
  
     return mids
 
 
+def lg(mesh:gcl.Mesh3D, uplg:gcl.Point3D, panshBot:nt.ArrayLike, panidBot:nt.NDArray[np.int64], lg:str, lgmount:str):
+    y = np.array([pt.y for pt in panshBot[:, -1]]) #we need the TE side
+    idx = (np.abs(y-uplg.y)).argmin() #looking for the closest point on the sheet to connect the LG to
+    lgPt = gcl.Point3D(uplg.x, panshBot[idx, -1].y, panshBot[idx, -1].z)
+    lgid = mesh.register([lgPt])[0]
+    mesh.pointmass_attach(lgid, lg)
+    mesh.spring_connect([lgid], [panidBot[idx, -1]], lgmount)
+
+    return lgid
+
+def hinge(mesh:gcl.Mesh3D, uphinge:gcl.Point3D, panshTop:nt.ArrayLike, panidTop:nt.NDArray[np.int64], hinge:str, hingemount:str):
+    x = np.array([pt.x for pt in panshTop[-1, :]]) 
+    idx = (np.abs(x-uphinge.x)).argmin()
+    hingePt = gcl.Point3D(panshTop[-1, idx].x, uphinge.y, uphinge.z)
+    hingeid = mesh.register([hingePt])[0]
+    mesh.pointmass_attach(hingeid, hinge)
+    mesh.spring_connect([hingeid], [panidTop[-1, idx]], hingemount)
+
+    return hingeid
+
+
 def all_components(mesh:gcl.Mesh3D, up:pfc.UnpackedPoints, nb:int, na:int, nf2:int, nipCoeff:int, ntrig:int, dzRail:float, dinRail:float, cspacing:float, bspacing:float, totmass:float, 
-                   rivet:str, spar:str, plate:str, rib:str, skin:str, rail:str, bat:str, motor:str, mount:str):
+                   spar:str, plate:str, rib:str, flange:str, skin:str, rail:str, bat:str, motor:str, lg_:str, hinge_:str, mount:str):
     #in case we ever want to do mounts differently
     railmount=mount
     batmount=mount
     motormount=mount
+    lgmount = mount
+    hingemount = mount
 
-    sparsh, sparigrids, a1, a2, f = trigspars(mesh, nb, na, nf2, ntrig, rivet, spar, up.ffb, up.frb, up.frt, up.fft, up.tfb, up.trb, up.trt, up.tft)
+    sparsh, sparigrd, sparSecIdxs, a1, a2, f = trigspars(mesh, nb, na, nf2, ntrig, spar, up.ffb, up.frb, up.frt, up.fft, up.tfb, up.trb, up.trt, up.tft)
 
     nip = int(np.ceil(nipCoeff*(4*((a1+2*f)/cspacing+1)))) #obtaining nip so that we get the minimal required amount of elements
 
-    beamids, batids = [[]]*len(sparigrids), [[]]*len(sparigrids)
-    rivetingids = list()
-    for igrid, idx in zip(sparigrids[::2], range(0,len(sparigrids),2)):
-        #bats on the upper side go down
-        edgeids = igrid[:, -1]
-        rivetingids.append(edgeids)
-        beamids[idx], batids[idx] = bat_rail(mesh, ntrig, a1, a2, f, dinRail, -dzRail, edgeids, 
-                                             rail, bat, railmount, batmount, totmass)
-    
-    floorsh, upsh, floorids, skinids, ribids, ribIdbs, ribIdcs = panel(mesh, up.fft, up.frt, up.tft, up.trt, nb, nip, nf2, 
-                                     plate, skin, rib, rivet, up.surft, rivetingids, cspacing, bspacing)
-    
-    rivetedbot = [sparigrids[0][:, 0]]
-    for igrid, idx in zip(sparigrids[1:-1:2], range(1,len(sparigrids)-1,2)):
-        #bats on the upper side go down
-        edgeidsN = igrid[:, -1]
-        rivetedbot.append(edgeidsN)
-        beamids[idx], batids[idx] = bat_rail(mesh, ntrig, a1, a2, f, dinRail, dzRail, edgeidsN, 
-                                             rail, bat, railmount, batmount, totmass)
-    rivetedbot.append(sparigrids[-1][:, -1])
-    fshb, sshb, fib, sib, rib_, rbib, rcib = panel(mesh, up.ffb, up.frb, up.tfb, up.trb, nb, nip, nf2, 
-                                      plate, skin, rib, rivet, up.surfb, rivetedbot, cspacing, bspacing)
-    
-    #motors
-    mids = motors(mesh, up.motors, floorsh, floorids, fshb, fib, motor, motormount)
+    sparBotConns = sparSecIdxs[0::6]
+    sparTopConns = sparSecIdxs[3::6]
+    sbci = [sparigrd[:,idx] for idx in sparBotConns] #spar bottom connection ids
+    stci = [sparigrd[:,idx] for idx in sparTopConns] #spar top connection ids
 
-    return {"spars":sparsh, "plateTop":floorsh, "skinTop":upsh, "plateBot":fshb, "skinBot":sshb}, {"spars":sparigrids, "plateTop":floorids, "skinTop":skinids, "plateBot":fib,
-         "skinBot":sib, "ribsTop":(ribids, ribIdbs, ribIdcs), "ribsBot":(rib_, rbib, rcib), "rails":beamids, "bats":batids, "motors":mids}
+    beamids, batids = [[]]*(2*ntrig+1), [[]]*(2*ntrig+1)
+    for i, ids in zip(range(1,2*ntrig+1,2), sbci[1:-1]): #bottom batteries
+        beamids[i], batids[i] = bat_rail(mesh, ntrig, a1, a2, f, dinRail, dzRail, ids, 
+                                         rail, bat, railmount, batmount, totmass)
+    for i, ids in zip(range(0,2*ntrig+1,2), stci): #top batteries
+        beamids[i], batids[i] = bat_rail(mesh, ntrig, a1, a2, f, dinRail, -dzRail, ids, 
+                                         rail, bat, railmount, batmount, totmass)
+
+    topflsh, topsksh, topflids, topskids = panel(mesh, up.fft, up.frt, up.tft, up.trt, nb, nip, nf2, 
+                                    plate, skin, rib, flange, up.surft, stci, cspacing, bspacing)
+    
+    botflsh, botsksh, botflids, botskids = panel(mesh, up.ffb, up.frb, up.tfb, up.trb, nb, nip, nf2, 
+                                    plate, skin, rib, flange, up.surfb, sbci, cspacing, bspacing)
+    
+    mids = motors(mesh, up.motors, topflsh, topflids, botflsh, botflids, motor, motormount)
+    lgid = lg(mesh, up.lg, botflsh, botflids, lg_, lgmount)
+    hingeid = hinge(mesh, up.hinge, topflsh, topflids, hinge_, hingemount)
+
+    return {"spars":sparsh, "plateTop":topflsh, "skinTop":topsksh, "plateBot":botflsh, "skinBot":botsksh}, {"spars":sparigrd, "plateTop":topflids, "skinTop":topskids, 
+            "plateBot":botflids,"skinBot":botskids, "rails":beamids, "bats":batids, "motors":mids, "lg":lgid, "hinge":hingeid}
 
 if __name__ == "__main__":
     import ptsFromCAD as pfc
@@ -333,7 +277,7 @@ if __name__ == "__main__":
     # rivetedbot.append(idgrids[-1][:, -1])
     # fshb, sshb, fib, sib, rib, rbib, rcib = panel(mesh, up.ffb, up.frb, up.tfb, up.trb, nb, nip, nf2, 
     #                                   "panfl", "skin", "rib", "tr", up.surfb, rivetedbot, cspacing, bspacing)
-    pts, ids = all_components(mesh, up, nb, na, nf2, 1, ntrig, dz, din, cspacing, bspacing, totmass, "rv", "sp", "pl", "rb", "sk", "rl", "bt", "mo", "mm")
+    all_components(mesh, up, nb, na, nf2, 1, ntrig, dz, din, cspacing, bspacing, totmass, "sp", "pl", "rb", "fl", "sk", "rl", "bt", "mo", "lg", "hg", "mm")
 
     #comparison of what is registered in the mesh and what the sheets are
     from mpl_toolkits import mplot3d
