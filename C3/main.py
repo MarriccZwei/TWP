@@ -149,8 +149,8 @@ xbmesh, ybmesh = np.array(xbs).reshape(pts["skinBot"].shape).T, np.array(ybs).re
 
 #lift fractions - will have to get multiplied by an appropriate load case
 #lt, mxt, myt, ncxp, ncxm, ncyp, ncym, yPerB2, xPerC = lm.apply_on_wingbox(xtmesh, ytmesh, (up.fft.y/FULLSPAN, up.tft.y/FULLSPAN), (up.xcft, up.xcrt), True, True)
-lt, mxt, myt = lm.apply_on_wingbox(xtmesh, ytmesh, (up.fft.y/FULLSPAN, up.tft.y/FULLSPAN), (up.xcft, up.xcrt), True)
-lb, mxb, myb = lm.apply_on_wingbox(xbmesh, ybmesh, (up.fft.y/FULLSPAN, up.tft.y/FULLSPAN), (up.xcfb, up.xcrb), False)
+lt, mxt, myt = lm.apply_on_wingbox(xtmesh, ytmesh, (0,1), (0,1), True) #up.fft.y/FULLSPAN, up.tft.y/FULLSPAN | up.xcft, up.xcrt
+lb, mxb, myb = lm.apply_on_wingbox(xbmesh, ybmesh, (0,1), (0,1), False)
 
 #for now, just mul by 2.5*76000*G0
 L = n*MTOM*G0

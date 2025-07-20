@@ -167,4 +167,9 @@ if __name__ == "__main__":
         plt.scatter([xc], [yb])
         
     print(sum(np.ravel(f)), sum(np.ravel(Mx)), sum(np.ravel(My)))
+
+    plt.figure()
+    levels = np.linspace(f.min(), f.max(), 50)
+    plt.contourf(x, y, f, levels=levels)
+    plt.colorbar()
     plt.show()
