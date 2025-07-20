@@ -149,33 +149,39 @@ xbmesh, ybmesh = np.array(xbs).reshape(pts["skinBot"].shape).T, np.array(ybs).re
 
 #lift fractions - will have to get multiplied by an appropriate load case
 #lt, mxt, myt, ncxp, ncxm, ncyp, ncym, yPerB2, xPerC = lm.apply_on_wingbox(xtmesh, ytmesh, (up.fft.y/FULLSPAN, up.tft.y/FULLSPAN), (up.xcft, up.xcrt), True, True)
-lt, mxt, myt = lm.apply_on_wingbox(xtmesh, ytmesh, (0,1), (0,1), True) #up.fft.y/FULLSPAN, up.tft.y/FULLSPAN | up.xcft, up.xcrt
-lb, mxb, myb = lm.apply_on_wingbox(xbmesh, ybmesh, (0,1), (0,1), False)
+lt, mxt, myt = lm.apply_on_wingbox(xtmesh, ytmesh, (up.fft.y/FULLSPAN, up.tft.y/FULLSPAN), (up.xcft, up.xcrt), True) #(up.fft.y/FULLSPAN, up.tft.y/FULLSPAN), (up.xcft, up.xcrt)
+lb, mxb, myb = lm.apply_on_wingbox(xbmesh, ybmesh, (up.fft.y/FULLSPAN, up.tft.y/FULLSPAN), (up.xcfb, up.xcrb), False) #(up.fft.y/FULLSPAN, up.tft.y/FULLSPAN), (up.xcfb, up.xcrb)
 
 #for now, just mul by 2.5*76000*G0
 L = n*MTOM*G0
 Lt, Mxt, Myt, Lb, Mxb, Myb = L*lt.flatten(), L*mxt.flatten(), L*myb.flatten(), L*lb.flatten(), L*mxb.flatten(), L*myb.flatten()
 #applying the top skin loads
-for id_, Lt_, Mxt_, Myt_ in zip(ids["skinTop"].flatten(), Lt, Mxt, Myt):
+for id_, Lt_, Mxt_, Myt_ in zip(ids["skinTop"].T.flatten(), Lt, Mxt, Myt):
     f[2::pf3.DOF][id_] = Lt_
     f[3::pf3.DOF][id_] = Mxt_
     f[4::pf3.DOF][id_] = Myt_ 
 #applying the bottom skin loads
-for id_, Lb_, Mxb_, Myb_ in zip(ids["skinBot"].flatten(), Lb, Mxb, Myb):
+for id_, Lb_, Mxb_, Myb_ in zip(ids["skinBot"].T.flatten(), Lb, Mxb, Myb):
     f[2::pf3.DOF][id_] = Lb_
     f[3::pf3.DOF][id_] = Mxb_
     f[4::pf3.DOF][id_] = Myb_ 
 
 assert np.isclose(f[2::pf3.DOF].sum(), L/2) #we have to compare with f not fu, cuz in fu part of the lift gets eaten by bce, but that's aight
+aerof = copy.deepcopy(f[2::pf3.DOF])
 
 #applying thrust
 for mtr, mid in zip(up.motors, ids["motors"]): #checking coordinate correspondence
     f[0::pf3.DOF][mid[0]] = TT/2
-    f[3::pf3.DOF][mid[1]] = TT/2
+    f[0::pf3.DOF][mid[1]] = TT/2
 
 #applying weight
 weight = p3g.weight(M, n*G0, N, pf3.DOF, gcl.Direction3D(0,0,-1))
 f+=weight
+
+#TODO: Remove this, this is only to check the mopment hypothesis
+# f[3::pf3.DOF] = 0
+# f[4::pf3.DOF] = 0
+# f[5::pf3.DOF] = 0
 
 
 #checks and solution
@@ -192,7 +198,7 @@ v = u[0::pf3.DOF]
 
 
 
-def plotqty(w:nt.NDArray):
+def plotqty(w:nt.NDArray, wtxt:str):
     plt.figure()
     levels = np.linspace(w.min(), w.max(), 50)
 
@@ -200,13 +206,23 @@ def plotqty(w:nt.NDArray):
         plt.subplot(loc) if loc != 0 else ""
         sf = selection.flatten()
         plt.contourf(x[sf].reshape(selection.shape), y[sf].reshape(selection.shape), w[sf].reshape(selection.shape), levels=levels)
+        plt.xlabel("x [m]", loc="right")
+        plt.ylabel("y [m]", loc="top")
 
     contourp(331, ids["plateTop"])
+    plt.title("Upper Panel")
     contourp(332, ids["skinTop"])
+    plt.title("Upper Skin")
     contourp(333, ids["spars"][:, nf2-1:-nf2])
     plt.colorbar()
+    for i in ids["sparBends"][1:-1]:
+        plt.plot([mesh.nodes[ids["spars"][0, i]].x, mesh.nodes[ids["spars"][-1, i]].x], [mesh.nodes[ids["spars"][0, i]].y, mesh.nodes[ids["spars"][-1, i]].y],
+                 color="black", linestyle="dotted", linewidth=.2)
+    plt.title("Spars - Without flanges")
     contourp(334, ids["plateBot"])
+    plt.title("Lower Panel")
     contourp(335, ids["skinBot"])
+    plt.title("Lower Skin")
 
     plt.subplot(336)
     x_ = [0,1,2,3,4,5,6,7,8,9]
@@ -216,6 +232,9 @@ def plotqty(w:nt.NDArray):
     plt.scatter(x_, y_)
     plt.xticks(x_, ["m1u","m1l","m2u","m2l", "m3u", "m3l", 
                             "m4u", "m4l", "lg", "hn"], rotation=60)
+    plt.xlabel("y [m]", loc="right")
+    plt.ylabel(f"{wtxt} [m]", loc="top")
+    plt.title("Poitmass Components")
 
     #TODO: reformat as 9x9, with rails, batteries and LE, TE mass distrs.
     plt.subplot(337)
@@ -223,6 +242,9 @@ def plotqty(w:nt.NDArray):
         x_ = [mesh.nodes[id_].y for id_ in batids]
         y_ = [w[id_] for id_ in batids]
         plt.plot(x_, y_)
+    plt.xlabel("y [m]", loc="right")
+    plt.ylabel(f"{wtxt} [m]", loc="top")
+    plt.title("Batteries")
     plt.subplot(338)
     labels = [f"cell{i}" for i in range(1, 2*ntrig+2)]
     for beamids in ids["rails"]:
@@ -230,22 +252,30 @@ def plotqty(w:nt.NDArray):
         y_ = [w[id_] for id_ in beamids]
         plt.plot(x_, y_, label=labels.pop(0))
     plt.legend()
+    plt.xlabel("y [m]", loc="right")
+    plt.ylabel(f"{wtxt} [m]", loc="top")
+    plt.title("Battery Rails")
     plt.subplot(339)
     first=True
     for i in range(ids["spars"][:, :nf2].shape[1]):
-        plt.plot(y[ids["spars"][:, i]], w[ids["spars"][:, i]], color="pink", label="frontFlange") if first else plt.plot(x[ids["spars"][:, i]], w[ids["spars"][:, i]], color="pink")
+        plt.plot(y[ids["spars"][:, i]], w[ids["spars"][:, i]], color="pink", label="frontFlange") if first else plt.plot(y[ids["spars"][:, i]], w[ids["spars"][:, i]], color="pink")
         first = False
     first=True
     for i in range(ids["spars"][:, -nf2:].shape[1]):
-        plt.plot(y[ids["spars"][:, i]], w[ids["spars"][:, i]], color="green", label="rearFlange") if first else plt.plot(x[ids["spars"][:, i]], w[ids["spars"][:, i]], color="green")
+        plt.plot(y[ids["spars"][:, i]], w[ids["spars"][:, i]], color="green", label="rearFlange") if first else plt.plot(y[ids["spars"][:, i]], w[ids["spars"][:, i]], color="green")
         first = False
 
     plt.plot(y[ids["LE"]], w[ids["LE"]], label="LEeqpt")
     plt.plot(y[ids["TE"]], w[ids["TE"]], label="TEeqpt")
+    plt.xlabel("y [m]", loc="right")
+    plt.ylabel(f"{wtxt} [m]", loc="top")
+    plt.title("Spar Flanges and LE/TE ept")
     plt.legend()
 
 
-plotqty(w)
-plotqty(v)
-plotqty(f[2::pf3.DOF])
+plotqty(w, 'w')
+plotqty(v, 'v')
+fupadded = np.zeros(f.shape)
+fupadded[bu] = fu
+plotqty(fupadded[2::pf3.DOF], 'fu')
 plt.show()
