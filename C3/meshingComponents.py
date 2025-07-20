@@ -209,7 +209,7 @@ def LETE(mesh:gcl.Mesh3D, lineLE:gcl.Line3D, lineTE:gcl.Line3D, panshTop:nt.Arra
     ptsLE = [lineLE.for_y(pt.y) for pt in connPtsLE]
     idsLE = mesh.register(ptsLE)
     #the distance between the points is also expressed in terms of chord fractions, it can be used as proprtionality for mass if squared
-    distsLE2 = [(pLE.pythagoras(pcLE))**2 for pLE, pcLE in zip(ptsLE, connPtsLE)]
+    distsLE2 = [(pLE.pythagoras(pcLE))**2 for pLE, pcLE in zip(ptsLE, panshTop[:, 0])] #you have to take distance from the same point though
     totDistsLE2 = sum(distsLE2)
     msLE = [d2/totDistsLE2*totmassLE for d2 in distsLE2]
     [mesh.pointmass_attach(id_, ptmass, m) for id_, m in zip(idsLE, msLE)]
@@ -224,7 +224,7 @@ def LETE(mesh:gcl.Mesh3D, lineLE:gcl.Line3D, lineTE:gcl.Line3D, panshTop:nt.Arra
     ptsTE = [lineTE.for_y(pt.y) for pt in connPtsTE]
     idsTE = mesh.register(ptsTE)
     #the distance between the points is also expressed in terms of chord fractions, it can be used as proprtionality for mass if squared
-    distsTE2 = [(pTE.pythagoras(pcTE))**2 for pTE, pcTE in zip(ptsTE, connPtsTE)]
+    distsTE2 = [(pTE.pythagoras(pcTE))**2 for pTE, pcTE in zip(ptsTE,panshTop[:, -1])]
     totDistsTE2 = sum(distsTE2)
     msTE = [d2/totDistsTE2*totmassTE for d2 in distsTE2]
     [mesh.pointmass_attach(id_, ptmass, m) for id_, m in zip(idsTE, msTE)]

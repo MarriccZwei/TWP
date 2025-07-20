@@ -10,6 +10,7 @@ import pyfe3d as pf3
 import pyfe3Dgcl as p3g
 
 import numpy as np
+import numpy.typing as nt
 from mpl_toolkits import mplot3d
 import matplotlib.pyplot as plt
 import scipy.sparse.linalg as ssl
@@ -25,7 +26,7 @@ E_STEEL = 200e9 #Pa #TODO: verif
 FULLSPAN = 21 #m
 G0 = 9.81 #N/kg
 MTOM = 76000 #kg
-INFTY_STIFF = 1e14
+INFTY_STIFF = 1e20
 
 data = "5000;0;-6.5|4750;0;-24|4500;0;-41|4000;0;-75|3500;0;-107|3000;0;-138|2500;0;-167|2000;0;-190|1500;0;-206|1250;0;-211|1000;0;-211.5|750;0;-205|500;0;-187.5|375;0;-173|250;0;-150.5|125;0;-113.5|62.5;0;-82.5|0;0;0|62.5;0;107.5|125;0;149.5|250;0;206.5|375;0;248|500;0;281.5|750;0;330.5|1000;0;363|1250;0;383.5|1500;0;394|2000;0;390|2500;0;362|3000;0;318|3500;0;259|4000;0;187.5|4500;0;104|4750;0;57|5000;0;6.5&4250;18000;2206.872|4125;18000;2198.122|4000;18000;2189.622|3750;18000;2172.622|3500;18000;2156.622|3250;18000;2141.122|3000;18000;2126.622|2750;18000;2115.122|2500;18000;2107.122|2375;18000;2104.622|2250;18000;2104.372|2125;18000;2107.622|2000;18000;2116.372|1937.5;18000;2123.622|1875;18000;2134.872|1812.5;18000;2153.372|1781.25;18000;2168.872|1750;18000;2210.122|1781.25;18000;2263.872|1812.5;18000;2284.872|1875;18000;2313.372|1937.5;18000;2334.122|2000;18000;2350.872|2125;18000;2375.372|2250;18000;2391.622|2375;18000;2401.872|2500;18000;2407.122|2750;18000;2405.122|3000;18000;2391.122|3250;18000;2369.122|3500;18000;2339.622|3750;18000;2303.872|4000;18000;2262.122|4125;18000;2238.622|4250;18000;2213.372&-471.576;3673.46;441.249|126.713;7770.33;945.522|725.002;11867.2;1449.796|1323.292;15964.069;1954.07&3012.266;18950.167;2324.854|4861.588;5721.895;702.56&500;0;0|1999.77;18000;2214.157&3500;0;0|3499.77;18000;2214.157&787.633;1600;66.192|2883.375;1600;66.192|2617.418;1600;526.843|1053.59;1600;526.843&2024.321;18000;2152.592|3273.646;18000;2152.592|3148.758;18000;2368.903|2149.209;18000;2368.903" 
 up = pfc.UnpackedPoints(data)
@@ -47,6 +48,8 @@ ribflange = 0.0125 #rib flange length, excluding bends at corners
 motormass = 1000
 lgmass = 5000
 hingemass = 500
+lemass = 1000
+temass = 3000
 # motmountwidth = 0.7 #width of the motor mount along y
 
 #loads
@@ -70,7 +73,7 @@ hinge ="hn"
 mount = "mm"
 
 #geometry loading
-pts, ids = mc.all_components(mesh, up, nb, na, nf2, nipCoeff, ntrig, dz, din, cspacing, bspacing, BAT_MASS_1WING,
+pts, ids = mc.all_components(mesh, up, nb, na, nf2, nipCoeff, ntrig, dz, din, cspacing, bspacing, BAT_MASS_1WING, lemass, temass,
                              spar, panelPlate, panelRib, panelFlange, skin, batteryRail, battery, motor, lg, hinge, mount)
 
 #element definitions
@@ -84,7 +87,7 @@ t_rib = 0.002 #panel rib thickness
 ks_rivet = p3g.SpringProp(1e5, 1e7, 1e7, 1e5, 1e5, 1e5, 0, 0, 1, 0, 1, 1, .01) #rivets are all oriented along z axis
 # ks_railmount = (1e7, 1e7, 1e7, 1e7, 1e7, 1e7) #rail to flange mount also oriented along z
 # ks_batmount = (1e6, 1e6, 1e6, 1e6, 1e6, 1e6) #battery to rail mount also oriented along z
-ks_motmount =  p3g.SpringProp(INFTY_STIFF, INFTY_STIFF, INFTY_STIFF, INFTY_STIFF, INFTY_STIFF, INFTY_STIFF, 2) #TODO: here orientation will be "fun"
+ks_motmount =  p3g.SpringProp(INFTY_STIFF, INFTY_STIFF, INFTY_STIFF, INFTY_STIFF, INFTY_STIFF, INFTY_STIFF) #TODO: here orientation will be "fun"
 
 #3) beams
 prop_rail = p3g.OrientedBeamProp(1, 0, 0)
@@ -171,16 +174,9 @@ for mtr, mid in zip(up.motors, ids["motors"]): #checking coordinate corresponden
     f[3::pf3.DOF][mid[1]] = TT/2
 
 #applying weight
-f+=p3g.weight(M, n*G0, N, pf3.DOF, gcl.Direction3D(0,0,-1))
+weight = p3g.weight(M, n*G0, N, pf3.DOF, gcl.Direction3D(0,0,-1))
+f+=weight
 
-# plt.figure()
-# for xp, xm, yp, ym, yb, xc in zip(np.ravel(ncxp), np.ravel(ncxm), np.ravel(ncyp), np.ravel(ncym), np.ravel(yPerB2), np.ravel(xPerC)):
-#     plt.plot([xm, xm, xp, xp, xm], [ym, yp, yp, ym, ym])
-#     plt.scatter([xc], [yb])
-#plt.show()
-    
-# check = np.isclose(y, up.tfb.y)
-# f[2::pf3.DOF][check] = 10000/np.count_nonzero(check)
 
 #checks and solution
 KC0uu = KC0[bu, :][:, bu]
@@ -196,28 +192,60 @@ v = u[0::pf3.DOF]
 
 
 
-plt.figure()
-levels = np.linspace(w.min(), w.max(), 50)
+def plotqty(w:nt.NDArray):
+    plt.figure()
+    levels = np.linspace(w.min(), w.max(), 50)
 
-def contourp(loc:int, compId:str):
-    plt.subplot(loc)
-    selection = ids[compId]
-    sf = selection.flatten()
-    plt.contourf(x[sf].reshape(selection.shape), y[sf].reshape(selection.shape), w[sf].reshape(selection.shape), levels=levels)
+    def contourp(loc:int, selection:nt.NDArray[np.int32]):
+        plt.subplot(loc) if loc != 0 else ""
+        sf = selection.flatten()
+        plt.contourf(x[sf].reshape(selection.shape), y[sf].reshape(selection.shape), w[sf].reshape(selection.shape), levels=levels)
 
-contourp(231, "plateTop")
-contourp(232, "skinTop")
-contourp(233, "spars")
-plt.colorbar()
-contourp(234, "plateBot")
-contourp(235, "skinBot")
+    contourp(331, ids["plateTop"])
+    contourp(332, ids["skinTop"])
+    contourp(333, ids["spars"][:, nf2-1:-nf2])
+    plt.colorbar()
+    contourp(334, ids["plateBot"])
+    contourp(335, ids["skinBot"])
 
-plt.subplot(236)
-x_ = [0,1,2,3,4,5,6,7,8,9]
-y_ = [w[ids["motors"][0][0]], w[ids["motors"][0][1]], w[ids["motors"][1][0]], w[ids["motors"][1][1]],
-     w[ids["motors"][2][0]], w[ids["motors"][2][1]], w[ids["motors"][3][0]], w[ids["motors"][3][1]],
-     w[ids["lg"]], w[ids["hinge"]]]
-plt.scatter(x_, y_)
-plt.xticks(x_, ["m1u","m1l","m2u","m2l", "m3u", "m3l", 
-                           "m4u", "m4l", "lg", "hn"], rotation=60)
+    plt.subplot(336)
+    x_ = [0,1,2,3,4,5,6,7,8,9]
+    y_ = [w[ids["motors"][0][0]], w[ids["motors"][0][1]], w[ids["motors"][1][0]], w[ids["motors"][1][1]],
+        w[ids["motors"][2][0]], w[ids["motors"][2][1]], w[ids["motors"][3][0]], w[ids["motors"][3][1]],
+        w[ids["lg"]], w[ids["hinge"]]]
+    plt.scatter(x_, y_)
+    plt.xticks(x_, ["m1u","m1l","m2u","m2l", "m3u", "m3l", 
+                            "m4u", "m4l", "lg", "hn"], rotation=60)
+
+    #TODO: reformat as 9x9, with rails, batteries and LE, TE mass distrs.
+    plt.subplot(337)
+    for batids in ids["bats"]:
+        x_ = [mesh.nodes[id_].y for id_ in batids]
+        y_ = [w[id_] for id_ in batids]
+        plt.plot(x_, y_)
+    plt.subplot(338)
+    labels = [f"cell{i}" for i in range(1, 2*ntrig+2)]
+    for beamids in ids["rails"]:
+        x_ = [mesh.nodes[id_].y for id_ in beamids]
+        y_ = [w[id_] for id_ in beamids]
+        plt.plot(x_, y_, label=labels.pop(0))
+    plt.legend()
+    plt.subplot(339)
+    first=True
+    for i in range(ids["spars"][:, :nf2].shape[1]):
+        plt.plot(y[ids["spars"][:, i]], w[ids["spars"][:, i]], color="pink", label="frontFlange") if first else plt.plot(x[ids["spars"][:, i]], w[ids["spars"][:, i]], color="pink")
+        first = False
+    first=True
+    for i in range(ids["spars"][:, -nf2:].shape[1]):
+        plt.plot(y[ids["spars"][:, i]], w[ids["spars"][:, i]], color="green", label="rearFlange") if first else plt.plot(x[ids["spars"][:, i]], w[ids["spars"][:, i]], color="green")
+        first = False
+
+    plt.plot(y[ids["LE"]], w[ids["LE"]], label="LEeqpt")
+    plt.plot(y[ids["TE"]], w[ids["TE"]], label="TEeqpt")
+    plt.legend()
+
+
+plotqty(w)
+plotqty(v)
+plotqty(f[2::pf3.DOF])
 plt.show()
