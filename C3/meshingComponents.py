@@ -324,7 +324,8 @@ if __name__ == "__main__":
     # rivetedbot.append(idgrids[-1][:, -1])
     # fshb, sshb, fib, sib, rib, rbib, rcib = panel(mesh, up.ffb, up.frb, up.tfb, up.trb, nb, nip, nf2, 
     #                                   "panfl", "skin", "rib", "tr", up.surfb, rivetedbot, cspacing, bspacing)
-    all_components(mesh, up, 1, na, nf2, 1, ntrig, dz, din, cspacing, bspacing, totmass, lemass, temass, "sp", "pl", "rb", "fl", "sk", "rl", "bt", "mo", "lg", "hg", "mm")
+    all_components(mesh, up, 1, na, nf2, 1, ntrig, dz, din, cspacing, bspacing, totmass, lemass, temass, "sp", "pl", "rb", "fl", "sk", "rl", "bt", 
+                   "mo", "lg", "hg", "mm")
 
     #comparison of what is registered in the mesh and what the sheets are
     from mpl_toolkits import mplot3d

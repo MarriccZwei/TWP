@@ -43,7 +43,7 @@ nipCoeff = 1
 dz = .015 #inwards z offset of battery rail
 din = .010 #inner diameter of (threaded) battery rail
 cspacing = .2 #chordwise panel rib spacing
-bspacing = 1 #spanwise panel rib spacing
+bspacing = 1.5 #spanwise panel rib spacing
 ribflange = 0.0125 #rib flange length, excluding bends at corners
 motormass = 1000
 lgmass = 5000
@@ -55,7 +55,9 @@ temass = 3000
 #loads
 n = 2.5 #[-], load factor
 FT = 5000 #N, per motor
-TT = 1400 #Nm, per motor, can be negative depends on direction of spinning
+#TT = 1400 #Nm, per motor, can be negative depends on direction of spinning
+LD = 20 #lift to drag ratio
+nl =2.
 
 #eleids
 spar = "sp"
@@ -169,10 +171,16 @@ for id_, Lb_, Mxb_, Myb_ in zip(ids["skinBot"].T.flatten(), Lb, Mxb, Myb):
 assert np.isclose(f[2::pf3.DOF].sum(), L/2) #we have to compare with f not fu, cuz in fu part of the lift gets eaten by bce, but that's aight
 aerof = copy.deepcopy(f[2::pf3.DOF])
 
+#applying drag
+f[0::pf3.DOF] += f[2::pf3.DOF]/LD
+
 #applying thrust
 for mtr, mid in zip(up.motors, ids["motors"]): #checking coordinate correspondence
-    f[0::pf3.DOF][mid[0]] = TT/2
-    f[0::pf3.DOF][mid[1]] = TT/2
+    f[0::pf3.DOF][mid[0]] = FT/2
+    f[0::pf3.DOF][mid[1]] = FT/2
+
+#applying landing load
+f[2::pf3.DOF][ids["lg"]] += nl*G0*MTOM/2
 
 #applying weight
 weight = p3g.weight(M, n*G0, N, pf3.DOF, gcl.Direction3D(0,0,-1))
@@ -199,7 +207,7 @@ v = u[0::pf3.DOF]
 
 
 def plotqty(w:nt.NDArray, wtxt:str, plusonly=False):
-    plt.figure()
+    fig = plt.figure()
     levels = np.linspace(w.min(), w.max(), 50) if not plusonly else np.linspace(0, w.max(), 50)
 
     def contourp(loc:int, selection:nt.NDArray[np.int32]):
@@ -271,6 +279,7 @@ def plotqty(w:nt.NDArray, wtxt:str, plusonly=False):
     plt.ylabel(f"{wtxt} [m]", loc="top")
     plt.title("Spar Flanges and LE/TE ept")
     plt.legend()
+    fig.subplots_adjust(wspace=0.4, hspace=0.5)
 
 
 plotqty(w, 'w')
