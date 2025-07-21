@@ -33,7 +33,7 @@ up = pfc.UnpackedPoints(data)
 mesh = gcl.Mesh3D()
 
 #mesh settings
-nb = 50
+nbCoeff = 1
 na = 7
 nf2 = 3
 ntrig = 2
@@ -43,7 +43,7 @@ nipCoeff = 1
 dz = .015 #inwards z offset of battery rail
 din = .010 #inner diameter of (threaded) battery rail
 cspacing = .25 #chordwise panel rib spacing
-bspacing = 2 #spanwise panel rib spacing
+bspacing = 1.33 #spanwise panel rib spacing
 ribflange = 0.0125 #rib flange length, excluding bends at corners
 motormass = 1000
 lgmass = 5000
@@ -73,7 +73,7 @@ hinge ="hn"
 mount = "mm"
 
 #geometry loading
-pts, ids = mc.all_components(mesh, up, nb, na, nf2, nipCoeff, ntrig, dz, din, cspacing, bspacing, BAT_MASS_1WING, lemass, temass,
+pts, ids = mc.all_components(mesh, up, nbCoeff, na, nf2, nipCoeff, ntrig, dz, din, cspacing, bspacing, BAT_MASS_1WING, lemass, temass,
                              spar, panelPlate, panelRib, panelFlange, skin, batteryRail, battery, motor, lg, hinge, mount)
 
 #element definitions
@@ -198,9 +198,9 @@ v = u[0::pf3.DOF]
 
 
 
-def plotqty(w:nt.NDArray, wtxt:str):
+def plotqty(w:nt.NDArray, wtxt:str, plusonly=False):
     plt.figure()
-    levels = np.linspace(w.min(), w.max(), 50)
+    levels = np.linspace(w.min(), w.max(), 50) if not plusonly else np.linspace(0, w.max(), 50)
 
     def contourp(loc:int, selection:nt.NDArray[np.int32]):
         plt.subplot(loc) if loc != 0 else ""
@@ -277,5 +277,5 @@ plotqty(w, 'w')
 plotqty(v, 'v')
 fupadded = np.zeros(f.shape)
 fupadded[bu] = fu
-plotqty(fupadded[2::pf3.DOF], 'fu')
+plotqty(fupadded[2::pf3.DOF], 'fu', True)
 plt.show()
