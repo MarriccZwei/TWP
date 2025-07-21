@@ -42,8 +42,8 @@ nipCoeff = 1
 #geometry settings
 dz = .015 #inwards z offset of battery rail
 din = .010 #inner diameter of (threaded) battery rail
-cspacing = .25 #chordwise panel rib spacing
-bspacing = 1.33 #spanwise panel rib spacing
+cspacing = .2 #chordwise panel rib spacing
+bspacing = 1 #spanwise panel rib spacing
 ribflange = 0.0125 #rib flange length, excluding bends at corners
 motormass = 1000
 lgmass = 5000

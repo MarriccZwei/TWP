@@ -200,12 +200,14 @@ def hinge(mesh:gcl.Mesh3D, uphinge:gcl.Point3D, panshTop:nt.ArrayLike, panidTop:
 def LETE(mesh:gcl.Mesh3D, lineLE:gcl.Line3D, lineTE:gcl.Line3D, panshTop:nt.ArrayLike, panidTop:nt.NDArray[np.int64], panshBot:nt.ArrayLike, panidBot:nt.NDArray[np.int64],
          totmassLE:float, totmassTE:float, ptmass:str, ptmassmount:str):
     '''Leading Edge'''
-    connPtsLE = [0]*panshTop.shape[0]
-    connPtsLE[::2] = panshTop[::2, 0]
-    connPtsLE[1::2] = panshBot[1::2, 0]
-    connIdsLE = [0]*panidTop.shape[0]
-    connIdsLE[::2] = panidTop[::2, 0]
-    connIdsLE[1::2] = panidBot[1::2, 0]
+    #connPtsLE = [0]*panshTop.shape[0]
+    # connPtsLE[::2] = panshTop[::2, 0]
+    # connPtsLE[1::2] = panshBot[1::2, 0]
+    connPtsLE = panshBot[::, 0]
+    # connIdsLE = [0]*panidTop.shape[0]
+    # connIdsLE[::2] = panidTop[::2, 0]
+    # connIdsLE[1::2] = panidBot[1::2, 0]
+    connIdsLE = panidBot[::, 0]
     ptsLE = [lineLE.for_y(pt.y) for pt in connPtsLE]
     idsLE = mesh.register(ptsLE)
     #the distance between the points is also expressed in terms of chord fractions, it can be used as proprtionality for mass if squared
@@ -215,12 +217,14 @@ def LETE(mesh:gcl.Mesh3D, lineLE:gcl.Line3D, lineTE:gcl.Line3D, panshTop:nt.Arra
     [mesh.pointmass_attach(id_, ptmass, m) for id_, m in zip(idsLE, msLE)]
     [mesh.spring_connect(connIdsLE, idsLE, ptmassmount)]
     '''Trailing Edge'''
-    connPtsTE = [0]*panshTop.shape[0]
-    connPtsTE[::2] = panshTop[::2, -1]
-    connPtsTE[1::2] = panshBot[1::2, -1]
-    connIdsTE = [0]*panidTop.shape[0]
-    connIdsTE[::2] = panidTop[::2, 0-1]
-    connIdsTE[1::2] = panidBot[1::2, -1]
+    # connPtsTE = [0]*panshTop.shape[0]
+    # connPtsTE[::2] = panshTop[::2, -1]
+    # connPtsTE[1::2] = panshBot[1::2, -1]
+    # connIdsTE = [0]*panidTop.shape[0]
+    # connIdsTE[::2] = panidTop[::2, 0-1]
+    # connIdsTE[1::2] = panidBot[1::2, -1]
+    connPtsTE = panshBot[::, -1]
+    connIdsTE = panidBot[::, -1]
     ptsTE = [lineTE.for_y(pt.y) for pt in connPtsTE]
     idsTE = mesh.register(ptsTE)
     #the distance between the points is also expressed in terms of chord fractions, it can be used as proprtionality for mass if squared
@@ -245,11 +249,11 @@ def all_components(mesh:gcl.Mesh3D, up:pfc.UnpackedPoints, nbCoeff:float, na:int
     edgemount = mount
     edgeptmass = bat #same behaviour a ptmass with assigned mass
 
-    nb = int(np.ceil(nbCoeff*5*((up.tfb.y-up.ffb.y)/bspacing+1)))
+    nb = int(np.ceil(nbCoeff*4*((up.tfb.y-up.ffb.y)/bspacing+1)))
 
     sparsh, sparigrd, sparSecIdxs, a1, a2, f = trigspars(mesh, nb, na, nf2, ntrig, spar, up.ffb, up.frb, up.frt, up.fft, up.tfb, up.trb, up.trt, up.tft)
 
-    nip = int(np.ceil(nipCoeff*(5*((a1+2*f)/cspacing+1)))) #obtaining nip so that we get the minimal required amount of elements
+    nip = int(np.ceil(nipCoeff*(4*((a1+2*f)/cspacing+1)))) #obtaining nip so that we get the minimal required amount of elements
 
     sparBotConns = sparSecIdxs[0::6]
     sparTopConns = sparSecIdxs[3::6]
