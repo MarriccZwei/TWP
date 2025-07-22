@@ -176,7 +176,7 @@ def eles_from_gcl(mesh:gcl.Mesh3D, eleDict:ty.Dict[str, ty.Dict[str, object]]):
         beam.update_probe_xe(ncoords_flatten)
         beam.update_KC0(KC0r, KC0c, KC0v, prop)
         beam.update_M(Mr, Mc, Mv, prop) #TODO: mtype?
-        created_eles["beam"].append(spring)
+        created_eles["beam"].append(beam)
         init_k_KC0 += data["beam"].KC0_SPARSE_SIZE
         init_k_M += data["beam"].M_SPARSE_SIZE
     #Point masses
