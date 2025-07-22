@@ -82,7 +82,7 @@ def bat_rail(mesh:gcl.Mesh3D, ntrig:int, a1:float, a2:float, f:float,
         ymax = mesh.nodes[midflids[-1]].y
         yfrac = (y-y0)/(ymax-y0)
         a = a2*yfrac+(1-yfrac)*a1 #linear interpolation of battery a
-        #battery volume proportionality - july 10th page
+        #battery volume proportionality - july 10th page TODO:SUS
         prop = a**2*np.sqrt(3)/4+a*np.sqrt(3)/2*f-(2*abs(dz)+din)**2*np.sqrt(3)/12
         assert prop>0 #if prop<0, then we have a prob - foil too thin at the tip
         props[i] = prop
