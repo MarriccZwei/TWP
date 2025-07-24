@@ -80,11 +80,11 @@ def bat_rail(mesh:gcl.Mesh3D, ntrig:int, a1:float, a2:float, f:float,
         yfrac = (y-y0)/(ymax-y0)
         a = a2*yfrac+(1-yfrac)*a1 #linear interpolation of battery a
         #battery volume proportionality - july 10th page TODO:SUS
-        prop = a**2*np.sqrt(3)/4+a*np.sqrt(3)/2*f-(2*abs(dz)+din)**2*np.sqrt(3)/12
+        prop = (a+2*f)*a*np.sqrt(3)/4-((din+dz)/np.sqrt(3)+f)*(din+dz)
         assert prop>0 #if prop<0, then we have a prob - foil too thin at the tip
         props[i] = prop
         dzs[i] = np.sign(dz)*a*np.sqrt(3)/3 #oriented distance from the rail to the battery centroid
-    propmass = totmass/(2*ntrig+1)/sum(props.values()) #how much mass a unit prop means
+    propmass = totmass/(4*ntrig+2)/sum(props.values()) #how much mass a unit prop means
     batids = list()
     for i in midflids:
         batpt = zaxis.step(mesh.nodes[i], dzs[i])
@@ -256,18 +256,26 @@ def all_components(mesh:gcl.Mesh3D, up:pfc.UnpackedPoints, nbCoeff:float, na:int
     sparTopConns = sparSecIdxs[3::6]
     sbci = [sparigrd[:,idx] for idx in sparBotConns] #spar bottom connection ids
     stci = [sparigrd[:,idx] for idx in sparTopConns] #spar top connection ids
-    batTopConns = sparSecIdxs[2::6]
-    batBotConns = sparSecIdxs[5::6][:-1] #this one would also have the semi last corner which we know should not be there
-    sbbc = [sparigrd[:,idx] for idx in batBotConns] 
-    stbc = [sparigrd[:,idx] for idx in batTopConns] 
+    batTopConn1s = sparSecIdxs[2::6]
+    batBotConn1s = sparSecIdxs[5::6][:-1] #this one would also have the semi last corner which we know should not be there
+    sbbc1 = [sparigrd[:,idx] for idx in batBotConn1s] 
+    stbc1 = [sparigrd[:,idx] for idx in batTopConn1s]
+    batTopConn2s = sparSecIdxs[4::6]
+    batBotConn2s = sparSecIdxs[7::6] #this one would also have the semi last corner which we know should not be there
+    sbbc2 = [sparigrd[:,idx] for idx in batBotConn2s] 
+    stbc2 = [sparigrd[:,idx] for idx in batTopConn2s] 
 
 
-    batids = [[]]*(2*ntrig+1)
-    for i, ids, cids in zip(range(1,2*ntrig+1,2), sbci[1:-1], sbbc): #bottom batteries
-        batids[i] = bat_rail(mesh, ntrig, a1, a2, f, dinRail, dzRail, ids, #cids,
+    batids = [[]]*(4*ntrig+2)
+    for i, ids1, ids2 in zip(range(2,4*ntrig+2,4), sbbc1, sbbc2): #bottom batteries
+        batids[i] = bat_rail(mesh, ntrig, a1, a2, f, dinRail, dzRail, ids1,
                                          rail, bat, batmount, totmass)
-    for i, ids, cids in zip(range(0,2*ntrig+1,2), stci, stbc): #top batteries
-       batids[i] = bat_rail(mesh, ntrig, a1, a2, f, dinRail, -dzRail, ids, #cids,
+        batids[i+1] = bat_rail(mesh, ntrig, a1, a2, f, dinRail, dzRail, ids2,
+                                         rail, bat, batmount, totmass)
+    for i, ids1, ids2 in zip(range(0,4*ntrig+2,4), stbc1, stbc2): #top batteries
+        batids[i] = bat_rail(mesh, ntrig, a1, a2, f, dinRail, -dzRail, ids1, #cids,
+                                         rail, bat, batmount, totmass)
+        batids[i+1] = bat_rail(mesh, ntrig, a1, a2, f, dinRail, -dzRail, ids2, #cids,
                                          rail, bat, batmount, totmass)
 
     topflsh, topsksh, topflids, topskids = panel(mesh, up.fft, up.frt, up.tft, up.trt, nb, nip, nf2, 
