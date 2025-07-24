@@ -1,0 +1,54 @@
+import geometricClasses as gcl
+import numpy as np
+'''ALL PARAMETERS NOT CHANGED BY THE SIZER'''
+CONSTS={
+    'BAT_MASS_1WING':17480, #kg
+    'E_ALU':72e9, #Pa
+    'E_STEEL':200e9, #Pa #TODO: verify
+    'NU':.33, #[-]
+    'RHO_ALU':2700, #kg/m^3
+    'RHO_STEEL':7850, #kg/m^3 #TODO: verify
+    'FULLSPAN':21, #m
+    'G0':9.81, #N/kg
+    'MTOM':7600, #kg
+    'INFTY_STIFF':1e15, #stiffness assumed for infinity stiffness springs [N/m]
+    'RIB_FLANGE':0.0125, #m
+    'DIN':0.015, #inner diameter of the rail wormgear [m]
+    'NTRIG':2, #number of batteries supported on the lower panel [-]
+    'M_MOTOR':1000, #Entire engine group of a single engine [kg]
+    'M_LG':5000, #Mass of the entire landing gear group [kg]
+    'M_LE':1000, #Mass of all other LE eqpt: thermal management, avionics, 1/2 cable/pipe mass etc. [kg]
+    'M_TE':3000, #Mass of all TE eqpt: hlds, 1/2 cable/pipe mass etc. [kg]
+    'M_HN':500 #Mass of the hinge
+    }
+
+LOAD_C=[
+    {'n':2.5, 'nult':2.5*1.5, 'nlg': 0, 'ndir':gcl.Direction3D(0, 0, 1)}, #symmetric coordinated turn
+    {'n':1, 'nult':1.5, 'nlg': 0, 'ndir':gcl.Direction3D(0, 0, -1)}, #negative load factor
+    {'n':1.5, 'nult':1.5*1.5, 'nlg': 2, 'ndir':gcl.Direction3D(0, 0, 1)}, #landing loads
+    ]
+
+#internal ids of element types
+CODES={
+    'spar':'sp',
+    'skin':'sk',
+    'panelPlate':'pp',
+    'panelRib':'pr',
+    'panelFlange':'pf',
+    'rail':'rl',
+    'varpt':'vp', #special code - this code corresponds to mass point with mass in protocol
+    'motor':'en', #typical would be mt, so none shall get it
+    'mount':'mm', #typical would be mt, so none shall get it
+    'hinge':'hn',
+    'lg':'lg',
+}
+
+#styled as a sizer protocol
+INTIAL = {
+'tspar':0.005, #m
+'tskin':0.003, #m
+'tpan':0.002, #m
+'trib':0.0025, #m
+'bsp':2, #spanwise panel rib spacing (maximum) [m]
+'csp':.3 #chordwise panel rib spacing (maximum) [m]
+}
