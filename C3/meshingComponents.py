@@ -63,20 +63,17 @@ def trigspars(mesh:gcl.Mesh3D, nb:int, na:int, nf2:int, ntrig:int,
 
 def bat_rail(mesh:gcl.Mesh3D, ntrig:int, a1:float, a2:float, f:float, 
              din:float, dz:float, midflids:ty.List[int], rail:str, bat:str,
-             railmount:str, batmount:str, totmass:float)->ty.Tuple[ty.List[int]]:
+             batmount:str, totmass:float)->ty.Tuple[ty.List[int]]:
     '''nodes for midflids have to be oriented from y=0 to y=ymax'''
     zaxis = gcl.Direction3D(0,0,1)
     #translated points to serve as center of the rails
-    transl = [zaxis.step(mesh.nodes[i], dz) for i in midflids] 
-    beamids = mesh.register(transl)
-    mesh.beam_interconnect(beamids, rail)
-    mesh.spring_connect(midflids, beamids, railmount)
+    mesh.beam_interconnect(midflids, rail)
 
     #batteries - harder job. We need to define the local battery area
     #continuous attachment for now - subject to change
     props = dict()
     dzs = dict()
-    for i in beamids:
+    for i in midflids:
         y = mesh.nodes[i].y
         y0 = mesh.nodes[midflids[0]].y
         ymax = mesh.nodes[midflids[-1]].y
@@ -86,10 +83,10 @@ def bat_rail(mesh:gcl.Mesh3D, ntrig:int, a1:float, a2:float, f:float,
         prop = a**2*np.sqrt(3)/4+a*np.sqrt(3)/2*f-(2*abs(dz)+din)**2*np.sqrt(3)/12
         assert prop>0 #if prop<0, then we have a prob - foil too thin at the tip
         props[i] = prop
-        dzs[i] = np.sign(dz)*a*np.sqrt(3)/3-dz #oriented distance from the rail to the battery centroid
+        dzs[i] = np.sign(dz)*a*np.sqrt(3)/3 #oriented distance from the rail to the battery centroid
     propmass = totmass/(2*ntrig+1)/sum(props.values()) #how much mass a unit prop means
     batids = list()
-    for i in beamids:
+    for i in midflids:
         batpt = zaxis.step(mesh.nodes[i], dzs[i])
         batid = mesh.register([batpt])
         #assigning the variable mass to the battery using protocol
@@ -97,7 +94,7 @@ def bat_rail(mesh:gcl.Mesh3D, ntrig:int, a1:float, a2:float, f:float,
         mesh.spring_connect([i], batid, batmount)
         batids.append(batid[0])
 
-    return beamids, batids
+    return batids
 
 def panel(mesh:gcl.Mesh3D, ff:gcl.Point3D, fr:gcl.Point3D, tf:gcl.Point3D, tr:gcl.Point3D, nb:int, nip:int, nf:int, 
           floor:str, skin:str, rib:str, flange:str, panelz:ty.Callable, ribconnids:ty.List[nt.NDArray[np.int64]],
@@ -239,7 +236,7 @@ def LETE(mesh:gcl.Mesh3D, lineLE:gcl.Line3D, lineTE:gcl.Line3D, panshTop:nt.Arra
 
 def all_components(mesh:gcl.Mesh3D, up:pfc.UnpackedPoints, nbCoeff:float, na:int, nf2:int, nipCoeff:float, ntrig:int, dzRail:float, dinRail:float, cspacing:float, bspacing:float, 
                    totmass:float, totmassLE:float, totmassTE:float, spar:str, plate:str, rib:str, flange:str, skin:str, rail:str, bat:str, motor:str, lg_:str, hinge_:str, 
-                   mount:str, railmount:str):
+                   mount:str):
     #in case we ever want to do mounts differently
     #railmount=mount
     batmount=mount
@@ -265,13 +262,13 @@ def all_components(mesh:gcl.Mesh3D, up:pfc.UnpackedPoints, nbCoeff:float, na:int
     stbc = [sparigrd[:,idx] for idx in batTopConns] 
 
 
-    beamids, batids = [[]]*(2*ntrig+1), [[]]*(2*ntrig+1)
+    batids = [[]]*(2*ntrig+1)
     for i, ids, cids in zip(range(1,2*ntrig+1,2), sbci[1:-1], sbbc): #bottom batteries
-        beamids[i], batids[i] = bat_rail(mesh, ntrig, a1, a2, f, dinRail, dzRail, ids, #cids,
-                                         rail, bat, railmount, batmount, totmass)
+        batids[i] = bat_rail(mesh, ntrig, a1, a2, f, dinRail, dzRail, ids, #cids,
+                                         rail, bat, batmount, totmass)
     for i, ids, cids in zip(range(0,2*ntrig+1,2), stci, stbc): #top batteries
-        beamids[i], batids[i] = bat_rail(mesh, ntrig, a1, a2, f, dinRail, -dzRail, ids, #cids,
-                                         rail, bat, railmount, batmount, totmass)
+       batids[i] = bat_rail(mesh, ntrig, a1, a2, f, dinRail, -dzRail, ids, #cids,
+                                         rail, bat, batmount, totmass)
 
     topflsh, topsksh, topflids, topskids = panel(mesh, up.fft, up.frt, up.tft, up.trt, nb, nip, nf2, 
                                     plate, skin, rib, flange, up.surft, stci, cspacing, bspacing)
@@ -285,7 +282,7 @@ def all_components(mesh:gcl.Mesh3D, up:pfc.UnpackedPoints, nbCoeff:float, na:int
     leids, teids = LETE(mesh, up.leline, up.teline, topflsh, topflids, botflsh, botflids, totmassLE, totmassTE, edgeptmass, edgemount)
 
     return {"spars":sparsh, "plateTop":topflsh, "skinTop":topsksh, "plateBot":botflsh, "skinBot":botsksh}, {"spars":sparigrd, "plateTop":topflids, "skinTop":topskids, 
-            "plateBot":botflids,"skinBot":botskids, "rails":beamids, "bats":batids, "motors":mids, "lg":lgid, "hinge":hingeid, "sparBends":sparSecIdxs, "LE":leids, "TE":teids}
+            "plateBot":botflids,"skinBot":botskids, "bats":batids, "motors":mids, "lg":lgid, "hinge":hingeid, "sparBends":sparSecIdxs, "LE":leids, "TE":teids}
 
 if __name__ == "__main__":
     import ptsFromCAD as pfc
@@ -330,7 +327,7 @@ if __name__ == "__main__":
     # fshb, sshb, fib, sib, rib, rbib, rcib = panel(mesh, up.ffb, up.frb, up.tfb, up.trb, nb, nip, nf2, 
     #                                   "panfl", "skin", "rib", "tr", up.surfb, rivetedbot, cspacing, bspacing)
     all_components(mesh, up, 1, na, nf2, 1, ntrig, dz, din, cspacing, bspacing, totmass, lemass, temass, "/EXCLsp", "/EXCLpl", "/EXCLrb", "/EXCLfl", "/EXCLsk", "rl", "bt", 
-                   "/EXCLmo", "/EXCLlg", "/EXCLhg", "mm", "rm")
+                   "/EXCLmo", "/EXCLlg", "/EXCLhg", "mm")
 
     #comparison of what is registered in the mesh and what the sheets are
     from mpl_toolkits import mplot3d
