@@ -240,7 +240,6 @@ def plotqty(w:nt.NDArray, wtxt:str, plusonly=False):
     plt.scatter(x_, y_)
     plt.xticks(x_, ["m1u","m1l","m2u","m2l", "m3u", "m3l", 
                             "m4u", "m4l", "lg", "hn"], rotation=60)
-    plt.xlabel("y [m]", loc="right")
     plt.ylabel(f"{wtxt} [m]", loc="top")
     plt.title("Poitmass Components")
 
