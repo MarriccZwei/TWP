@@ -40,7 +40,6 @@ ntrig = 2
 nipCoeff = 1
 
 #geometry settings
-dz = .015 #inwards z offset of battery rail
 din = .010 #inner diameter of (threaded) battery rail
 cspacing = .3 #chordwise panel rib spacing
 bspacing = 2 #spanwise panel rib spacing
@@ -76,7 +75,7 @@ mount = "mm"
 railmount = "rm"
 
 #geometry loading
-pts, ids = mc.all_components(mesh, up, nbCoeff, na, nf2, nipCoeff, ntrig, dz, din, cspacing, bspacing, BAT_MASS_1WING, lemass, temass,
+pts, ids = mc.all_components(mesh, up, nbCoeff, na, nf2, nipCoeff, ntrig, din, cspacing, bspacing, BAT_MASS_1WING, lemass, temass,
                              spar, panelPlate, panelRib, panelFlange, skin, batteryRail, battery, motor, lg, hinge, mount)
 
 #element definitions

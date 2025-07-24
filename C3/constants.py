@@ -19,13 +19,13 @@ CONSTS={
     'M_LG':5000, #Mass of the entire landing gear group [kg]
     'M_LE':1000, #Mass of all other LE eqpt: thermal management, avionics, 1/2 cable/pipe mass etc. [kg]
     'M_TE':3000, #Mass of all TE eqpt: hlds, 1/2 cable/pipe mass etc. [kg]
-    'M_HN':500 #Mass of the hinge
+    'M_HN':500, #Mass of the hinge
     }
 
 LOAD_C=[
-    {'n':2.5, 'nult':2.5*1.5, 'nlg': 0, 'ndir':gcl.Direction3D(0, 0, 1)}, #symmetric coordinated turn
-    {'n':1, 'nult':1.5, 'nlg': 0, 'ndir':gcl.Direction3D(0, 0, -1)}, #negative load factor
-    {'n':1.5, 'nult':1.5*1.5, 'nlg': 2, 'ndir':gcl.Direction3D(0, 0, 1)}, #landing loads
+    {'n':2.5, 'nult':2.5*1.5, 'nlg': 0, 'ndir':gcl.Direction3D(0, 0, 1), "LD":20, "FT":5000}, #symmetric coordinated turn
+    {'n':1, 'nult':1.5, 'nlg': 0, 'ndir':gcl.Direction3D(0, 0, -1), "LD":16, "FT":2500}, #negative load factor
+    {'n':1.5, 'nult':1.5*1.5, 'nlg': 2, 'ndir':gcl.Direction3D(0, 0, 1), "LD":14, "FT":0}, #landing loads
     ]
 
 #internal ids of element types

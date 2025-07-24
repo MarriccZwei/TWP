@@ -66,7 +66,6 @@ def bat_rail(mesh:gcl.Mesh3D, ntrig:int, a1:float, a2:float, f:float,
              batmount:str, totmass:float)->ty.Tuple[ty.List[int]]:
     '''nodes for midflids have to be oriented from y=0 to y=ymax'''
     zaxis = gcl.Direction3D(0,0,1)
-    #translated points to serve as center of the rails
     mesh.beam_interconnect(midflids, rail)
 
     #batteries - harder job. We need to define the local battery area
@@ -80,7 +79,7 @@ def bat_rail(mesh:gcl.Mesh3D, ntrig:int, a1:float, a2:float, f:float,
         yfrac = (y-y0)/(ymax-y0)
         a = a2*yfrac+(1-yfrac)*a1 #linear interpolation of battery a
         #battery volume proportionality - july 10th page TODO:SUS
-        prop = (a+2*f)*a*np.sqrt(3)/4-((din+dz)/np.sqrt(3)+f)*(din+dz)
+        prop = (a+2*f)*a*np.sqrt(3)/4
         assert prop>0 #if prop<0, then we have a prob - foil too thin at the tip
         props[i] = prop
         dzs[i] = np.sign(dz)*a*np.sqrt(3)/3 #oriented distance from the rail to the battery centroid
@@ -234,7 +233,7 @@ def LETE(mesh:gcl.Mesh3D, lineLE:gcl.Line3D, lineTE:gcl.Line3D, panshTop:nt.Arra
     return idsLE, idsTE
 
 
-def all_components(mesh:gcl.Mesh3D, up:pfc.UnpackedPoints, nbCoeff:float, na:int, nf2:int, nipCoeff:float, ntrig:int, dzRail:float, dinRail:float, cspacing:float, bspacing:float, 
+def all_components(mesh:gcl.Mesh3D, up:pfc.UnpackedPoints, nbCoeff:float, na:int, nf2:int, nipCoeff:float, ntrig:int, dinRail:float, cspacing:float, bspacing:float, 
                    totmass:float, totmassLE:float, totmassTE:float, spar:str, plate:str, rib:str, flange:str, skin:str, rail:str, bat:str, motor:str, lg_:str, hinge_:str, 
                    mount:str):
     #in case we ever want to do mounts differently
@@ -268,14 +267,14 @@ def all_components(mesh:gcl.Mesh3D, up:pfc.UnpackedPoints, nbCoeff:float, na:int
 
     batids = [[]]*(4*ntrig+2)
     for i, ids1, ids2 in zip(range(2,4*ntrig+2,4), sbbc1, sbbc2): #bottom batteries
-        batids[i] = bat_rail(mesh, ntrig, a1, a2, f, dinRail, dzRail, ids1,
+        batids[i] = bat_rail(mesh, ntrig, a1, a2, f, dinRail, 1, ids1,
                                          rail, bat, batmount, totmass)
-        batids[i+1] = bat_rail(mesh, ntrig, a1, a2, f, dinRail, dzRail, ids2,
+        batids[i+1] = bat_rail(mesh, ntrig, a1, a2, f, dinRail, 1, ids2,
                                          rail, bat, batmount, totmass)
     for i, ids1, ids2 in zip(range(0,4*ntrig+2,4), stbc1, stbc2): #top batteries
-        batids[i] = bat_rail(mesh, ntrig, a1, a2, f, dinRail, -dzRail, ids1, #cids,
+        batids[i] = bat_rail(mesh, ntrig, a1, a2, f, dinRail, -1, ids1, #cids,
                                          rail, bat, batmount, totmass)
-        batids[i+1] = bat_rail(mesh, ntrig, a1, a2, f, dinRail, -dzRail, ids2, #cids,
+        batids[i+1] = bat_rail(mesh, ntrig, a1, a2, f, dinRail, -1, ids2, #cids,
                                          rail, bat, batmount, totmass)
 
     topflsh, topsksh, topflids, topskids = panel(mesh, up.fft, up.frt, up.tft, up.trt, nb, nip, nf2, 
@@ -334,7 +333,7 @@ if __name__ == "__main__":
     # rivetedbot.append(idgrids[-1][:, -1])
     # fshb, sshb, fib, sib, rib, rbib, rcib = panel(mesh, up.ffb, up.frb, up.tfb, up.trb, nb, nip, nf2, 
     #                                   "panfl", "skin", "rib", "tr", up.surfb, rivetedbot, cspacing, bspacing)
-    all_components(mesh, up, 1, na, nf2, 1, ntrig, dz, din, cspacing, bspacing, totmass, lemass, temass, "/EXCLsp", "/EXCLpl", "/EXCLrb", "/EXCLfl", "/EXCLsk", "rl", "bt", 
+    all_components(mesh, up, 1, na, nf2, 1, ntrig, din, cspacing, bspacing, totmass, lemass, temass, "/EXCLsp", "/EXCLpl", "/EXCLrb", "/EXCLfl", "/EXCLsk", "rl", "bt", 
                    "/EXCLmo", "/EXCLlg", "/EXCLhg", "mm")
 
     #comparison of what is registered in the mesh and what the sheets are
