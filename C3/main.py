@@ -42,8 +42,8 @@ nipCoeff = 1
 #geometry settings
 dz = .015 #inwards z offset of battery rail
 din = .010 #inner diameter of (threaded) battery rail
-cspacing = .2 #chordwise panel rib spacing
-bspacing = 1.5 #spanwise panel rib spacing
+cspacing = .3 #chordwise panel rib spacing
+bspacing = 2 #spanwise panel rib spacing
 ribflange = 0.0125 #rib flange length, excluding bends at corners
 motormass = 1000
 lgmass = 5000
@@ -240,7 +240,6 @@ def plotqty(w:nt.NDArray, wtxt:str, plusonly=False):
     plt.scatter(x_, y_)
     plt.xticks(x_, ["m1u","m1l","m2u","m2l", "m3u", "m3l", 
                             "m4u", "m4l", "lg", "hn"], rotation=60)
-    plt.xlabel("y [m]", loc="right")
     plt.ylabel(f"{wtxt} [m]", loc="top")
     plt.title("Poitmass Components")
 

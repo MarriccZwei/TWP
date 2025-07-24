@@ -62,7 +62,7 @@ def trigspars(mesh:gcl.Mesh3D, nb:int, na:int, nf2:int, ntrig:int,
 
 
 def bat_rail(mesh:gcl.Mesh3D, ntrig:int, a1:float, a2:float, f:float, 
-             din:float, dz:float, midflids:ty.List[int], conns:ty.List[int], rail:str, bat:str,
+             din:float, dz:float, midflids:ty.List[int], conn1s:ty.List[int],conn2s:ty.List[int], rail:str, bat:str,
              railmount:str, batmount:str, totmass:float)->ty.Tuple[ty.List[int]]:
     '''nodes for midflids have to be oriented from y=0 to y=ymax'''
     zaxis = gcl.Direction3D(0,0,1)
@@ -70,7 +70,8 @@ def bat_rail(mesh:gcl.Mesh3D, ntrig:int, a1:float, a2:float, f:float,
     transl = [zaxis.step(mesh.nodes[i], dz) for i in midflids] 
     beamids = mesh.register(transl)
     mesh.beam_interconnect(beamids, rail)
-    mesh.spring_connect(conns, beamids, railmount)
+    mesh.quad_connect(conn1s, beamids, railmount)
+    mesh.quad_connect(conn2s, beamids, railmount)
 
     #batteries - harder job. We need to define the local battery area
     #continuous attachment for now - subject to change
@@ -241,7 +242,7 @@ def all_components(mesh:gcl.Mesh3D, up:pfc.UnpackedPoints, nbCoeff:float, na:int
                    totmass:float, totmassLE:float, totmassTE:float, spar:str, plate:str, rib:str, flange:str, skin:str, rail:str, bat:str, motor:str, lg_:str, hinge_:str, 
                    mount:str):
     #in case we ever want to do mounts differently
-    railmount=mount
+    railmount=spar #TODO: move to a dedicated element for this one
     batmount=mount
     motormount=mount
     lgmount = mount
@@ -259,18 +260,22 @@ def all_components(mesh:gcl.Mesh3D, up:pfc.UnpackedPoints, nbCoeff:float, na:int
     sparTopConns = sparSecIdxs[3::6]
     sbci = [sparigrd[:,idx] for idx in sparBotConns] #spar bottom connection ids
     stci = [sparigrd[:,idx] for idx in sparTopConns] #spar top connection ids
-    batTopConns = sparSecIdxs[2::6]
-    batBotConns = sparSecIdxs[5::6][:-1] #this one would also have the semi last corner which we know should not be there
-    sbbc = [sparigrd[:,idx] for idx in batBotConns] 
-    stbc = [sparigrd[:,idx] for idx in batTopConns] 
+    batTopConn1s = sparSecIdxs[2::6]
+    batBotConn1s = sparSecIdxs[5::6][:-1] #this one would also have the semi last corner which we know should not be there
+    sbbc1 = [sparigrd[:,idx] for idx in batBotConn1s] 
+    stbc1 = [sparigrd[:,idx] for idx in batTopConn1s] 
+    batTopConn2s = sparSecIdxs[4::6]
+    batBotConn2s = sparSecIdxs[7::6]
+    sbbc2 = [sparigrd[:,idx] for idx in batBotConn2s] 
+    stbc2 = [sparigrd[:,idx] for idx in batTopConn2s]
 
 
     beamids, batids = [[]]*(2*ntrig+1), [[]]*(2*ntrig+1)
-    for i, ids, cids in zip(range(1,2*ntrig+1,2), sbci[1:-1], sbbc): #bottom batteries
-        beamids[i], batids[i] = bat_rail(mesh, ntrig, a1, a2, f, dinRail, dzRail, ids, cids,
+    for i, ids, cids, ci2 in zip(range(1,2*ntrig+1,2), sbci[1:-1], sbbc1, sbbc2): #bottom batteries
+        beamids[i], batids[i] = bat_rail(mesh, ntrig, a1, a2, f, dinRail, dzRail, ids, cids, ci2,
                                          rail, bat, railmount, batmount, totmass)
-    for i, ids, cids in zip(range(0,2*ntrig+1,2), stci, stbc): #top batteries
-        beamids[i], batids[i] = bat_rail(mesh, ntrig, a1, a2, f, dinRail, -dzRail, ids, cids,
+    for i, ids, cids, ci2 in zip(range(0,2*ntrig+1,2), stci, stbc1, stbc2): #top batteries
+        beamids[i], batids[i] = bat_rail(mesh, ntrig, a1, a2, f, dinRail, -dzRail, ids, cids, ci2,
                                          rail, bat, railmount, batmount, totmass)
 
     topflsh, topsksh, topflids, topskids = panel(mesh, up.fft, up.frt, up.tft, up.trt, nb, nip, nf2, 
