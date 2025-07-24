@@ -42,8 +42,8 @@ nipCoeff = 1
 #geometry settings
 dz = .015 #inwards z offset of battery rail
 din = .010 #inner diameter of (threaded) battery rail
-cspacing = .2 #chordwise panel rib spacing
-bspacing = 1.5 #spanwise panel rib spacing
+cspacing = .3 #chordwise panel rib spacing
+bspacing = 2 #spanwise panel rib spacing
 ribflange = 0.0125 #rib flange length, excluding bends at corners
 motormass = 1000
 lgmass = 5000
@@ -73,10 +73,11 @@ motor = "mo"
 lg ="lg"
 hinge ="hn"
 mount = "mm"
+railmount = "rm"
 
 #geometry loading
 pts, ids = mc.all_components(mesh, up, nbCoeff, na, nf2, nipCoeff, ntrig, dz, din, cspacing, bspacing, BAT_MASS_1WING, lemass, temass,
-                             spar, panelPlate, panelRib, panelFlange, skin, batteryRail, battery, motor, lg, hinge, mount)
+                             spar, panelPlate, panelRib, panelFlange, skin, batteryRail, battery, motor, lg, hinge, mount, railmount)
 
 #element definitions
 #1) thicknesses
@@ -86,7 +87,8 @@ t_plate = 0.0025 #panel plate thickness
 t_rib = 0.002 #panel rib thickness
 
 #2) springs
-ks_rivet = p3g.SpringProp(1e5, 1e7, 1e7, 1e5, 1e5, 1e5, 0, 0, 1, 0, 1, 1, .01) #rivets are all oriented along z axis
+k_rlmount = 1e9
+ks_rlmount = p3g.SpringProp(k_rlmount, k_rlmount, k_rlmount, k_rlmount, k_rlmount, k_rlmount) #rivets are all oriented along z axis
 # ks_railmount = (1e7, 1e7, 1e7, 1e7, 1e7, 1e7) #rail to flange mount also oriented along z
 # ks_batmount = (1e6, 1e6, 1e6, 1e6, 1e6, 1e6) #battery to rail mount also oriented along z
 ks_motmount =  p3g.SpringProp(INFTY_STIFF, INFTY_STIFF, INFTY_STIFF, INFTY_STIFF, INFTY_STIFF, INFTY_STIFF) #TODO: here orientation will be "fun"
@@ -126,7 +128,7 @@ eleProps = {"quad":{spar:psp.isotropic_plate(thickness=t_spar, E=E, nu=NU, rho=R
                     skin:psp.isotropic_plate(thickness=t_skin, E=E, nu=NU, rho=RHO, calc_scf=True),
                     panelPlate:psp.isotropic_plate(thickness=t_plate, E=E, nu=NU, rho=RHO, calc_scf=True), 
                     panelRib:psp.isotropic_plate(thickness=t_rib, E=E, nu=NU, rho=RHO, calc_scf=True)},
-            "spring":{mount:ks_motmount},
+            "spring":{mount:ks_motmount, railmount:ks_rlmount},
             "beam":{batteryRail:prop_rail, panelFlange:prop_flange_or}, 
             "mass":{battery:lambda m:m, motor:motormass, lg:lgmass, hinge:hingemass}}
 
