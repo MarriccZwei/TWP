@@ -56,7 +56,7 @@ panel_plate_quad = lambda t_plate, E, NU, RHO:psp.isotropic_plate(thickness=t_pl
 panel_rib_quad = lambda t_rib, E, NU, RHO:psp.isotropic_plate(thickness=t_rib, E=E, nu=NU, rho=RHO, calc_scf=True)
 
 
-def eledict(consts:ty.Dict[str:object], sizerVars:ty.Dict[str:object], codes:ty.Dict[str:str]):
+def eledict(consts:ty.Dict[str,object], sizerVars:ty.Dict[str,object], codes:ty.Dict[str,str]):
     '''a function that initiates them all based on sizer and constant report'''
 
     eleProps = {"quad":{codes["spar"]:spar_quad(sizerVars["tspar"], consts["E_ALU"], consts["NU"], consts["RHO_ALU"]), 
@@ -65,7 +65,7 @@ def eledict(consts:ty.Dict[str:object], sizerVars:ty.Dict[str:object], codes:ty.
                         codes["panelRib"]:spar_quad(sizerVars["trib"], consts["E_ALU"], consts["NU"], consts["RHO_ALU"])},
                 "spring":{codes["mount"]:ks_mount(consts["INFTY_STIFF"])},
                 "beam":{codes["rail"]:prop_rail(consts["DIN"], consts["E_STEEL"], consts["RHO_STEEL"]), 
-                        codes["panelFlange"]:rib_flange(sizerVars["trib"])}, 
+                        codes["panelFlange"]:rib_flange(sizerVars["trib"], consts["RIB_FLANGE"], consts["E_ALU"], consts["RHO_ALU"])}, 
                 "mass":{codes["varpt"]:lambda m:m, codes["motor"]:consts["M_MOTOR"], codes["lg"]:consts["M_LG"], codes["hinge"]:consts["M_HINGE"]}}
     
     return eleProps

@@ -339,7 +339,6 @@ if __name__ == "__main__":
     #comparison of what is registered in the mesh and what the sheets are
     from mpl_toolkits import mplot3d
     import matplotlib.pyplot as plt
-    fig = plt.figure()
     ax = plt.axes(projection="3d")
     # for sh in sheets:
     #     ax.scatter(*gcl.pts2coords3D(np.ravel(sh)))

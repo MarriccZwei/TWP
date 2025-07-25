@@ -2,24 +2,36 @@ import geometricClasses as gcl
 import numpy as np
 '''ALL PARAMETERS NOT CHANGED BY THE SIZER'''
 CONSTS={
-    'BAT_MASS_1WING':17480, #kg
+    'G0':9.81, #N/kg
+
+    #material properties
     'E_ALU':72e9, #Pa
     'E_STEEL':200e9, #Pa #TODO: verify
     'NU':.33, #[-]
     'RHO_ALU':2700, #kg/m^3
     'RHO_STEEL':7850, #kg/m^3 #TODO: verify
-    'FULLSPAN':21, #m
-    'G0':9.81, #N/kg
-    'MTOM':7600, #kg
-    'INFTY_STIFF':1e15, #stiffness assumed for infinity stiffness springs [N/m]
+
+    #geometry assumptions
     'RIB_FLANGE':0.0125, #m
     'DIN':0.015, #inner diameter of the rail wormgear [m]
     'NTRIG':2, #number of batteries supported on the lower panel [-]
+    'FULLSPAN':21, #m
+
+    #masses
+    'BAT_MASS_1WING':17480, #kg
+    'MTOM':7600, #kg
     'M_MOTOR':1000, #Entire engine group of a single engine [kg]
     'M_LG':5000, #Mass of the entire landing gear group [kg]
     'M_LE':1000, #Mass of all other LE eqpt: thermal management, avionics, 1/2 cable/pipe mass etc. [kg]
     'M_TE':3000, #Mass of all TE eqpt: hlds, 1/2 cable/pipe mass etc. [kg]
-    'M_HN':500, #Mass of the hinge
+    'M_HINGE':500, #Mass of the hinge
+    
+    #Mesh settings
+    'INFTY_STIFF':1e15, #stiffness assumed for infinity stiffness springs [N/m]
+    'NB_COEFF':1,
+    'NIP_COEFF':1,
+    'NA':5,
+    'NF2':3,
     }
 
 LOAD_C=[

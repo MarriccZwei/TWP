@@ -254,16 +254,7 @@ def plotqty(w:nt.NDArray, wtxt:str, plusonly=False):
     plt.xlabel("y [m]", loc="right")
     plt.ylabel(f"{wtxt} [m]", loc="top")
     plt.title("Batteries")
-    # plt.subplot(338)
-    # labels = [f"cell{i}" for i in range(1, 2*ntrig+2)]
-    # for beamids in ids["rails"]:
-    #     x_ = [mesh.nodes[id_].y for id_ in beamids]
-    #     y_ = [w[id_] for id_ in beamids]
-    #     plt.plot(x_, y_, label=labels.pop(0))
     plt.legend()
-    # plt.xlabel("y [m]", loc="right")
-    # plt.ylabel(f"{wtxt} [m]", loc="top")
-    # plt.title("Battery Rails")
     plt.subplot(248)
     first=True
     for i in range(ids["spars"][:, :nf2].shape[1]):
