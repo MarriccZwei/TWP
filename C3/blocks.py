@@ -163,7 +163,7 @@ def plot_block(w:nt.NDArray, wtxt:str, meshOuts:ty.Dict[str, object], consts:ty.
     plt.ylabel(f"{wtxt} [m]", loc="top")
     plt.title("Spar Flanges and LE/TE ept")
     plt.legend()
-    #fig.subplots_adjust(wspace=0.4, hspace=0.5)
+    fig.subplots_adjust(wspace=0.4)
     return fig
 
 
@@ -180,7 +180,7 @@ if __name__ == "__main__":
     load_case["FT"] = 5000 #landing at full thrust - a weird load case that tests everything at once
 
     for k_inf in k_infs:
-        csts["IFTY_STIFF"] = k_inf
+        csts["INFTY_STIFF"] = k_inf
         eleDict = ed.eledict(csts, cst.INTIAL, cst.CODES)
         meshOut = mesh_block(data, cst.INTIAL, eleDict, csts, cst.CODES)
         sol = fem_linear_block(csts, meshOut, load_case, True)
@@ -188,3 +188,4 @@ if __name__ == "__main__":
         wfig.savefig(fr"C:\marek\studia\hpb\Results\Sensivity Study Springs\w\K{np.log10(k_inf)}.pdf")
         vfig = plot_block(sol['v'], "v", meshOut, csts)
         vfig.savefig(fr"C:\marek\studia\hpb\Results\Sensivity Study Springs\v\K{np.log10(k_inf)}.pdf")
+        print(f"{np.log10(k_inf)} is done")
