@@ -87,11 +87,8 @@ def bat_rail(mesh:gcl.Mesh3D, ntrig:int, a1:float, a2:float, f:float,
     batids = list()
     for i in midflids:
         batpt = zaxis.step(mesh.nodes[i], dzs[i])
-        batid = mesh.register([batpt])
         #assigning the variable mass to the battery using protocol
-        mesh.pointmass_attach(batid[0], bat, props[i]*propmass)
-        mesh.spring_connect([i], batid, batmount)
-        batids.append(batid[0])
+        mesh.inertia_attach(props[i], i, batpt)
 
     return batids
 
