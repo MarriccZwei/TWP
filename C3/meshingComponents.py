@@ -180,15 +180,11 @@ def lg(mesh:gcl.Mesh3D, uplg:gcl.Point3D, panshBot:nt.ArrayLike, panidBot:nt.NDA
 
     return lgid
 
-def hinge(mesh:gcl.Mesh3D, uphinge:gcl.Point3D, panshTop:nt.ArrayLike, panidTop:nt.NDArray[np.int64], hinge:str, hingemount:str):
-    x = np.array([pt.x for pt in panshTop[-1, :]]) 
-    idx = (np.abs(x-uphinge.x)).argmin()
-    hingePt = gcl.Point3D(panshTop[-1, idx].x, uphinge.y, uphinge.z)
-    hingeid = mesh.register([hingePt])[0]
-    mesh.pointmass_attach(hingeid, hinge)
-    mesh.spring_connect([hingeid], [panidTop[-1, idx]], hingemount)
+def hinge(mesh:gcl.Mesh3D, uphinge:gcl.Point3D, panidTop:nt.NDArray[np.int64], mhn:float):
+    xids = panidTop[-1, :]
+    mn = mhn/len(xids)
+    [mesh.inertia_attach(mn, xid, uphinge) for xid in xids]
 
-    return hingeid
 
 def LETE(mesh:gcl.Mesh3D, lineLE:gcl.Line3D, lineTE:gcl.Line3D, panshTop:nt.ArrayLike, panidTop:nt.NDArray[np.int64], panshBot:nt.ArrayLike, panidBot:nt.NDArray[np.int64],
          totmassLE:float, totmassTE:float, ptmass:str, ptmassmount:str):
@@ -231,7 +227,7 @@ def LETE(mesh:gcl.Mesh3D, lineLE:gcl.Line3D, lineTE:gcl.Line3D, panshTop:nt.Arra
 
 
 def all_components(mesh:gcl.Mesh3D, up:pfc.UnpackedPoints, nbCoeff:float, na:int, nf2:int, nipCoeff:float, ntrig:int, dinRail:float, cspacing:float, bspacing:float, 
-                   totmass:float, totmassLE:float, totmassTE:float, spar:str, plate:str, rib:str, flange:str, skin:str, rail:str, bat:str, motor:str, lg_:str, hinge_:str, 
+                   totmass:float, totmassLE:float, totmassTE:float, spar:str, plate:str, rib:str, flange:str, skin:str, rail:str, bat:str, motor:str, lg_:str, hinge_:float, 
                    mount:str):
     #in case we ever want to do mounts differently
     #railmount=mount
@@ -262,16 +258,15 @@ def all_components(mesh:gcl.Mesh3D, up:pfc.UnpackedPoints, nbCoeff:float, na:int
     stbc2 = [sparigrd[:,idx] for idx in batTopConn2s] 
 
 
-    batids = [[]]*(4*ntrig+2)
     for i, ids1, ids2 in zip(range(2,4*ntrig+2,4), sbbc1, sbbc2): #bottom batteries
-        batids[i] = bat_rail(mesh, ntrig, a1, a2, f, dinRail, 1, ids1,
+        bat_rail(mesh, ntrig, a1, a2, f, dinRail, 1, ids1,
                                          rail, bat, batmount, totmass)
-        batids[i+1] = bat_rail(mesh, ntrig, a1, a2, f, dinRail, 1, ids2,
+        bat_rail(mesh, ntrig, a1, a2, f, dinRail, 1, ids2,
                                          rail, bat, batmount, totmass)
     for i, ids1, ids2 in zip(range(0,4*ntrig+2,4), stbc1, stbc2): #top batteries
-        batids[i] = bat_rail(mesh, ntrig, a1, a2, f, dinRail, -1, ids1, #cids,
+        bat_rail(mesh, ntrig, a1, a2, f, dinRail, -1, ids1, #cids,
                                          rail, bat, batmount, totmass)
-        batids[i+1] = bat_rail(mesh, ntrig, a1, a2, f, dinRail, -1, ids2, #cids,
+        bat_rail(mesh, ntrig, a1, a2, f, dinRail, -1, ids2, #cids,
                                          rail, bat, batmount, totmass)
 
     topflsh, topsksh, topflids, topskids = panel(mesh, up.fft, up.frt, up.tft, up.trt, nb, nip, nf2, 
@@ -282,11 +277,11 @@ def all_components(mesh:gcl.Mesh3D, up:pfc.UnpackedPoints, nbCoeff:float, na:int
     
     mids = motors(mesh, up.motors, topflsh, topflids, botflsh, botflids, motor, motormount)
     lgid = lg(mesh, up.lg, botflsh, botflids, lg_, lgmount)
-    hingeid = hinge(mesh, up.hinge, topflsh, topflids, hinge_, hingemount)
+    hinge(mesh, up.hinge, topflids, hinge_)
     leids, teids = LETE(mesh, up.leline, up.teline, topflsh, topflids, botflsh, botflids, totmassLE, totmassTE, edgeptmass, edgemount)
 
     return {"spars":sparsh, "plateTop":topflsh, "skinTop":topsksh, "plateBot":botflsh, "skinBot":botsksh}, {"spars":sparigrd, "plateTop":topflids, "skinTop":topskids, 
-            "plateBot":botflids,"skinBot":botskids, "bats":batids, "motors":mids, "lg":lgid, "hinge":hingeid, "sparBends":sparSecIdxs, "LE":leids, "TE":teids}
+            "plateBot":botflids,"skinBot":botskids, "motors":mids, "lg":lgid, "sparBends":sparSecIdxs, "LE":leids, "TE":teids}
 
 if __name__ == "__main__":
     import ptsFromCAD as pfc
@@ -331,7 +326,7 @@ if __name__ == "__main__":
     # fshb, sshb, fib, sib, rib, rbib, rcib = panel(mesh, up.ffb, up.frb, up.tfb, up.trb, nb, nip, nf2, 
     #                                   "panfl", "skin", "rib", "tr", up.surfb, rivetedbot, cspacing, bspacing)
     all_components(mesh, up, 1, na, nf2, 1, ntrig, din, cspacing, bspacing, totmass, lemass, temass, "/EXCLsp", "/EXCLpl", "/EXCLrb", "/EXCLfl", "/EXCLsk", "rl", "bt", 
-                   "/EXCLmo", "/EXCLlg", "/EXCLhg", "mm")
+                   "/EXCLmo", "/EXCLlg", 500, "mm")
 
     #comparison of what is registered in the mesh and what the sheets are
     from mpl_toolkits import mplot3d
