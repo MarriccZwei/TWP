@@ -6,7 +6,8 @@ import geometricClasses as gcl
 import pyfe3d.beamprop as pbp
 
 """The file containing an interpreter of the gcl connection matrix into pyfe3D elements"""
-PM_SPARSE_SIZE = 3
+PM_SPARSE_SIZE = 3 #point mass sparse size
+IN_SPARSE_SIZE = 6 #inertia mass sparse size
 
 class OrientedBeamProp(pbp.BeamProp):
     def __init__(self, xyex, xyey, xyez):
@@ -99,6 +100,7 @@ def eles_from_gcl(mesh:gcl.Mesh3D, eleDict:ty.Dict[str, ty.Dict[str, object]]):
             mass_size += data[key].M_SPARSE_SIZE*len(val)
         else:
             mass_size += PM_SPARSE_SIZE*len(val) #a mass in the translational DOF on the diagonal
+    mass_size += IN_SPARSE_SIZE*len(mesh.inertia)
 
     #initialising system matrices
     KC0r = np.zeros(sparse_size, dtype=pf3.INT)
@@ -201,6 +203,39 @@ def eles_from_gcl(mesh:gcl.Mesh3D, eleDict:ty.Dict[str, ty.Dict[str, object]]):
         Mc[k] = 2+pos
         Mv[k] += mass
         init_k_M += PM_SPARSE_SIZE
+    #Inertia
+    for inco in mesh.inertia:
+        k = init_k_M
+        pos = pf3.DOF*inco.id_
+        Mr[k] = 0+pos
+        Mc[k] = 0+pos
+        Mv[k] += inco.mn
+        k+=1
+        pos = pf3.DOF*inco.id_
+        Mr[k] = 1+pos
+        Mc[k] = 1+pos
+        Mv[k] += inco.mn
+        k+=1
+        pos = pf3.DOF*inco.id_
+        Mr[k] = 2+pos
+        Mc[k] = 2+pos
+        Mv[k] += inco.mn
+        k+=1
+        pos = pf3.DOF*inco.id_
+        Mr[k] = 3+pos
+        Mc[k] = 3+pos
+        Mv[k] += inco.Jxx
+        k+=1
+        pos = pf3.DOF*inco.id_
+        Mr[k] = 4+pos
+        Mc[k] = 4+pos
+        Mv[k] += inco.Jyy
+        k+=1
+        pos = pf3.DOF*inco.id_
+        Mr[k] = 5+pos
+        Mc[k] = 5+pos
+        Mv[k] += inco.Jzz
+        init_k_M += IN_SPARSE_SIZE
 
     #TODO: Other eles
 
@@ -243,6 +278,7 @@ if __name__ == "__main__":
     beamnodeids = list(idgrid2[:, 10])
     mesh.beam_interconnect(beamnodeids, "beam1")
     mesh.pointmass_attach(27, "m1")
+    mesh.inertia_smear(31, gcl.Point3D(-5, 5, 1), gcl.Point3D(-5, 4, -1), gcl.Point3D(0, 6, 1))
 
     #checking the mesh
     import matplotlib.pyplot as plt 
@@ -255,7 +291,7 @@ if __name__ == "__main__":
     #     pts = [mesh.nodes[i] for i in conn.ids]
     #     x_, y_, _ = gcl.pts2coords3D(pts)
     #     plt.scatter(x_, y_)
-    mesh.visualise(ax)
+    mesh.visualise(ax, True)
 
     #standard test data for the elements
     h = 0.005 # m

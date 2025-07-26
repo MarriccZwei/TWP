@@ -342,7 +342,7 @@ if __name__ == "__main__":
     ax = plt.axes(projection="3d")
     # for sh in sheets:
     #     ax.scatter(*gcl.pts2coords3D(np.ravel(sh)))
-    mesh.visualise(ax)
+    mesh.visualise(ax, True)
     ax.legend()
     plt.show()
 

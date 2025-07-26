@@ -137,8 +137,8 @@ class InertiaConn3D():
 class Mesh3D():
     def __init__(self):
         self.nodes:ty.List[Point3D] = list()
-        self.connections:ty.Dict[str, ty.List[MeshConn3D]] = {"quad":list(), "spring":list(), "beam":list(), "mass":list(),
-                                                              "inertia":list()}
+        self.connections:ty.Dict[str, ty.List[MeshConn3D]] = {"quad":list(), "spring":list(), "beam":list(), "mass":list(),}
+        self.inertia:ty.List[InertiaConn3D] = list()
 
     def pyfe3D(self):
         "here be all the re-formatting of the code so it can be used with pyfe3D"
@@ -213,7 +213,7 @@ class Mesh3D():
     
     def inertia_attach(self, mn:float, id_:int, cg:Point3D):
         pt = self.nodes[id_]
-        self.connections["inertia"].append(InertiaConn3D(id_, mn, *self._polar_moms_inertia(mn, pt, cg)))
+        self.inertia.append(InertiaConn3D(id_, mn, *self._polar_moms_inertia(mn, pt, cg)))
 
     @staticmethod
     def _obtain_box(bound1:Point3D, bound2:Point3D):
@@ -239,8 +239,9 @@ class Mesh3D():
             self.inertia_attach(mn, id_, cg)
                 
 
-    def visualise(self, ax):
+    def visualise(self, ax, plt_inertia=False):
         labels_used = dict()
+        inertia_color = "lime"
         basic_cmap = ["blue", "orange", "black", "green", "red", "yellow", "pink", "purple", "gray", "magenta", "indigo", "gold"]
         for conn in self.connections["quad"]:
             if conn.eleid[0:5]!= "/EXCL": #exclusion from plotting marker
@@ -279,6 +280,9 @@ class Mesh3D():
                    labels_used[conn.eleid] = col
                 else:
                    ax.scatter(*pts2coords3D([self.nodes[conn.ids[0]]]), color=labels_used[conn.eleid])
+        for conn in self.inertia:
+            if plt_inertia:
+                ax.scatter(*pts2coords3D([self.nodes[conn.id_]]), color=inertia_color)
 
         ax.legend()
 
@@ -359,23 +363,25 @@ if __name__ == "__main__":
     for i in idspace[::4]: mesh.pointmass_attach(i, 'test') 
     mesh.quad_connect(idgrid[:4, 0], idgrid[:4, -1], 'test')
     mesh.spring_connect(idgrid[4:, 0], idgrid[4:, -1], 'test')
+    mesh.inertia_smear(2137, Point3D(5,6,4), Point3D(-1,0,1), Point3D(3, 3, -4))
 
-    scatter = []
-    for conn in mesh.connections["spring"][::2]+mesh.connections["quad"][::4]:
-        pts = [mesh.nodes[i] for i in conn.ids]
-        plt.plot(*pts2coords3D(pts))
+    # scatter = []
+    # for conn in mesh.connections["spring"][::2]+mesh.connections["quad"][::4]:
+    #     pts = [mesh.nodes[i] for i in conn.ids]
+    #     plt.plot(*pts2coords3D(pts))
 
-    for idx in idxs:
-        ptlist = list()
-        for id_ in idgrid[:, idx]:
-            ptlist.append(mesh.nodes[id_])
-        plt.plot(*pts2coords3D(ptlist))
+    # for idx in idxs:
+    #     ptlist = list()
+    #     for id_ in idgrid[:, idx]:
+    #         ptlist.append(mesh.nodes[id_])
+    #     plt.plot(*pts2coords3D(ptlist))
     
-    for conn in  mesh.connections["mass"]:
-        pts = [mesh.nodes[i] for i in conn.ids]
-        scatter+=pts
-    print([pt.z for pt in scatter])    
-    ax.scatter(*pts2coords3D(scatter))
+    # for conn in  mesh.connections["mass"]:
+    #     pts = [mesh.nodes[i] for i in conn.ids]
+    #     scatter+=pts
+    # print([pt.z for pt in scatter])    
+    # ax.scatter(*pts2coords3D(scatter))
+    mesh.visualise(ax, True)
 
     #testing the 3d line
     pt1 = Point3D(0,1,2)
