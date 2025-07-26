@@ -125,10 +125,20 @@ class MeshConn3D():
         self.eleid = eleid
         self.protocol = protocol #arguments for function if the object pointed by eleid is a function. Doesn't have to be an str
 
+class InertiaConn3D():
+    def __init__(self, id_, mn, Jxx, Jyy, Jzz):
+        self.id_ = id_
+        self.mn = mn
+        self.Jxx = Jxx
+        self.Jyy = Jyy
+        self.Jzz = Jzz
+
+
 class Mesh3D():
     def __init__(self):
         self.nodes:ty.List[Point3D] = list()
-        self.connections:ty.Dict[str, ty.List[MeshConn3D]] = {"quad":list(), "spring":list(), "beam":list(), "mass":list()}
+        self.connections:ty.Dict[str, ty.List[MeshConn3D]] = {"quad":list(), "spring":list(), "beam":list(), "mass":list(),
+                                                              "inertia":list()}
 
     def pyfe3D(self):
         "here be all the re-formatting of the code so it can be used with pyfe3D"
@@ -190,6 +200,44 @@ class Mesh3D():
 
     def pointmass_attach(self, id_, eleid, protocol=""): #used to attach extra point mass to a given point
         self.connections["mass"].append(MeshConn3D([id_], eleid, protocol))
+
+    @staticmethod
+    def _polar_moms_inertia(mn, p1:Point3D, p2:Point3D):
+        xc = (p1.x-p2.x)**2*mn
+        yc = (p1.y-p2.y)**2*mn
+        zc = (p1.z-p2.z)**2*mn
+        Jxx = yc+zc
+        Jyy = xc+zc
+        Jzz = xc+yc
+        return Jxx, Jyy, Jzz
+    
+    def inertia_attach(self, mn:float, id_:int, cg:Point3D):
+        pt = self.nodes[id_]
+        self.connections["inertia"].append(InertiaConn3D(id_, mn, *self._polar_moms_inertia(mn, pt, cg)))
+
+    @staticmethod
+    def _obtain_box(bound1:Point3D, bound2:Point3D):
+        minx = min(bound1.x, bound2.x)
+        miny = min(bound1.y, bound2.y)
+        minz = min(bound1.z, bound2.z)
+        maxx = max(bound1.x, bound2.x)
+        maxy = max(bound1.y, bound2.y)
+        maxz = max(bound1.z, bound2.z)
+        in_ = lambda pt: minx<pt.x and maxx>pt.x and miny<pt.y and maxy>pt.y and minz<pt.z and maxz>pt.z
+        return minx, miny, minz, maxx, maxy, maxz, in_
+    
+    def inertia_smear(self, m:float, cg:Point3D, bound1:Point3D, bound2:Point3D):
+        minx, miny, minz, maxx, maxy, maxz, in_ = self._obtain_box(bound1, bound2)
+        pts_in_box = list()
+        ids_in_box = list()
+        for id_, pt in enumerate(self.nodes):
+            if in_(pt):
+                pts_in_box.append(pt)
+                ids_in_box.append(id_)
+        mn = m/len(ids_in_box)
+        for id_, pt in zip(ids_in_box, pts_in_box):
+            self.inertia_attach(mn, id_, cg)
+                
 
     def visualise(self, ax):
         labels_used = dict()
