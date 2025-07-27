@@ -64,6 +64,5 @@ INTIAL = {
 'tskin':0.003, #m
 'tpan':0.002, #m
 'trib':0.0025, #m
-'bsp':2, #spanwise panel rib spacing (maximum) [m]
 'csp':.3 #chordwise panel rib spacing (maximum) [m]
 }

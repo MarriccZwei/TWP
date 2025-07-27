@@ -15,7 +15,7 @@ def mesh_block(cadData:str, sizerVars:ty.Dict[str,str], eleProps:ty.Dict[str,ty.
     up = pfc.UnpackedPoints(cadData)
     mesh = gcl.Mesh3D()
     pts, ids = mc.all_components(mesh, up, consts["NB_COEFF"], consts["NA"], consts["NF2"], consts["NIP_COEFF"], consts["NTRIG"], 
-                                 sizerVars["csp"], sizerVars["bsp"], consts["BAT_MASS_1WING"], consts["M_LE"], 
+                                 sizerVars["csp"], consts["BAT_MASS_1WING"], consts["M_LE"], 
                                  consts["M_TE"], codes["spar"], codes["panelPlate"], codes["panelRib"], codes["panelFlange"], 
                                  codes["skin"], codes["rail"], consts["M_MOTOR"], consts["MR"], consts["ML"], consts["M_LG"], consts["LGR"], consts["LGL"], consts["M_HINGE"])
     KC0, M, N, x, y, z, outdict = p3g.eles_from_gcl(mesh, eleProps)

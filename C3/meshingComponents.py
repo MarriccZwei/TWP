@@ -243,8 +243,7 @@ def all_components(mesh:gcl.Mesh3D, up:pfc.UnpackedPoints, nbCoeff:float, na:int
     '''RIB PLACEMENT DEFINITIONS'''
     tol = .001 #so that the landing gear ribs are captured in the inertia
     ribys = [up.fft.y, (up.fft.y+up.motors[0].y)/2, up.motors[0].y, up.lg.y+tol-lgR, up.lg.y-tol+lgR, up.motors[1].y]
-    ribys += [(up.motors[1].y+up.motors[2].y)/2, up.motors[2].y, (up.motors[2].y+up.motors[3].y)/2, up.motors[2].y,
-              (up.motors[2].y+up.motors[3].y)/2, up.motors[3].y, up.tft.y]
+    ribys += [(up.motors[1].y+up.motors[2].y)/2, up.motors[2].y, (up.motors[2].y+up.motors[3].y)/2, up.motors[3].y, up.tft.y]
 
     sparsh, sparigrd, sparSecIdxs, a1, a2, f = trigspars(mesh, ribys, nb, na, nf2, ntrig, spar, up.ffb, up.frb, up.frt, up.fft, up.tfb, up.trb, up.trt, up.tft)
 
@@ -320,7 +319,7 @@ if __name__ == "__main__":
     lemass = 1000
     temass = 3000
                                   
-    all_components(mesh, up, 1, na, nf2, 1, ntrig, cspacing, totmass, lemass, temass, "/EXCLsp", "/EXCLpl", "/EXCLrb", "fl", "sk", "/EXCLrl", 
+    all_components(mesh, up, 1, na, nf2, 1, ntrig, cspacing, totmass, lemass, temass, "/EXCLsp", "/EXCLpl", "/EXCLrb", "/EXCLfl", "sk", "/EXCLrl", 
                    1000, 0.4, 3, 3000, .5, 4, 500)
 
     plt.figure()
