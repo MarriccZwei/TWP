@@ -146,28 +146,32 @@ def panel(mesh:gcl.Mesh3D, ff:gcl.Point3D, fr:gcl.Point3D, tf:gcl.Point3D, tr:gc
     return floorsh, upsh, flidgrid, upidgrid
 
 
-def motors(mesh:gcl.Mesh3D, motors:ty.List[gcl.Point3D], panshTop:nt.ArrayLike, panidTop:nt.NDArray[np.int64], panshBot:nt.ArrayLike, panidBot:nt.NDArray[np.int64],
-           motor:str, motormount:str):
-    mids = list()
+def motors(mesh:gcl.Mesh3D, motors:ty.List[gcl.Point3D], motorR:float, motorL:float, motormass:float):
     for mtr in motors:
+        affected_ids = list()
+        for i, node in enumerate(mesh.nodes):
+            if (node.y >= mtr.y-motorR) and (node.y <= motorR+mtr.y) and (node.x-mtr.x <= motorL/2):
+                affected_ids.append(i)
+        mn = motormass/len(affected_ids)
+        for i in affected_ids:
+            mesh.inertia_attach(mn, i, mtr)
+
         #bottom mount
-        yBot = np.array([pt.y for pt in panshBot[:, 0]])
-        idxb = (np.abs(yBot-mtr.y)).argmin() #looking for the closest point on the sheet to connect the motor to
-        motorPtBot = gcl.Point3D(mtr.x, panshBot[idxb, 0].y, panshBot[idxb, 0].z)
-        midb = mesh.register([motorPtBot])[0] #returns a list!
-        mesh.pointmass_attach(midb, motor)
-        mesh.spring_connect([midb], [panidBot[idxb, 0]], motormount)
-        #top mount
-        yTop = np.array([pt.y for pt in panshTop[:, 0]])
-        idxt = (np.abs(yTop-mtr.y)).argmin() #looking for the closest point on the sheet to connect the motor to
-        motorPtTop = gcl.Point3D(mtr.x, panshTop[idxt, 0].y, panshTop[idxt, 0].z)
-        midt = mesh.register([motorPtTop])[0] #returns a list!
-        mesh.pointmass_attach(midt, motor)
-        mesh.spring_connect([midt], [panidTop[idxt, 0]], motormount)
-        #storing motor ids at (top, bot)
-        mids.append((midt, midb))
- 
-    return mids
+        # yBot = np.array([pt.y for pt in panshBot[:, 0]])
+        # idxb = (np.abs(yBot-mtr.y)).argmin() #looking for the closest point on the sheet to connect the motor to
+        # motorPtBot = gcl.Point3D(mtr.x, panshBot[idxb, 0].y, panshBot[idxb, 0].z)
+        # midb = mesh.register([motorPtBot])[0] #returns a list!
+        # mesh.pointmass_attach(midb, motor)
+        # mesh.spring_connect([midb], [panidBot[idxb, 0]], motormount)
+        # #top mount
+        # yTop = np.array([pt.y for pt in panshTop[:, 0]])
+        # idxt = (np.abs(yTop-mtr.y)).argmin() #looking for the closest point on the sheet to connect the motor to
+        # motorPtTop = gcl.Point3D(mtr.x, panshTop[idxt, 0].y, panshTop[idxt, 0].z)
+        # midt = mesh.register([motorPtTop])[0] #returns a list!
+        # mesh.pointmass_attach(midt, motor)
+        # mesh.spring_connect([midt], [panidTop[idxt, 0]], motormount)
+        # #storing motor ids at (top, bot)
+        # mids.append((midt, midb))
 
 
 def lg(mesh:gcl.Mesh3D, uplg:gcl.Point3D, panshBot:nt.ArrayLike, panidBot:nt.NDArray[np.int64], lg:str, lgmount:str):
@@ -227,8 +231,8 @@ def LETE(mesh:gcl.Mesh3D, lineLE:gcl.Line3D, lineTE:gcl.Line3D, panshTop:nt.Arra
 
 
 def all_components(mesh:gcl.Mesh3D, up:pfc.UnpackedPoints, nbCoeff:float, na:int, nf2:int, nipCoeff:float, ntrig:int, dinRail:float, cspacing:float, bspacing:float, 
-                   totmass:float, totmassLE:float, totmassTE:float, spar:str, plate:str, rib:str, flange:str, skin:str, rail:str, bat:str, motor:str, lg_:str, hinge_:float, 
-                   mount:str):
+                   totmass:float, totmassLE:float, totmassTE:float, spar:str, plate:str, rib:str, flange:str, skin:str, rail:str, bat:str, motorM:float, motorR:float,
+                   motorL, lg_:str, hinge_:float, mount:str):
     #in case we ever want to do mounts differently
     #railmount=mount
     batmount=mount
@@ -275,13 +279,13 @@ def all_components(mesh:gcl.Mesh3D, up:pfc.UnpackedPoints, nbCoeff:float, na:int
     botflsh, botsksh, botflids, botskids = panel(mesh, up.ffb, up.frb, up.tfb, up.trb, nb, nip, nf2, 
                                     plate, skin, rib, flange, up.surfb, sbci, cspacing, bspacing)
     
-    mids = motors(mesh, up.motors, topflsh, topflids, botflsh, botflids, motor, motormount)
+    motors(mesh, up.motors, motorR, motorL, motorM)
     lgid = lg(mesh, up.lg, botflsh, botflids, lg_, lgmount)
     hinge(mesh, up.hinge, topflids, hinge_)
     leids, teids = LETE(mesh, up.leline, up.teline, topflsh, topflids, botflsh, botflids, totmassLE, totmassTE, edgeptmass, edgemount)
 
     return {"spars":sparsh, "plateTop":topflsh, "skinTop":topsksh, "plateBot":botflsh, "skinBot":botsksh}, {"spars":sparigrd, "plateTop":topflids, "skinTop":topskids, 
-            "plateBot":botflids,"skinBot":botskids, "motors":mids, "lg":lgid, "sparBends":sparSecIdxs, "LE":leids, "TE":teids}
+            "plateBot":botflids,"skinBot":botskids, "lg":lgid, "sparBends":sparSecIdxs, "LE":leids, "TE":teids}
 
 if __name__ == "__main__":
     import ptsFromCAD as pfc
@@ -326,7 +330,7 @@ if __name__ == "__main__":
     # fshb, sshb, fib, sib, rib, rbib, rcib = panel(mesh, up.ffb, up.frb, up.tfb, up.trb, nb, nip, nf2, 
     #                                   "panfl", "skin", "rib", "tr", up.surfb, rivetedbot, cspacing, bspacing)
     all_components(mesh, up, 1, na, nf2, 1, ntrig, din, cspacing, bspacing, totmass, lemass, temass, "/EXCLsp", "/EXCLpl", "/EXCLrb", "/EXCLfl", "/EXCLsk", "rl", "bt", 
-                   "/EXCLmo", "/EXCLlg", 500, "mm")
+                   1000, 0.5, 3, "/EXCLlg", 500, "mm")
 
     #comparison of what is registered in the mesh and what the sheets are
     from mpl_toolkits import mplot3d
