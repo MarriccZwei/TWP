@@ -7,7 +7,39 @@ import ptsFromCAD as pfc
 '''Here be a file with meshings of given components. 
 Inside-component connections will be completed in this file, 
 some connections might have to be applied in main'''
-def trigspars(mesh:gcl.Mesh3D, nb:int, na:int, nf2:int, ntrig:int, 
+
+'''First a modification of multi section sheet from gcl, that allows for irregular rib spacing'''
+def ribbed_sheet_y(pt1s:ty.List[gcl.Point3D], pt2s:ty.List[gcl.Point3D], ys:ty.List[float], nby:int, nLs:ty.List[int], returnSecIds=False):
+    #Requirements, same y for all pt1s and all pt2s, matching ys[0] and ys[-1], respectively.
+    #This is satisfied by the data from pfc
+    extpt1s = [pt1s[0]]
+    extpt2s = [pt2s[0]]
+    for nL, p11, p12, p21, p22 in zip(nLs, pt1s[:-1], pt1s[1:], pt2s[:-1], pt2s[1:]):
+        extpt1s += p11.pts_between(p12, nL)[1:]
+        extpt2s += p21.pts_between(p22, nL)[1:]
+
+    extys = [ys[0]]
+    for y1, y2 in zip(ys[:-1], ys[1:]):
+        extys += list(np.linspace(y1, y2, nby)[1:])
+
+    lines = [gcl.Line3D.from_pts(pt1, pt2) for pt1, pt2 in zip(extpt1s, extpt2s)]
+    pts = np.array([[line.for_y(y) for line in lines] for y in extys])
+
+    #copy-paste from gcl
+    if returnSecIds: #returning the indexes of the sections if asked for
+        secIndexes = [0] #section index is not id!!!
+        secIdx = 0 #section index is the commond value of array second dimension for the section on the sheet
+        for nL in nLs:
+            secIdx+=nL-1
+            secIndexes.append(secIdx)
+        assert secIdx == pts.shape[1]-1
+        return pts, secIndexes
+    
+    return pts
+
+
+
+def trigspars(mesh:gcl.Mesh3D, ys:ty.List[float], nb:int, na:int, nf2:int, ntrig:int, 
               shell:str, ffb:gcl.Point3D, frb:gcl.Point3D, 
               frt:gcl.Point3D, fft:gcl.Point3D,tfb:gcl.Point3D, 
               trb:gcl.Point3D, trt:gcl.Point3D, tft:gcl.Point3D
@@ -52,7 +84,7 @@ def trigspars(mesh:gcl.Mesh3D, nb:int, na:int, nf2:int, ntrig:int,
     pt1s, a1, f = trig_crossec(ffb, frb, frt, fft)
     pt2s, a2, _ = trig_crossec(tfb, trb, trt, tft)
 
-    sheet, secIdxs = gcl.multi_section_sheet3D(pt1s, pt2s, nb, [nf2, na, nf2]*(2*ntrig+2), True)
+    sheet, secIdxs = ribbed_sheet_y(pt1s, pt2s, ys, nb, [nf2, na, nf2]*(2*ntrig+2), True)
     idspace = mesh.register(list(sheet.flatten()))
     idgrid = idspace.reshape(sheet.shape)
     #interconnection of sheets
@@ -87,17 +119,17 @@ def bat_rail(mesh:gcl.Mesh3D, ntrig:int, a1:float, a2:float, f:float,
     for i in midflids:
         batpt = zaxis.step(mesh.nodes[i], dzs[i])
         #assigning the variable mass to the battery using protocol
-        mesh.inertia_attach(props[i], i, batpt)
+        mesh.inertia_attach(props[i]*propmass, i, batpt)
 
     return batids
 
-def panel(mesh:gcl.Mesh3D, ff:gcl.Point3D, fr:gcl.Point3D, tf:gcl.Point3D, tr:gcl.Point3D, nb:int, nip:int, nf:int, 
+def panel(mesh:gcl.Mesh3D, ff:gcl.Point3D, fr:gcl.Point3D, tf:gcl.Point3D, tr:gcl.Point3D, nb:int, ribys:ty.List[float], nip:int, nf:int, 
           floor:str, skin:str, rib:str, flange:str, panelz:ty.Callable, ribconnids:ty.List[nt.NDArray[np.int64]],
-          cspacing:float, bspacing:float)->ty.Tuple[ty.List[int]]:
+          cspacing:float)->ty.Tuple[ty.List[int]]:
     #1) lower sheet
     ribconnpt1s = [mesh.nodes[ptids[0]] for ptids in ribconnids]
     ribconnpt2s = [mesh.nodes[ptids[-1]] for ptids in ribconnids]
-    floorsh, secs = gcl.multi_section_sheet3D([ff]+ribconnpt1s+[fr], [tf]+ribconnpt2s+[tr], nb,
+    floorsh, secs = ribbed_sheet_y([ff]+ribconnpt1s+[fr], [tf]+ribconnpt2s+[tr], ribys, nb,
                                               [nf]+[nip]*(len(ribconnpt1s)-1)+[nf], True)
     #1.1) sheet registration without the already registered connection points
     ribconnIdsTospend = ribconnids.copy()
@@ -128,9 +160,7 @@ def panel(mesh:gcl.Mesh3D, ff:gcl.Point3D, fr:gcl.Point3D, tf:gcl.Point3D, tr:gc
 
     #4) chordwise stiffeners
     #we use bspacing - spacing along the span, as chordwise stiffeners are
-    bcount = int(np.ceil((tf.y-ff.y)/bspacing)) #more stiffeners chosen if not exact match
-    assert nb/bcount >= 4 #elese you have insufficient mesh size and buckling cannot be captured
-    ribNbs = [int(np.rint(i)) for i in np.linspace(0, nb-1, bcount+1)] #plus 1 as you have to close the panel
+    ribNbs = range(0, flidgrid.shape[0], nb-1) #plus 1 as you have to close the panel
     [stiffener(upidgrid[ribNb, :], flidgrid[ribNb, :], (0, tf.y-ff.y, tf.z-ff.z)) for ribNb in ribNbs] #creating the stiffeners
     
     #5) extra spanwise stiffeners
@@ -204,13 +234,19 @@ def LETE(mesh:gcl.Mesh3D, lineLE:gcl.Line3D, lineTE:gcl.Line3D, panshTop:nt.Arra
     
 
 
-def all_components(mesh:gcl.Mesh3D, up:pfc.UnpackedPoints, nbCoeff:float, na:int, nf2:int, nipCoeff:float, ntrig:int, cspacing:float, bspacing:float, 
+def all_components(mesh:gcl.Mesh3D, up:pfc.UnpackedPoints, nbCoeff:float, na:int, nf2:int, nipCoeff:float, ntrig:int, cspacing:float, 
                    totmass:float, totmassLE:float, totmassTE:float, spar:str, plate:str, rib:str, flange:str, skin:str, rail:str, motorM:float, motorR:float,
                    motorL, lgmass:float, lgR:float, lgL:float, hinge_:float):
 
-    nb = int(np.ceil(nbCoeff*4*((up.tfb.y-up.ffb.y)/bspacing+1)))
+    nb = 5*nbCoeff
 
-    sparsh, sparigrd, sparSecIdxs, a1, a2, f = trigspars(mesh, nb, na, nf2, ntrig, spar, up.ffb, up.frb, up.frt, up.fft, up.tfb, up.trb, up.trt, up.tft)
+    '''RIB PLACEMENT DEFINITIONS'''
+    tol = .001 #so that the landing gear ribs are captured in the inertia
+    ribys = [up.fft.y, (up.fft.y+up.motors[0].y)/2, up.motors[0].y, up.lg.y+tol-lgR, up.lg.y-tol+lgR, up.motors[1].y]
+    ribys += [(up.motors[1].y+up.motors[2].y)/2, up.motors[2].y, (up.motors[2].y+up.motors[3].y)/2, up.motors[2].y,
+              (up.motors[2].y+up.motors[3].y)/2, up.motors[3].y, up.tft.y]
+
+    sparsh, sparigrd, sparSecIdxs, a1, a2, f = trigspars(mesh, ribys, nb, na, nf2, ntrig, spar, up.ffb, up.frb, up.frt, up.fft, up.tfb, up.trb, up.trt, up.tft)
 
     nip = int(np.ceil(nipCoeff*(4*((a1+2*f)/cspacing+1)))) #obtaining nip so that we get the minimal required amount of elements
 
@@ -239,11 +275,11 @@ def all_components(mesh:gcl.Mesh3D, up:pfc.UnpackedPoints, nbCoeff:float, na:int
         bat_rail(mesh, ntrig, a1, a2, f, -1, ids2, #cids,
                                          rail, totmass)
 
-    topflsh, topsksh, topflids, topskids = panel(mesh, up.fft, up.frt, up.tft, up.trt, nb, nip, nf2, 
-                                    plate, skin, rib, flange, up.surft, stci, cspacing, bspacing)
+    topflsh, topsksh, topflids, topskids = panel(mesh, up.fft, up.frt, up.tft, up.trt, nb, ribys, nip, nf2, 
+                                    plate, skin, rib, flange, up.surft, stci, cspacing)
     
-    botflsh, botsksh, botflids, botskids = panel(mesh, up.ffb, up.frb, up.tfb, up.trb, nb, nip, nf2, 
-                                    plate, skin, rib, flange, up.surfb, sbci, cspacing, bspacing)
+    botflsh, botsksh, botflids, botskids = panel(mesh, up.ffb, up.frb, up.tfb, up.trb, nb, ribys, nip, nf2, 
+                                    plate, skin, rib, flange, up.surfb, sbci, cspacing)
     
     motors(mesh, up.motors, motorR, motorL, motorM)
     lgids = lg(mesh, up.lg, lgmass, lgR, lgL) #saving the lg id to smear the landing load
@@ -254,6 +290,19 @@ def all_components(mesh:gcl.Mesh3D, up:pfc.UnpackedPoints, nbCoeff:float, na:int
             "plateBot":botflids,"skinBot":botskids, "sparBends":sparSecIdxs, "lg":lgids}
 
 if __name__ == "__main__":
+    from mpl_toolkits import mplot3d
+    import matplotlib.pyplot as plt
+    #test ribbed sheet
+    # pt1s = [gcl.Point3D(0, 0, 0), gcl.Point3D(3, 0, .5), gcl.Point3D(4, 0, -.5), gcl.Point3D(4, 0, 4)]
+    # pt2s = [gcl.Point3D(0, 6, 1), gcl.Point3D(2.5, 6, 0), gcl.Point3D(3, 6, -.5), gcl.Point3D(4, 6, 5)]
+    # ns = 7
+    # nLs = [2, 13, 7]
+    # msp, idxs = ribbed_sheet_y(pt1s, pt2s, [0, 1, 4, 4.5, 6], 5, nLs, True)
+
+    # plt.figure()
+    # ax = plt.axes(projection="3d")
+    # ax.scatter(*gcl.pts2coords3D(msp.flatten()))
+
     import ptsFromCAD as pfc
     data = "5000;0;-6.5|4750;0;-24|4500;0;-41|4000;0;-75|3500;0;-107|3000;0;-138|2500;0;-167|2000;0;-190|1500;0;-206|1250;0;-211|1000;0;-211.5|750;0;-205|500;0;-187.5|375;0;-173|250;0;-150.5|125;0;-113.5|62.5;0;-82.5|0;0;0|62.5;0;107.5|125;0;149.5|250;0;206.5|375;0;248|500;0;281.5|750;0;330.5|1000;0;363|1250;0;383.5|1500;0;394|2000;0;390|2500;0;362|3000;0;318|3500;0;259|4000;0;187.5|4500;0;104|4750;0;57|5000;0;6.5&4250;18000;2206.872|4125;18000;2198.122|4000;18000;2189.622|3750;18000;2172.622|3500;18000;2156.622|3250;18000;2141.122|3000;18000;2126.622|2750;18000;2115.122|2500;18000;2107.122|2375;18000;2104.622|2250;18000;2104.372|2125;18000;2107.622|2000;18000;2116.372|1937.5;18000;2123.622|1875;18000;2134.872|1812.5;18000;2153.372|1781.25;18000;2168.872|1750;18000;2210.122|1781.25;18000;2263.872|1812.5;18000;2284.872|1875;18000;2313.372|1937.5;18000;2334.122|2000;18000;2350.872|2125;18000;2375.372|2250;18000;2391.622|2375;18000;2401.872|2500;18000;2407.122|2750;18000;2405.122|3000;18000;2391.122|3250;18000;2369.122|3500;18000;2339.622|3750;18000;2303.872|4000;18000;2262.122|4125;18000;2238.622|4250;18000;2213.372&-471.576;3673.46;441.249|126.713;7770.33;945.522|725.002;11867.2;1449.796|1323.292;15964.069;1954.07&3012.266;18950.167;2324.854|4861.588;5721.895;702.56&500;0;0|1999.77;18000;2214.157&3500;0;0|3499.77;18000;2214.157&787.633;1600;66.192|2883.375;1600;66.192|2617.418;1600;526.843|1053.59;1600;526.843&2024.321;18000;2152.592|3273.646;18000;2152.592|3148.758;18000;2368.903|2149.209;18000;2368.903" 
     up = pfc.UnpackedPoints(data)
@@ -271,16 +320,15 @@ if __name__ == "__main__":
     lemass = 1000
     temass = 3000
                                   
-    all_components(mesh, up, 1, na, nf2, 1, ntrig, cspacing, bspacing, totmass, lemass, temass, "/EXCLsp", "/EXCLpl", "/EXCLrb", "/EXCLfl", "/EXCLsk", "rl", 
+    all_components(mesh, up, 1, na, nf2, 1, ntrig, cspacing, totmass, lemass, temass, "/EXCLsp", "/EXCLpl", "/EXCLrb", "fl", "sk", "/EXCLrl", 
                    1000, 0.4, 3, 3000, .5, 4, 500)
 
+    plt.figure()
     #comparison of what is registered in the mesh and what the sheets are
-    from mpl_toolkits import mplot3d
-    import matplotlib.pyplot as plt
     ax = plt.axes(projection="3d")
     # for sh in sheets:
     #     ax.scatter(*gcl.pts2coords3D(np.ravel(sh)))
-    mesh.visualise(ax, True)
+    mesh.visualise(ax)
     ax.legend()
     plt.show()
 
