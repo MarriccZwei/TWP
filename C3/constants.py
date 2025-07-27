@@ -16,6 +16,10 @@ CONSTS={
     'DIN':0.015, #inner diameter of the rail wormgear [m]
     'NTRIG':2, #number of batteries supported on the lower panel [-]
     'FULLSPAN':21, #m
+    'LGR':.5, #m
+    'LGL':4.5, #m
+    'ML': 3, #m
+    'MR': .4, #m
 
     #masses
     'BAT_MASS_1WING':17480, #kg
@@ -27,7 +31,6 @@ CONSTS={
     'M_HINGE':500, #Mass of the hinge
     
     #Mesh settings
-    'INFTY_STIFF':1e15, #stiffness assumed for infinity stiffness springs [N/m]
     'NB_COEFF':1,
     'NIP_COEFF':1,
     'NA':5,

@@ -62,8 +62,7 @@ def trigspars(mesh:gcl.Mesh3D, nb:int, na:int, nf2:int, ntrig:int,
 
 
 def bat_rail(mesh:gcl.Mesh3D, ntrig:int, a1:float, a2:float, f:float, 
-             din:float, dz:float, midflids:ty.List[int], rail:str, bat:str,
-             batmount:str, totmass:float)->ty.Tuple[ty.List[int]]:
+             dz:float, midflids:ty.List[int], rail:str,totmass:float)->ty.Tuple[ty.List[int]]:
     '''nodes for midflids have to be oriented from y=0 to y=ymax'''
     zaxis = gcl.Direction3D(0,0,1)
     mesh.beam_interconnect(midflids, rail)
@@ -156,33 +155,9 @@ def motors(mesh:gcl.Mesh3D, motors:ty.List[gcl.Point3D], motorR:float, motorL:fl
         for i in affected_ids:
             mesh.inertia_attach(mn, i, mtr)
 
-        #bottom mount
-        # yBot = np.array([pt.y for pt in panshBot[:, 0]])
-        # idxb = (np.abs(yBot-mtr.y)).argmin() #looking for the closest point on the sheet to connect the motor to
-        # motorPtBot = gcl.Point3D(mtr.x, panshBot[idxb, 0].y, panshBot[idxb, 0].z)
-        # midb = mesh.register([motorPtBot])[0] #returns a list!
-        # mesh.pointmass_attach(midb, motor)
-        # mesh.spring_connect([midb], [panidBot[idxb, 0]], motormount)
-        # #top mount
-        # yTop = np.array([pt.y for pt in panshTop[:, 0]])
-        # idxt = (np.abs(yTop-mtr.y)).argmin() #looking for the closest point on the sheet to connect the motor to
-        # motorPtTop = gcl.Point3D(mtr.x, panshTop[idxt, 0].y, panshTop[idxt, 0].z)
-        # midt = mesh.register([motorPtTop])[0] #returns a list!
-        # mesh.pointmass_attach(midt, motor)
-        # mesh.spring_connect([midt], [panidTop[idxt, 0]], motormount)
-        # #storing motor ids at (top, bot)
-        # mids.append((midt, midb))
+def lg(mesh:gcl.Mesh3D, uplg:gcl.Point3D, lgM, lgR, lgL):
+    return mesh.inertia_smear(lgM, uplg, gcl.Point3D(uplg.x-lgL/2, uplg.y-lgR, uplg.z-lgR), gcl.Point3D(uplg.x+lgL/2, uplg.y+lgR, uplg.z+lgR))
 
-
-def lg(mesh:gcl.Mesh3D, uplg:gcl.Point3D, panshBot:nt.ArrayLike, panidBot:nt.NDArray[np.int64], lg:str, lgmount:str):
-    y = np.array([pt.y for pt in panshBot[:, -1]]) #we need the TE side
-    idx = (np.abs(y-uplg.y)).argmin() #looking for the closest point on the sheet to connect the LG to
-    lgPt = gcl.Point3D(uplg.x, panshBot[idx, -1].y, panshBot[idx, -1].z)
-    lgid = mesh.register([lgPt])[0]
-    mesh.pointmass_attach(lgid, lg)
-    mesh.spring_connect([lgid], [panidBot[idx, -1]], lgmount)
-
-    return lgid
 
 def hinge(mesh:gcl.Mesh3D, uphinge:gcl.Point3D, panidTop:nt.NDArray[np.int64], mhn:float):
     xids = panidTop[-1, :]
@@ -191,7 +166,7 @@ def hinge(mesh:gcl.Mesh3D, uphinge:gcl.Point3D, panidTop:nt.NDArray[np.int64], m
 
 
 def LETE(mesh:gcl.Mesh3D, lineLE:gcl.Line3D, lineTE:gcl.Line3D, panshTop:nt.ArrayLike, panidTop:nt.NDArray[np.int64], panshBot:nt.ArrayLike, panidBot:nt.NDArray[np.int64],
-         totmassLE:float, totmassTE:float, ptmass:str, ptmassmount:str):
+         totmassLE:float, totmassTE:float):
     '''Leading Edge'''
     #connPtsLE = [0]*panshTop.shape[0]
     # connPtsLE[::2] = panshTop[::2, 0]
@@ -201,14 +176,14 @@ def LETE(mesh:gcl.Mesh3D, lineLE:gcl.Line3D, lineTE:gcl.Line3D, panshTop:nt.Arra
     # connIdsLE[::2] = panidTop[::2, 0]
     # connIdsLE[1::2] = panidBot[1::2, 0]
     connIdsLE = panidBot[::, 0]
+    connIdsTLE = panidTop[::,0]
     ptsLE = [lineLE.for_y(pt.y) for pt in connPtsLE]
-    idsLE = mesh.register(ptsLE)
     #the distance between the points is also expressed in terms of chord fractions, it can be used as proprtionality for mass if squared
-    distsLE2 = [(pLE.pythagoras(pcLE))**2 for pLE, pcLE in zip(ptsLE, panshTop[:, 0])] #you have to take distance from the same point though
+    distsLE2 = [(pLE.pythagoras(pcLE))**2 for pLE, pcLE in zip(ptsLE, panshBot[:, 0])] #you have to take distance from the same point though
     totDistsLE2 = sum(distsLE2)
     msLE = [d2/totDistsLE2*totmassLE for d2 in distsLE2]
-    [mesh.pointmass_attach(id_, ptmass, m) for id_, m in zip(idsLE, msLE)]
-    [mesh.spring_connect(connIdsLE, idsLE, ptmassmount)]
+    [mesh.inertia_attach(m/2, id_, pt) for id_, m, pt in zip(connIdsLE, msLE, ptsLE)]
+    [mesh.inertia_attach(m/2, id_, pt) for id_, m, pt in zip(connIdsTLE, msLE, ptsLE)]
     '''Trailing Edge'''
     # connPtsTE = [0]*panshTop.shape[0]
     # connPtsTE[::2] = panshTop[::2, -1]
@@ -218,29 +193,20 @@ def LETE(mesh:gcl.Mesh3D, lineLE:gcl.Line3D, lineTE:gcl.Line3D, panshTop:nt.Arra
     # connIdsTE[1::2] = panidBot[1::2, -1]
     connPtsTE = panshBot[::, -1]
     connIdsTE = panidBot[::, -1]
+    connIdsTTE = panidTop[::, -1]
     ptsTE = [lineTE.for_y(pt.y) for pt in connPtsTE]
-    idsTE = mesh.register(ptsTE)
     #the distance between the points is also expressed in terms of chord fractions, it can be used as proprtionality for mass if squared
-    distsTE2 = [(pTE.pythagoras(pcTE))**2 for pTE, pcTE in zip(ptsTE,panshTop[:, -1])]
+    distsTE2 = [(pTE.pythagoras(pcTE))**2 for pTE, pcTE in zip(ptsTE,panshBot[:, -1])]
     totDistsTE2 = sum(distsTE2)
     msTE = [d2/totDistsTE2*totmassTE for d2 in distsTE2]
-    [mesh.pointmass_attach(id_, ptmass, m) for id_, m in zip(idsTE, msTE)]
-    [mesh.spring_connect(connIdsTE, idsTE, ptmassmount)]
+    [mesh.inertia_attach(m/2, id_, pt) for id_, m, pt in zip(connIdsTE, msTE, ptsTE)]
+    [mesh.inertia_attach(m/2, id_, pt) for id_, m, pt in zip(connIdsTTE, msTE, ptsTE)]
     
-    return idsLE, idsTE
 
 
-def all_components(mesh:gcl.Mesh3D, up:pfc.UnpackedPoints, nbCoeff:float, na:int, nf2:int, nipCoeff:float, ntrig:int, dinRail:float, cspacing:float, bspacing:float, 
-                   totmass:float, totmassLE:float, totmassTE:float, spar:str, plate:str, rib:str, flange:str, skin:str, rail:str, bat:str, motorM:float, motorR:float,
-                   motorL, lg_:str, hinge_:float, mount:str):
-    #in case we ever want to do mounts differently
-    #railmount=mount
-    batmount=mount
-    motormount=mount
-    lgmount = mount
-    hingemount = mount
-    edgemount = mount
-    edgeptmass = bat #same behaviour a ptmass with assigned mass
+def all_components(mesh:gcl.Mesh3D, up:pfc.UnpackedPoints, nbCoeff:float, na:int, nf2:int, nipCoeff:float, ntrig:int, cspacing:float, bspacing:float, 
+                   totmass:float, totmassLE:float, totmassTE:float, spar:str, plate:str, rib:str, flange:str, skin:str, rail:str, motorM:float, motorR:float,
+                   motorL, lgmass:float, lgR:float, lgL:float, hinge_:float):
 
     nb = int(np.ceil(nbCoeff*4*((up.tfb.y-up.ffb.y)/bspacing+1)))
 
@@ -263,15 +229,15 @@ def all_components(mesh:gcl.Mesh3D, up:pfc.UnpackedPoints, nbCoeff:float, na:int
 
 
     for i, ids1, ids2 in zip(range(2,4*ntrig+2,4), sbbc1, sbbc2): #bottom batteries
-        bat_rail(mesh, ntrig, a1, a2, f, dinRail, 1, ids1,
-                                         rail, bat, batmount, totmass)
-        bat_rail(mesh, ntrig, a1, a2, f, dinRail, 1, ids2,
-                                         rail, bat, batmount, totmass)
+        bat_rail(mesh, ntrig, a1, a2, f, 1, ids1,
+                                         rail, totmass)
+        bat_rail(mesh, ntrig, a1, a2, f, 1, ids2,
+                                         rail, totmass)
     for i, ids1, ids2 in zip(range(0,4*ntrig+2,4), stbc1, stbc2): #top batteries
-        bat_rail(mesh, ntrig, a1, a2, f, dinRail, -1, ids1, #cids,
-                                         rail, bat, batmount, totmass)
-        bat_rail(mesh, ntrig, a1, a2, f, dinRail, -1, ids2, #cids,
-                                         rail, bat, batmount, totmass)
+        bat_rail(mesh, ntrig, a1, a2, f, -1, ids1, #cids,
+                                         rail, totmass)
+        bat_rail(mesh, ntrig, a1, a2, f, -1, ids2, #cids,
+                                         rail, totmass)
 
     topflsh, topsksh, topflids, topskids = panel(mesh, up.fft, up.frt, up.tft, up.trt, nb, nip, nf2, 
                                     plate, skin, rib, flange, up.surft, stci, cspacing, bspacing)
@@ -280,12 +246,12 @@ def all_components(mesh:gcl.Mesh3D, up:pfc.UnpackedPoints, nbCoeff:float, na:int
                                     plate, skin, rib, flange, up.surfb, sbci, cspacing, bspacing)
     
     motors(mesh, up.motors, motorR, motorL, motorM)
-    lgid = lg(mesh, up.lg, botflsh, botflids, lg_, lgmount)
+    lgids = lg(mesh, up.lg, lgmass, lgR, lgL) #saving the lg id to smear the landing load
     hinge(mesh, up.hinge, topflids, hinge_)
-    leids, teids = LETE(mesh, up.leline, up.teline, topflsh, topflids, botflsh, botflids, totmassLE, totmassTE, edgeptmass, edgemount)
+    LETE(mesh, up.leline, up.teline, topflsh, topflids, botflsh, botflids, totmassLE, totmassTE)
 
     return {"spars":sparsh, "plateTop":topflsh, "skinTop":topsksh, "plateBot":botflsh, "skinBot":botsksh}, {"spars":sparigrd, "plateTop":topflids, "skinTop":topskids, 
-            "plateBot":botflids,"skinBot":botskids, "lg":lgid, "sparBends":sparSecIdxs, "LE":leids, "TE":teids}
+            "plateBot":botflids,"skinBot":botskids, "sparBends":sparSecIdxs, "lg":lgids}
 
 if __name__ == "__main__":
     import ptsFromCAD as pfc
@@ -304,33 +270,9 @@ if __name__ == "__main__":
     totmass = 17480
     lemass = 1000
     temass = 3000
-    # sheets, idgrids, a1, a2, f = trigspars(mesh, nb, na, nf2, ntrig, "tr", "ts", 
-    #                             up.ffb, up.frb, up.frt, up.fft,
-    #                             up.tfb, up.trb, up.trt, up.tft)
-    # beamids, batids = [[]]*len(idgrids), [[]]*len(idgrids)
-    # rivetingids = list()
-    # for igrid, idx in zip(idgrids[::2], range(0,len(idgrids),2)):
-    #     #bats on the upper side go down
-    #     edgeids = igrid[:, -1]
-    #     rivetingids.append(edgeids)
-    #     beamids[idx], batids[idx] = bat_rail(mesh, ntrig, a1, a2, f, din, -dz, edgeids, 
-    #                                          "rail", "bat", "rm", "bm", 17480)
-    
-    # floorsh, upsh, floorids, skinids, ribids, ribIdbs, ribIdcs = panel(mesh, up.fft, up.frt, up.tft, up.trt, nb, nip, nf2, 
-    #                                  "panfl", "skin", "rib", "tr", up.surft, rivetingids, cspacing, bspacing)
-    
-    # rivetedbot = [idgrids[0][:, 0]]
-    # for igrid, idx in zip(idgrids[1:-1:2], range(1,len(idgrids)-1,2)):
-    #     #bats on the upper side go down
-    #     edgeidsN = igrid[:, -1]
-    #     rivetedbot.append(edgeidsN)
-    #     beamids[idx], batids[idx] = bat_rail(mesh, ntrig, a1, a2, f, din, dz, edgeidsN, 
-    #                                          "rail", "bat", "rm", "bm", 17480)
-    # rivetedbot.append(idgrids[-1][:, -1])
-    # fshb, sshb, fib, sib, rib, rbib, rcib = panel(mesh, up.ffb, up.frb, up.tfb, up.trb, nb, nip, nf2, 
-    #                                   "panfl", "skin", "rib", "tr", up.surfb, rivetedbot, cspacing, bspacing)
-    all_components(mesh, up, 1, na, nf2, 1, ntrig, din, cspacing, bspacing, totmass, lemass, temass, "/EXCLsp", "/EXCLpl", "/EXCLrb", "/EXCLfl", "/EXCLsk", "rl", "bt", 
-                   1000, 0.5, 3, "/EXCLlg", 500, "mm")
+                                  
+    all_components(mesh, up, 1, na, nf2, 1, ntrig, cspacing, bspacing, totmass, lemass, temass, "/EXCLsp", "/EXCLpl", "/EXCLrb", "/EXCLfl", "/EXCLsk", "rl", 
+                   1000, 0.4, 3, 3000, .5, 4, 500)
 
     #comparison of what is registered in the mesh and what the sheets are
     from mpl_toolkits import mplot3d

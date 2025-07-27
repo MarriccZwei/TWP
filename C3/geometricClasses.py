@@ -237,6 +237,7 @@ class Mesh3D():
         mn = m/len(ids_in_box)
         for id_, pt in zip(ids_in_box, pts_in_box):
             self.inertia_attach(mn, id_, cg)
+        return ids_in_box
                 
 
     def visualise(self, ax, plt_inertia=False):

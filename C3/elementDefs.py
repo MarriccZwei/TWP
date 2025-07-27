@@ -63,9 +63,9 @@ def eledict(consts:ty.Dict[str,object], sizerVars:ty.Dict[str,object], codes:ty.
                         codes["skin"]:spar_quad(sizerVars["tskin"], consts["E_ALU"], consts["NU"], consts["RHO_ALU"]),
                         codes["panelPlate"]:spar_quad(sizerVars["tpan"], consts["E_ALU"], consts["NU"], consts["RHO_ALU"]), 
                         codes["panelRib"]:spar_quad(sizerVars["trib"], consts["E_ALU"], consts["NU"], consts["RHO_ALU"])},
-                "spring":{codes["mount"]:ks_mount(consts["INFTY_STIFF"])},
+                "spring":{},
                 "beam":{codes["rail"]:prop_rail(consts["DIN"], consts["E_STEEL"], consts["RHO_STEEL"]), 
                         codes["panelFlange"]:rib_flange(sizerVars["trib"], consts["RIB_FLANGE"], consts["E_ALU"], consts["RHO_ALU"])}, 
-                "mass":{codes["varpt"]:lambda m:m, codes["motor"]:consts["M_MOTOR"], codes["lg"]:consts["M_LG"], codes["hinge"]:consts["M_HINGE"]}}
+                "mass":{}}
     
     return eleProps
