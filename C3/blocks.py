@@ -94,7 +94,7 @@ def fem_linear_block(consts:ty.Dict[str, object], meshOuts:ty.Dict[str,object], 
     w = u[2::pf3.DOF]
     v = u[0::pf3.DOF]
 
-    return {'u':u, 'w':w, 'v':v, 'bu':bu, 'bk':bk}
+    return {'u':u, 'w':w, 'v':v, 'bu':bu, 'bk':bk, 'KC0uu':KC0uu}
 
 def post_processor_block(defl:ty.Dict[str, nt.NDArray[np.float64]], meshOuts:ty.Dict[str,object]):
     eleDict = meshOuts["elements"]
