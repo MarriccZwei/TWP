@@ -96,6 +96,7 @@ def trigspars(mesh:gcl.Mesh3D, ys:ty.List[float], nb:int, na:int, nf2:int, ntrig
 def bat_rail(mesh:gcl.Mesh3D, ntrig:int, a1:float, a2:float, f:float, 
              dz:float, midflids:ty.List[int], rail:str,totmass:float)->ty.Tuple[ty.List[int]]:
     '''nodes for midflids have to be oriented from y=0 to y=ymax'''
+    sum_in_mn = sum([ine.mn for ine in mesh.inertia])
     zaxis = gcl.Direction3D(0,0,1)
     mesh.beam_interconnect(midflids, rail)
 
@@ -115,13 +116,12 @@ def bat_rail(mesh:gcl.Mesh3D, ntrig:int, a1:float, a2:float, f:float,
         props[i] = prop
         dzs[i] = np.sign(dz)*a*np.sqrt(3)/3 #oriented distance from the rail to the battery centroid
     propmass = totmass/(4*ntrig+2)/sum(props.values()) #how much mass a unit prop means
-    batids = list()
     for i in midflids:
         batpt = zaxis.step(mesh.nodes[i], dzs[i])
         #assigning the variable mass to the battery using protocol
         mesh.inertia_attach(props[i]*propmass, i, batpt)
-
-    return batids
+    
+    assert np.isclose(sum([ine.mn for ine in mesh.inertia])-sum_in_mn, totmass/(4*ntrig+2))
 
 def panel(mesh:gcl.Mesh3D, ff:gcl.Point3D, fr:gcl.Point3D, tf:gcl.Point3D, tr:gcl.Point3D, nb:int, ribys:ty.List[float], nip:int, nf:int, 
           floor:str, skin:str, rib:str, flange:str, panelz:ty.Callable, ribconnids:ty.List[nt.NDArray[np.int64]],
@@ -176,6 +176,7 @@ def panel(mesh:gcl.Mesh3D, ff:gcl.Point3D, fr:gcl.Point3D, tf:gcl.Point3D, tr:gc
 
 
 def motors(mesh:gcl.Mesh3D, motors:ty.List[gcl.Point3D], motorR:float, motorL:float, motormass:float):
+    sum_in_mn = sum([ine.mn for ine in mesh.inertia])
     for mtr in motors:
         affected_ids = list()
         for i, node in enumerate(mesh.nodes):
@@ -184,19 +185,26 @@ def motors(mesh:gcl.Mesh3D, motors:ty.List[gcl.Point3D], motorR:float, motorL:fl
         mn = motormass/len(affected_ids)
         for i in affected_ids:
             mesh.inertia_attach(mn, i, mtr)
+    assert np.isclose(sum([ine.mn for ine in mesh.inertia])-sum_in_mn, 4*motormass)
 
 def lg(mesh:gcl.Mesh3D, uplg:gcl.Point3D, lgM, lgR, lgL):
-    return mesh.inertia_smear(lgM, uplg, gcl.Point3D(uplg.x-lgL/2, uplg.y-lgR, uplg.z-lgR), gcl.Point3D(uplg.x+lgL/2, uplg.y+lgR, uplg.z+lgR))
+    sum_in_mn = sum([ine.mn for ine in mesh.inertia])
+    res= mesh.inertia_smear(lgM, uplg, gcl.Point3D(uplg.x-lgL/2, uplg.y-lgR, uplg.z-lgR), gcl.Point3D(uplg.x+lgL/2, uplg.y+lgR, uplg.z+lgR))
+    assert np.isclose(sum([ine.mn for ine in mesh.inertia])-sum_in_mn, lgM)
+    return res
 
 
 def hinge(mesh:gcl.Mesh3D, uphinge:gcl.Point3D, panidTop:nt.NDArray[np.int64], mhn:float):
+    sum_in_mn = sum([ine.mn for ine in mesh.inertia])
     xids = panidTop[-1, :]
     mn = mhn/len(xids)
     [mesh.inertia_attach(mn, xid, uphinge) for xid in xids]
+    assert np.isclose(sum([ine.mn for ine in mesh.inertia])-sum_in_mn, mhn)
 
 
 def LETE(mesh:gcl.Mesh3D, lineLE:gcl.Line3D, lineTE:gcl.Line3D, panshTop:nt.ArrayLike, panidTop:nt.NDArray[np.int64], panshBot:nt.ArrayLike, panidBot:nt.NDArray[np.int64],
          totmassLE:float, totmassTE:float):
+    sum_in_mn = sum([ine.mn for ine in mesh.inertia])
     '''Leading Edge'''
     #connPtsLE = [0]*panshTop.shape[0]
     # connPtsLE[::2] = panshTop[::2, 0]
@@ -231,6 +239,7 @@ def LETE(mesh:gcl.Mesh3D, lineLE:gcl.Line3D, lineTE:gcl.Line3D, panshTop:nt.Arra
     msTE = [d2/totDistsTE2*totmassTE for d2 in distsTE2]
     [mesh.inertia_attach(m/2, id_, pt) for id_, m, pt in zip(connIdsTE, msTE, ptsTE)]
     [mesh.inertia_attach(m/2, id_, pt) for id_, m, pt in zip(connIdsTTE, msTE, ptsTE)]
+    assert np.isclose(sum([ine.mn for ine in mesh.inertia])-sum_in_mn, totmassLE+totmassTE)
     
 
 

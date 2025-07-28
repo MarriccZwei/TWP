@@ -4,6 +4,8 @@ import scipy.sparse as ss
 import typing as ty
 import geometricClasses as gcl
 import pyfe3d.beamprop as pbp
+import pyfe3d.shellprop_utils as psp
+import copy
 
 """The file containing an interpreter of the gcl connection matrix into pyfe3D elements"""
 PM_SPARSE_SIZE = 3 #point mass sparse size
@@ -15,6 +17,18 @@ class OrientedBeamProp(pbp.BeamProp):
         self.xyex = xyex
         self.xyey = xyey
         self.xyez = xyez
+
+class BeamCWithProp(pf3.BeamC):
+    def __init__(self, probe:OrientedBeamProp):
+        super().__init__()
+        self.probe=probe
+        self.beamprop = None
+
+class QuadWithProp(pf3.Quad4):
+    def __init__(self, probe:pf3.Quad4Probe):
+        super().__init__()
+        self.probe = probe
+        self.shellprop = None
 
 class SpringData(): #spring data with reserved mass matrix for mass at nodes
     def __init__(self):
@@ -80,7 +94,7 @@ class Spring(pf3.Spring):
 
 def eles_from_gcl(mesh:gcl.Mesh3D, eleDict:ty.Dict[str, ty.Dict[str, object]]):
     #currently only for the elements we have used, same goes to gcl connections
-    probes = {"quad": pf3.Quad4Probe(), "spring": pf3.SpringProbe(), "beam":pf3.BeamCProbe(), "mass":None}
+    #probes = {"quad": pf3.Quad4Probe(), "spring": pf3.SpringProbe(), "beam":pf3.BeamCProbe(), "mass":None}
     data = {"quad": pf3.Quad4Data(), "spring":SpringData(), "beam":pf3.BeamCData(), "mass":None}
     created_eles = {"quad":[], "spring":[], "beam":[], "mass":[]}
 
@@ -94,10 +108,12 @@ def eles_from_gcl(mesh:gcl.Mesh3D, eleDict:ty.Dict[str, ty.Dict[str, object]]):
     #calculating matrix size based on element data sizes
     sparse_size = 0
     mass_size = 0
+    kg_size = 0
     for key, val in mesh.connections.items():
         if key!="mass": #mass does not contribute here, it's assigned to the mass matrix
             sparse_size += data[key].KC0_SPARSE_SIZE*len(val)
             mass_size += data[key].M_SPARSE_SIZE*len(val)
+            kg_size += data[key].KG_SPARSE_SIZE*len(val)
         else:
             mass_size += PM_SPARSE_SIZE*len(val) #a mass in the translational DOF on the diagonal
     mass_size += IN_SPARSE_SIZE*len(mesh.inertia)
@@ -109,18 +125,23 @@ def eles_from_gcl(mesh:gcl.Mesh3D, eleDict:ty.Dict[str, ty.Dict[str, object]]):
     Mr = np.zeros(mass_size, dtype=pf3.INT)
     Mc = np.zeros(mass_size, dtype=pf3.INT)
     Mv = np.zeros(mass_size, dtype=pf3.DOUBLE)
+    KGr = np.zeros(kg_size, dtype=pf3.INT)
+    KGc = np.zeros(kg_size, dtype=pf3.INT)
+    KGv = np.zeros(kg_size, dtype=pf3.DOUBLE) 
     N = pf3.DOF*len(mesh.nodes)
 
     #Element creation based on the connection matrix
     init_k_KC0 = 0
     init_k_M = 0
+    init_k_KG = 0
     #Quad elements
     for conn in mesh.connections["quad"]:
         if conn.protocol=="":
             shellprop = eleDict["quad"][conn.eleid]
         else:
             shellprop = eleDict["quad"][conn.eleid](conn.protocol)
-        quad = pf3.Quad4(probes["quad"])
+        quad = QuadWithProp(pf3.Quad4Probe())
+        quad.shellprop = shellprop
         quad.n1 = nids[conn.ids[0]]
         quad.n2 = nids[conn.ids[1]]
         quad.n3 = nids[conn.ids[2]]
@@ -135,12 +156,14 @@ def eles_from_gcl(mesh:gcl.Mesh3D, eleDict:ty.Dict[str, ty.Dict[str, object]]):
         quad.update_probe_xe(ncoords_flatten)
         quad.update_KC0(KC0r, KC0c, KC0v, shellprop) #matrix contribution, changing the matrices sent
         quad.update_M(Mr, Mc, Mv, shellprop)
+        quad.update_KG(KGr, KGc, KGv, shellprop)
         created_eles["quad"].append(quad)
         init_k_KC0 += data["quad"].KC0_SPARSE_SIZE
         init_k_M += data["quad"].M_SPARSE_SIZE
+        init_k_KG += data["quad"].KG_SPARSE_SIZE
     #Spring elements
     for conn in mesh.connections["spring"]:
-        spring = Spring(probes["spring"])
+        spring = Spring(pf3.SpringProbe())
         spring.n1 = nids[conn.ids[0]]
         spring.n2 = nids[conn.ids[1]]
         spring.c1 = pf3.DOF*nid_pos[spring.n1]
@@ -159,13 +182,15 @@ def eles_from_gcl(mesh:gcl.Mesh3D, eleDict:ty.Dict[str, ty.Dict[str, object]]):
         created_eles["spring"].append(spring)
         init_k_KC0 += data["spring"].KC0_SPARSE_SIZE
         init_k_M += data["spring"].M_SPARSE_SIZE
+        init_k_KG += data["spring"].KG_SPARSE_SIZE
     #Beam elements
     for conn in mesh.connections["beam"]:
         if conn.protocol=="":
             prop = eleDict["beam"][conn.eleid] #prop is an OrientedBeamProp
         else:
             prop = eleDict["beam"][conn.eleid](conn.protocol)
-        beam = pf3.BeamC(probes["beam"])
+        beam = BeamCWithProp(pf3.BeamCProbe())
+        beam.beamprop = prop
         beam.n1 = nids[conn.ids[0]]
         beam.n2 = nids[conn.ids[1]]
         pos1 = nid_pos[beam.n1]
@@ -178,9 +203,11 @@ def eles_from_gcl(mesh:gcl.Mesh3D, eleDict:ty.Dict[str, ty.Dict[str, object]]):
         beam.update_probe_xe(ncoords_flatten)
         beam.update_KC0(KC0r, KC0c, KC0v, prop)
         beam.update_M(Mr, Mc, Mv, prop) #TODO: mtype?
+        beam.update_KG(KGr, KGc, KGv, prop, 1)
         created_eles["beam"].append(beam)
         init_k_KC0 += data["beam"].KC0_SPARSE_SIZE
         init_k_M += data["beam"].M_SPARSE_SIZE
+        init_k_KG += data["beam"].KG_SPARSE_SIZE
     #Point masses
     for conn in mesh.connections["mass"]:
         if conn.protocol=="":
@@ -241,16 +268,19 @@ def eles_from_gcl(mesh:gcl.Mesh3D, eleDict:ty.Dict[str, ty.Dict[str, object]]):
 
     KC0 = ss.coo_matrix((KC0v, (KC0r, KC0c)), shape=(N, N)).tocsc() #@# stiffness matrix in sparse format
     M = ss.coo_matrix((Mv, (Mr, Mc)), shape=(N,N)).tocsc() #mass_matrix
+    '''!!! One initialises KG only in post-processsing!!!'''
+    #KG = ss.coo_matrix((KGv, (KGr, KGc)), shape=(N,N)).tocsc()
 
-    return KC0, M, N, x, y, z, {'probes': probes, 'data':data, 'elements':created_eles, 'nids':nids, 
-                             'nid_pos':nid_pos, 'ncoords_flatten':ncoords_flatten, 'ncoords':ncoords}
+    return KC0, M, N, x, y, z, {'data':data, 'elements':created_eles, 'nids':nids, 
+                             'nid_pos':nid_pos, 'ncoords_flatten':ncoords_flatten, 'ncoords':ncoords,
+                             'KGv':KGv, 'KGr':KGr, 'KGc':KGc}
 
 def weight(M:ss.coo_matrix, g:float, N:int, DOF:int, wd:gcl.Direction3D):
     diag = M.diagonal()
     Wvec = np.zeros(N)
     Wvec[0::DOF] = g*wd.x*diag[0::DOF]
-    Wvec[1::DOF] = g*wd.y*diag[0::DOF]
-    Wvec[2::DOF] = g*wd.z*diag[0::DOF]
+    Wvec[1::DOF] = g*wd.y*diag[1::DOF]
+    Wvec[2::DOF] = g*wd.z*diag[2::DOF]
     return Wvec
 
 if __name__ == "__main__":

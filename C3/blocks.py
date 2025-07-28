@@ -80,7 +80,8 @@ def fem_linear_block(consts:ty.Dict[str, object], meshOuts:ty.Dict[str,object], 
     f[2::pf3.DOF][ids["lg"]] += nlg*G0*MTOM/len(f[2::pf3.DOF][ids["lg"]])
 
     #applying weight
-    weight = p3g.weight(M, nult*G0, N, pf3.DOF, ndir) if ult else p3g.weight(M, n*G0, N, pf3.DOF, ndir)
+    wdir = gcl.Direction3D(-ndir.x, -ndir.y, -ndir.z)
+    weight = p3g.weight(M, nult*G0, N, pf3.DOF, wdir) if ult else p3g.weight(M, n*G0, N, pf3.DOF, wdir)
     f+=weight
 
     #checks and solution
@@ -93,9 +94,22 @@ def fem_linear_block(consts:ty.Dict[str, object], meshOuts:ty.Dict[str,object], 
     w = u[2::pf3.DOF]
     v = u[0::pf3.DOF]
 
-    return {'u':u, 'w':w, 'v':v}
+    return {'u':u, 'w':w, 'v':v, 'bu':bu, 'bk':bk}
 
-def plot_block(w:nt.NDArray, wtxt:str, meshOuts:ty.Dict[str, object], consts:ty.Dict[str, object], plusonly=False,):
+def post_processor_block(defl:ty.Dict[str, nt.NDArray[np.float64]], meshOuts:ty.Dict[str,object]):
+    eleDict = meshOuts["elements"]
+    fi = np.zeros(meshOuts["N"])
+    #only for quads and beams as of now - that's all we are using
+    for quad in eleDict["quad"]:
+        quad.update_probe_finte(quad.shellprop)
+        quad.update_fint(fi, quad.shellprop)
+    for beam in eleDict["beam"]:
+        beam.update_probe_finte(beam.beamprop)
+        beam.update_fint(fi, beam.beamprop)
+
+    return {"elements":eleDict, "fi":fi}
+
+def plot_block(w:nt.NDArray, wtxt:str, meshOuts:ty.Dict[str, object], consts:ty.Dict[str, object], unit="m", plusonly=False,):
     KC0, M, N, x, y, z, mesh, up, ids, pts = tuple(meshOuts[k] for k in ['KC0', 'M', 'N', 'x', 'y', 'z', 'mesh', 'up', 'ids', 'pts'])
     ntrig, nf2= tuple(consts[k] for k in ['NTRIG', 'NF2'])
 
@@ -124,28 +138,6 @@ def plot_block(w:nt.NDArray, wtxt:str, meshOuts:ty.Dict[str, object], consts:ty.
     contourp(235, ids["skinBot"])
     plt.title("Lower Skin")
 
-    # plt.subplot(244)
-    # x_ = [0,1,2,3,4,5,6,7,8,9]
-    # y_ = [w[ids["motors"][0][0]], w[ids["motors"][0][1]], w[ids["motors"][1][0]], w[ids["motors"][1][1]],
-    #     w[ids["motors"][2][0]], w[ids["motors"][2][1]], w[ids["motors"][3][0]], w[ids["motors"][3][1]],
-    #     w[ids["lg"]], w[ids["hinge"]]]
-    # plt.scatter(x_, y_)
-    # plt.xticks(x_, ["m1u","m1l","m2u","m2l", "m3u", "m3l", 
-    #                         "m4u", "m4l", "lg", "hn"], rotation=60)
-    # plt.ylabel(f"{wtxt} [m]", loc="top")
-    # plt.title("Poitmass Components")
-
-    # #TODO: reformat as 9x9, with rails, batteries and LE, TE mass distrs.
-    # plt.subplot(247)
-    # labels = [f"rail{i}" for i in range(1, 4*ntrig+3)]
-    # for batids in ids["bats"]:
-    #     x_ = [mesh.nodes[id_].y for id_ in batids]
-    #     y_ = [w[id_] for id_ in batids]
-    #     plt.plot(x_, y_, label=labels.pop(0))
-    # plt.xlabel("y [m]", loc="right")
-    # plt.ylabel(f"{wtxt} [m]", loc="top")
-    # plt.title("Batteries")
-    # plt.legend()
     plt.subplot(236)
     first=True
     for i in range(ids["spars"][:, :nf2].shape[1]):
@@ -153,13 +145,13 @@ def plot_block(w:nt.NDArray, wtxt:str, meshOuts:ty.Dict[str, object], consts:ty.
         first = False
     first=True
     for i in range(ids["spars"][:, -nf2:].shape[1]):
-        plt.plot(y[ids["spars"][:, i]], w[ids["spars"][:, i]], color="green", label="rearFlange") if first else plt.plot(y[ids["spars"][:, i]], w[ids["spars"][:, i]], color="green")
+        plt.plot(y[ids["spars"][:, -i-1]], w[ids["spars"][:, -i-1]], color="green", label="rearFlange") if first else plt.plot(y[ids["spars"][:, -i-1]], w[ids["spars"][:, -i-1]], color="green")
         first = False
 
     # plt.plot(y[ids["LE"]], w[ids["LE"]], label="LEeqpt")
     # plt.plot(y[ids["TE"]], w[ids["TE"]], label="TEeqpt")
     plt.xlabel("y [m]", loc="right")
-    plt.ylabel(f"{wtxt} [m]", loc="top")
+    plt.ylabel(f"{wtxt} [{unit}]", loc="top")
     plt.title("Spar Flanges")
     plt.legend()
     fig.subplots_adjust(wspace=0.4)

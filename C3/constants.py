@@ -23,7 +23,7 @@ CONSTS={
 
     #masses
     'BAT_MASS_1WING':17480, #kg
-    'MTOM':7600, #kg
+    'MTOM':76000, #kg
     'M_MOTOR':1000, #Entire engine group of a single engine [kg]
     'M_LG':5000, #Mass of the entire landing gear group [kg]
     'M_LE':1000, #Mass of all other LE eqpt: thermal management, avionics, 1/2 cable/pipe mass etc. [kg]
