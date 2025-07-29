@@ -5,6 +5,7 @@ import pyfe3Dgcl as p3g
 import numpy as np
 import pyfe3d as pf3
 import scipy.sparse.linalg as ssl
+import pypardiso as ppd
 import loadModel as lm
 
 import typing as ty
@@ -87,7 +88,7 @@ def fem_linear_block(consts:ty.Dict[str, object], meshOuts:ty.Dict[str,object], 
     #checks and solution
     KC0uu = KC0[bu, :][:, bu]
     fu = f[bu]
-    uu = ssl.spsolve(KC0uu, fu)
+    uu = ppd.spsolve(KC0uu, fu)
     u = np.zeros(N)
     u[bu] = uu
 
