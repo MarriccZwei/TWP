@@ -22,12 +22,14 @@ class BeamCWithProp(pf3.BeamC):
     def __init__(self, probe:OrientedBeamProp):
         super().__init__()
         self.probe=probe
+        self.eleid = None
         self.beamprop = None
 
 class QuadWithProp(pf3.Quad4):
     def __init__(self, probe:pf3.Quad4Probe):
         super().__init__()
         self.probe = probe
+        self.eleid = None
         self.shellprop = None
 
 class SpringData(): #spring data with reserved mass matrix for mass at nodes
@@ -142,6 +144,7 @@ def eles_from_gcl(mesh:gcl.Mesh3D, eleDict:ty.Dict[str, ty.Dict[str, object]]):
             shellprop = eleDict["quad"][conn.eleid](conn.protocol)
         quad = QuadWithProp(pf3.Quad4Probe())
         quad.shellprop = shellprop
+        quad.eleid = conn.eleid
         quad.n1 = nids[conn.ids[0]]
         quad.n2 = nids[conn.ids[1]]
         quad.n3 = nids[conn.ids[2]]
@@ -191,6 +194,7 @@ def eles_from_gcl(mesh:gcl.Mesh3D, eleDict:ty.Dict[str, ty.Dict[str, object]]):
             prop = eleDict["beam"][conn.eleid](conn.protocol)
         beam = BeamCWithProp(pf3.BeamCProbe())
         beam.beamprop = prop
+        beam.eleid = conn.eleid
         beam.n1 = nids[conn.ids[0]]
         beam.n2 = nids[conn.ids[1]]
         pos1 = nid_pos[beam.n1]
