@@ -11,6 +11,7 @@ ks_mount = lambda INFTY_STIFF: p3g.SpringProp(INFTY_STIFF, INFTY_STIFF, INFTY_ST
 '''Battery Rail modelled as a beam'''
 def prop_rail(din, E_STEEL, RHO_STEEL):
     prop_rail = p3g.OrientedBeamProp(1, 0, 0)
+    prop_rail.E = E_STEEL
     prop_rail.A = np.pi/4*din**2
     prop_rail.Iyy = np.pi/64*din**4
     prop_rail.Izz = prop_rail.Iyy
@@ -27,8 +28,10 @@ def rib_flange(t_rib, ribflange, E, RHO):
     #template for the flange prop
     prop_flange = p3g.OrientedBeamProp(0, 0, 0)
     prop_flange.A = t_rib*ribflange
+    prop_flange.E = E
     prop_flange.Izz = t_rib*ribflange**3/12
     prop_flange.Iyy = ribflange*t_rib**3/12
+    prop_flange.J = prop_flange.Izz+prop_flange.Iyy
     scf = 5/6 #ASSUMPTION, TODO: verify
     prop_flange.G = scf*E/2/(1+0.3)
     prop_flange.intrho = RHO*prop_flange.A
