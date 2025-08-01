@@ -17,7 +17,7 @@ CONSTS={
     'NTRIG':2, #number of batteries supported on the lower panel [-]
     'FULLSPAN':21, #m
     'LGR':.5, #m
-    'LGL':4.5, #m
+    'LGL':5, #m
     'ML': 3, #m
     'MR': .4, #m
 
