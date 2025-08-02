@@ -15,7 +15,7 @@ CONSTS={
     'RIB_FLANGE':0.0125, #m
     'DIN':0.015, #inner diameter of the rail wormgear [m]
     'NTRIG':2, #number of batteries supported on the lower panel [-]
-    'FULLSPAN':21, #m
+    'FULLSPAN':21, #m, full halfspan
     'LGR':.5, #m
     'LGL':5, #m
     'ML': 3, #m
