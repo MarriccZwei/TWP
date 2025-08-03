@@ -63,4 +63,5 @@ def fem2aero(les:ty.List[gcl.Point3D], p:nt.NDArray[np.float32], ncoords_s:nt.ND
     return ss.csc_matrix(W_u_to_p)
 
 
-if __name__ == "__main__"
+if __name__ == "__main__":
+    pass
