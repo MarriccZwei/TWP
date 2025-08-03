@@ -65,7 +65,7 @@ CODES={
 }
 
 #styled as a sizer protocol
-INTIAL = {
+INITIAL = {
 'tspar':0.005, #m
 'tskin':0.003, #m
 'tpan':0.002, #m

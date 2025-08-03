@@ -187,8 +187,8 @@ if __name__ == "__main__":
 
     for lgl in lgl_infs:
         csts["LGL"] = lgl
-        eleDict = ed.eledict(csts, cst.INTIAL, cst.CODES)
-        meshOut = mesh_block(data, cst.INTIAL, eleDict, csts, cst.CODES)
+        eleDict = ed.eledict(csts, cst.INITIAL, cst.CODES)
+        meshOut = mesh_block(data, cst.INITIAL, eleDict, csts, cst.CODES)
         sol = fem_linear_block(csts, meshOut, load_case, True)
         wfig = plot_block(sol['w'], "w", meshOut, csts)
         wfig.savefig(fr"C:\marek\studia\hpb\Results\Sensitivity Study LGL\w\K{lgl}.pdf")
