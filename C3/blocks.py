@@ -6,7 +6,7 @@ import numpy as np
 import pyfe3d as pf3
 import scipy.sparse.linalg as ssl
 import pypardiso as ppd
-import loadModel as lm
+import loads as ls
 
 import typing as ty
 import matplotlib.pyplot as plt
@@ -20,12 +20,17 @@ def mesh_block(cadData:str, sizerVars:ty.Dict[str,str], eleProps:ty.Dict[str,ty.
                                  consts["M_TE"], codes["spar"], codes["panelPlate"], codes["panelRib"], codes["panelFlange"], 
                                  codes["skin"], codes["rail"], consts["M_MOTOR"], consts["MR"], consts["ML"], consts["M_LG"], consts["LGR"], consts["LGL"], consts["M_HINGE"])
     KC0, M, N, x, y, z, outdict = p3g.eles_from_gcl(mesh, eleProps)
-    return {'mesh':mesh, 'up':up, 'KC0':KC0, 'M':M, 'N':N, 'x':x, 'y':y, 'z':z, 'pts':pts, 'ids':ids} | outdict
+
+    #preparing parmeters for the aerodynamic model
+    les = [up.outleline.for_y(y_) for y_ in consts["FOIL_YS"]]
+    tes = [up.outteline.for_y(y_) for y_ in consts["FOIL_YS"]]
+    return {'mesh':mesh, 'up':up, 'KC0':KC0, 'M':M, 'N':N, 'x':x, 'y':y, 'z':z, 'pts':pts, 'ids':ids,
+            'les':les, 'tes':tes} | outdict
 
 def fem_linear_block(consts:ty.Dict[str, object], meshOuts:ty.Dict[str,object], loadCase:ty.Dict[str,object], ult=False):
-    KC0, M, N, x, y, z, mesh, up, ids, pts = tuple(meshOuts[k] for k in ['KC0', 'M', 'N', 'x', 'y', 'z', 'mesh', 'up', 'ids', 'pts'])
-    FULLSPAN, MTOM, G0, motorR, motorL= tuple(consts[k] for k in ['FULLSPAN', 'MTOM', 'G0', 'MR', 'ML'])
-    n, nult, nlg, ndir, LD, FT  = tuple(loadCase[k] for k in ['n', 'nult', 'nlg', 'ndir', 'LD', 'FT'])
+    KC0, M, N, x, y, z, mesh, up, ids, pts, les, tes, ncoords = tuple(meshOuts[k] for k in ['KC0', 'M', 'N', 'x', 'y', 'z', 'mesh', 'up', 'ids', 'pts', 'les', 'tes', 'ncoords'])
+    FULLSPAN, MTOM, G0, motorR, motorL, foils= tuple(consts[k] for k in ['FULLSPAN', 'MTOM', 'G0', 'MR', 'ML', 'FOILS'])
+    n, nult, nlg, ndir, LD, FT, op  = tuple(loadCase[k] for k in ['n', 'nult', 'nlg', 'ndir', 'LD', 'FT', 'op'])
     
     #boundary conditions = fix at y of fuselage boundary
     bk = np.zeros(N, dtype=bool)
@@ -37,35 +42,44 @@ def fem_linear_block(consts:ty.Dict[str, object], meshOuts:ty.Dict[str,object], 
     #loads TODO: add real ones
     f = np.zeros(N)
 
-    #aerodynamic load
-    xts, yts, zts = gcl.pts2coords3D(pts["skinTop"].flatten())
-    xbs, ybs, zbs = gcl.pts2coords3D(pts["skinBot"].flatten())
-    xtmesh, ytmesh = np.array(xts).reshape(pts["skinTop"].shape).T, np.array(yts).reshape(pts["skinTop"].shape).T
-    xbmesh, ybmesh = np.array(xbs).reshape(pts["skinBot"].shape).T, np.array(ybs).reshape(pts["skinBot"].shape).T
+    # #aerodynamic load
+    # xts, yts, zts = gcl.pts2coords3D(pts["skinTop"].flatten())
+    # xbs, ybs, zbs = gcl.pts2coords3D(pts["skinBot"].flatten())
+    # xtmesh, ytmesh = np.array(xts).reshape(pts["skinTop"].shape).T, np.array(yts).reshape(pts["skinTop"].shape).T
+    # xbmesh, ybmesh = np.array(xbs).reshape(pts["skinBot"].shape).T, np.array(ybs).reshape(pts["skinBot"].shape).T
 
-    #lift fractions - will have to get multiplied by an appropriate load case
-    #lt, mxt, myt, ncxp, ncxm, ncyp, ncym, yPerB2, xPerC = lm.apply_on_wingbox(xtmesh, ytmesh, (up.fft.y/FULLSPAN, up.tft.y/FULLSPAN), (up.xcft, up.xcrt), True, True)
-    lt, mxt, myt = lm.apply_on_wingbox(xtmesh, ytmesh, (up.fft.y/FULLSPAN, up.tft.y/FULLSPAN), (up.xcft, up.xcrt), True) #(up.fft.y/FULLSPAN, up.tft.y/FULLSPAN), (up.xcft, up.xcrt)
-    lb, mxb, myb = lm.apply_on_wingbox(xbmesh, ybmesh, (up.fft.y/FULLSPAN, up.tft.y/FULLSPAN), (up.xcfb, up.xcrb), False) #(up.fft.y/FULLSPAN, up.tft.y/FULLSPAN), (up.xcfb, up.xcrb)
+    # #lift fractions - will have to get multiplied by an appropriate load case
+    # #lt, mxt, myt, ncxp, ncxm, ncyp, ncym, yPerB2, xPerC = lm.apply_on_wingbox(xtmesh, ytmesh, (up.fft.y/FULLSPAN, up.tft.y/FULLSPAN), (up.xcft, up.xcrt), True, True)
+    # lt, mxt, myt = lm.apply_on_wingbox(xtmesh, ytmesh, (up.fft.y/FULLSPAN, up.tft.y/FULLSPAN), (up.xcft, up.xcrt), True) #(up.fft.y/FULLSPAN, up.tft.y/FULLSPAN), (up.xcft, up.xcrt)
+    # lb, mxb, myb = lm.apply_on_wingbox(xbmesh, ybmesh, (up.fft.y/FULLSPAN, up.tft.y/FULLSPAN), (up.xcfb, up.xcrb), False) #(up.fft.y/FULLSPAN, up.tft.y/FULLSPAN), (up.xcfb, up.xcrb)
 
-    #for now, just mul by 2.5*76000*G0
-    L = n*MTOM*G0 #TODO: resolve nult vs n
-    Lt, Mxt, Myt, Lb, Mxb, Myb = L*lt.flatten(), L*mxt.flatten(), L*myb.flatten(), L*lb.flatten(), L*mxb.flatten(), L*myb.flatten()
-    #applying the top skin loads
-    for id_, Lt_, Mxt_, Myt_ in zip(ids["skinTop"].T.flatten(), Lt, Mxt, Myt):
-        f[2::pf3.DOF][id_] = Lt_
-        f[3::pf3.DOF][id_] = Mxt_
-        f[4::pf3.DOF][id_] = Myt_ 
-    #applying the bottom skin loads
-    for id_, Lb_, Mxb_, Myb_ in zip(ids["skinBot"].T.flatten(), Lb, Mxb, Myb):
-        f[2::pf3.DOF][id_] = Lb_
-        f[3::pf3.DOF][id_] = Mxb_
-        f[4::pf3.DOF][id_] = Myb_ 
+    # #for now, just mul by 2.5*76000*G0
+    # L = n*MTOM*G0 #TODO: resolve nult vs n
+    # Lt, Mxt, Myt, Lb, Mxb, Myb = L*lt.flatten(), L*mxt.flatten(), L*myb.flatten(), L*lb.flatten(), L*mxb.flatten(), L*myb.flatten()
+    # #applying the top skin loads
+    # for id_, Lt_, Mxt_, Myt_ in zip(ids["skinTop"].T.flatten(), Lt, Mxt, Myt):
+    #     f[2::pf3.DOF][id_] = Lt_
+    #     f[3::pf3.DOF][id_] = Mxt_
+    #     f[4::pf3.DOF][id_] = Myt_ 
+    # #applying the bottom skin loads
+    # for id_, Lb_, Mxb_, Myb_ in zip(ids["skinBot"].T.flatten(), Lb, Mxb, Myb):
+    #     f[2::pf3.DOF][id_] = Lb_
+    #     f[3::pf3.DOF][id_] = Mxb_
+    #     f[4::pf3.DOF][id_] = Myb_ 
 
-    assert np.isclose(f[2::pf3.DOF].sum(), L/2) #we have to compare with f not fu, cuz in fu part of the lift gets eaten by bce, but that's aight
+    #assert np.isclose(f[2::pf3.DOF].sum(), L/2) #we have to compare with f not fu, cuz in fu part of the lift gets eaten by bce, but that's aight
 
-    #applying drag
-    f[0::pf3.DOF] += f[2::pf3.DOF]/LD #drag points towards positive x!!!
+    # #applying drag
+    # f[0::pf3.DOF] += f[2::pf3.DOF]/LD #drag points towards positive x!!!
+
+    #aerodynamic forces
+    airplane, vlm, forces, moments = ls.vlm(les, tes, foils, op)
+    ids_s = np.hstack([ids["plateTop"][:, -1].flatten(), ids["skinTop"].flatten(), ids["plateTop"][:, 0].flatten(),
+                        ids["plateBot"][:, 0].flatten(), ids["skinBot"].flatten(), ids["plateBot"][:, -1].flatten()])
+    ncoords_s = ncoords[ids_s, :]
+    W, Fext = ls.aero2fem(vlm, ncoords_s, ids_s, N, pf3.DOF)
+    f += Fext
+
 
     #applying thrust
     for mtr in up.motors:
@@ -95,7 +109,7 @@ def fem_linear_block(consts:ty.Dict[str, object], meshOuts:ty.Dict[str,object], 
     w = u[2::pf3.DOF]
     v = u[0::pf3.DOF]
 
-    return {'u':u, 'w':w, 'v':v, 'bu':bu, 'bk':bk, 'KC0uu':KC0uu}
+    return {'u':u, 'w':w, 'v':v, 'bu':bu, 'bk':bk, 'KC0uu':KC0uu, 'W':W}
 
 def post_processor_block(defl:ty.Dict[str, nt.NDArray[np.float64]], meshOuts:ty.Dict[str,object]):
     eleDict = meshOuts["elements"]
@@ -165,7 +179,7 @@ if __name__ == "__main__":
     import constants as cst
     import copy
 
-    data = "5000;0;-6.5|4750;0;-24|4500;0;-41|4000;0;-75|3500;0;-107|3000;0;-138|2500;0;-167|2000;0;-190|1500;0;-206|1250;0;-211|1000;0;-211.5|750;0;-205|500;0;-187.5|375;0;-173|250;0;-150.5|125;0;-113.5|62.5;0;-82.5|0;0;0|62.5;0;107.5|125;0;149.5|250;0;206.5|375;0;248|500;0;281.5|750;0;330.5|1000;0;363|1250;0;383.5|1500;0;394|2000;0;390|2500;0;362|3000;0;318|3500;0;259|4000;0;187.5|4500;0;104|4750;0;57|5000;0;6.5&4250;18000;2206.872|4125;18000;2198.122|4000;18000;2189.622|3750;18000;2172.622|3500;18000;2156.622|3250;18000;2141.122|3000;18000;2126.622|2750;18000;2115.122|2500;18000;2107.122|2375;18000;2104.622|2250;18000;2104.372|2125;18000;2107.622|2000;18000;2116.372|1937.5;18000;2123.622|1875;18000;2134.872|1812.5;18000;2153.372|1781.25;18000;2168.872|1750;18000;2210.122|1781.25;18000;2263.872|1812.5;18000;2284.872|1875;18000;2313.372|1937.5;18000;2334.122|2000;18000;2350.872|2125;18000;2375.372|2250;18000;2391.622|2375;18000;2401.872|2500;18000;2407.122|2750;18000;2405.122|3000;18000;2391.122|3250;18000;2369.122|3500;18000;2339.622|3750;18000;2303.872|4000;18000;2262.122|4125;18000;2238.622|4250;18000;2213.372&-471.576;3673.46;441.249|126.713;7770.33;945.522|725.002;11867.2;1449.796|1323.292;15964.069;1954.07&3012.266;18950.167;2324.854|4861.588;5721.895;702.56&500;0;0|1999.77;18000;2214.157&3500;0;0|3499.77;18000;2214.157&787.633;1600;66.192|2883.375;1600;66.192|2617.418;1600;526.843|1053.59;1600;526.843&2024.321;18000;2152.592|3273.646;18000;2152.592|3148.758;18000;2368.903|2149.209;18000;2368.903" 
+    data = "5000;0;-6.5|4750;0;-24|4500;0;-41|4000;0;-75|3500;0;-107|3000;0;-138|2500;0;-167|2000;0;-190|1500;0;-206|1250;0;-211|1000;0;-211.5|750;0;-205|500;0;-187.5|375;0;-173|250;0;-150.5|125;0;-113.5|62.5;0;-82.5|0;0;0|62.5;0;107.5|125;0;149.5|250;0;206.5|375;0;248|500;0;281.5|750;0;330.5|1000;0;363|1250;0;383.5|1500;0;394|2000;0;390|2500;0;362|3000;0;318|3500;0;259|4000;0;187.5|4500;0;104|4750;0;57|5000;0;6.5&4250;18000;2206.872|4125;18000;2198.122|4000;18000;2189.622|3750;18000;2172.622|3500;18000;2156.622|3250;18000;2141.122|3000;18000;2126.622|2750;18000;2115.122|2500;18000;2107.122|2375;18000;2104.622|2250;18000;2104.372|2125;18000;2107.622|2000;18000;2116.372|1937.5;18000;2123.622|1875;18000;2134.872|1812.5;18000;2153.372|1781.25;18000;2168.872|1750;18000;2210.122|1781.25;18000;2263.872|1812.5;18000;2284.872|1875;18000;2313.372|1937.5;18000;2334.122|2000;18000;2350.872|2125;18000;2375.372|2250;18000;2391.622|2375;18000;2401.872|2500;18000;2407.122|2750;18000;2405.122|3000;18000;2391.122|3250;18000;2369.122|3500;18000;2339.622|3750;18000;2303.872|4000;18000;2262.122|4125;18000;2238.622|4250;18000;2213.372&-471.576;3673.46;441.249|126.713;7770.33;945.522|725.002;11867.2;1449.796|1323.292;15964.069;1954.07&3012.266;18950.167;2324.854|4861.588;5721.895;702.56&500;0;0|1999.77;18000;2214.157&3500;0;0|3499.77;18000;2214.157&787.633;1600;66.192|2883.375;1600;66.192|2617.418;1600;526.843|1053.59;1600;526.843&2024.321;18000;2152.592|3273.646;18000;2152.592|3148.758;18000;2368.903|2149.209;18000;2368.903&0;0;0|5000;0;0|1749.77;18000;2214.157|4250;18000;2210.122" 
     lgl_infs = [4, 4.5, 5, 6] #preparing the k infinity values
     csts = copy.deepcopy(cst.CONSTS) #not to touch the actual constants dict
     load_case = cst.LOAD_C[2] #landing load case used in the sensitivity study

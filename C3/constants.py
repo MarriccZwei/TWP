@@ -1,5 +1,6 @@
 import geometricClasses as gcl
 import numpy as np
+import aerosandbox as asb
 '''ALL PARAMETERS NOT CHANGED BY THE SIZER'''
 CONSTS={
     'G0':9.81, #N/kg
@@ -20,6 +21,8 @@ CONSTS={
     'LGL':5, #m
     'ML': 3, #m
     'MR': .4, #m
+    'FOIL_YS': [0, 1.6, 10, 18, 21], #m, ys at which airfoilchords should be sampled
+    'FOILS':[asb.Airfoil("naca2412")]*5,
 
     #masses
     'BAT_MASS_1WING':17480, #kg
@@ -38,9 +41,12 @@ CONSTS={
     }
 
 LOAD_C=[
-    {'n':2.5, 'nult':2.5*1.5, 'nlg': 0, 'ndir':gcl.Direction3D(0, 0, 1), "LD":20, "FT":5000}, #symmetric coordinated turn
-    {'n':1, 'nult':1.5, 'nlg': 0, 'ndir':gcl.Direction3D(0, 0, -1), "LD":16, "FT":2500}, #negative load factor
-    {'n':1.5, 'nult':1.5*1.5, 'nlg': 2, 'ndir':gcl.Direction3D(0, 0, 1), "LD":14, "FT":0}, #landing loads
+    {'n':2.5, 'nult':2.5*1.5, 'nlg': 0, 'ndir':gcl.Direction3D(0, 0, 1), "LD":20, "FT":5000,
+     'op':asb.OperatingPoint(asb.Atmosphere(7000), .6*310, 3)}, #symmetric coordinated turn
+    {'n':1, 'nult':1.5, 'nlg': 0, 'ndir':gcl.Direction3D(0, 0, -1), "LD":16, "FT":2500,
+     'op':asb.OperatingPoint(asb.Atmosphere(7000), .6*310, -3)}, #negative load factor
+    {'n':1.5, 'nult':1.5*1.5, 'nlg': 2, 'ndir':gcl.Direction3D(0, 0, 1), "LD":14, "FT":0,
+     'op':asb.OperatingPoint(asb.Atmosphere(7000), .6*310, 5)}, #landing loads
     ]
 
 #internal ids of element types
