@@ -27,7 +27,7 @@ def mesh_block(cadData:str, sizerVars:ty.Dict[str,str], eleProps:ty.Dict[str,ty.
     return {'mesh':mesh, 'up':up, 'KC0':KC0, 'M':M, 'N':N, 'x':x, 'y':y, 'z':z, 'pts':pts, 'ids':ids,
             'les':les, 'tes':tes} | outdict
 
-def fem_linear_block(consts:ty.Dict[str, object], meshOuts:ty.Dict[str,object], loadCase:ty.Dict[str,object], ult=False):
+def fem_linear_block(consts:ty.Dict[str, object], meshOuts:ty.Dict[str,object], loadCase:ty.Dict[str,object], ult=False, debug=False):
     KC0, M, N, x, y, z, mesh, up, ids, pts, les, tes, ncoords = tuple(meshOuts[k] for k in ['KC0', 'M', 'N', 'x', 'y', 'z', 'mesh', 'up', 'ids', 'pts', 'les', 'tes', 'ncoords'])
     FULLSPAN, MTOM, G0, motorR, motorL, foils= tuple(consts[k] for k in ['FULLSPAN', 'MTOM', 'G0', 'MR', 'ML', 'FOILS'])
     n, nult, nlg, ndir, LD, FT, op  = tuple(loadCase[k] for k in ['n', 'nult', 'nlg', 'ndir', 'LD', 'FT', 'op'])
@@ -39,38 +39,8 @@ def fem_linear_block(consts:ty.Dict[str, object], meshOuts:ty.Dict[str,object], 
         bk[i::pf3.DOF] = check
     bu = ~bk
 
-    #loads TODO: add real ones
+    #loads
     f = np.zeros(N)
-
-    # #aerodynamic load
-    # xts, yts, zts = gcl.pts2coords3D(pts["skinTop"].flatten())
-    # xbs, ybs, zbs = gcl.pts2coords3D(pts["skinBot"].flatten())
-    # xtmesh, ytmesh = np.array(xts).reshape(pts["skinTop"].shape).T, np.array(yts).reshape(pts["skinTop"].shape).T
-    # xbmesh, ybmesh = np.array(xbs).reshape(pts["skinBot"].shape).T, np.array(ybs).reshape(pts["skinBot"].shape).T
-
-    # #lift fractions - will have to get multiplied by an appropriate load case
-    # #lt, mxt, myt, ncxp, ncxm, ncyp, ncym, yPerB2, xPerC = lm.apply_on_wingbox(xtmesh, ytmesh, (up.fft.y/FULLSPAN, up.tft.y/FULLSPAN), (up.xcft, up.xcrt), True, True)
-    # lt, mxt, myt = lm.apply_on_wingbox(xtmesh, ytmesh, (up.fft.y/FULLSPAN, up.tft.y/FULLSPAN), (up.xcft, up.xcrt), True) #(up.fft.y/FULLSPAN, up.tft.y/FULLSPAN), (up.xcft, up.xcrt)
-    # lb, mxb, myb = lm.apply_on_wingbox(xbmesh, ybmesh, (up.fft.y/FULLSPAN, up.tft.y/FULLSPAN), (up.xcfb, up.xcrb), False) #(up.fft.y/FULLSPAN, up.tft.y/FULLSPAN), (up.xcfb, up.xcrb)
-
-    # #for now, just mul by 2.5*76000*G0
-    # L = n*MTOM*G0 #TODO: resolve nult vs n
-    # Lt, Mxt, Myt, Lb, Mxb, Myb = L*lt.flatten(), L*mxt.flatten(), L*myb.flatten(), L*lb.flatten(), L*mxb.flatten(), L*myb.flatten()
-    # #applying the top skin loads
-    # for id_, Lt_, Mxt_, Myt_ in zip(ids["skinTop"].T.flatten(), Lt, Mxt, Myt):
-    #     f[2::pf3.DOF][id_] = Lt_
-    #     f[3::pf3.DOF][id_] = Mxt_
-    #     f[4::pf3.DOF][id_] = Myt_ 
-    # #applying the bottom skin loads
-    # for id_, Lb_, Mxb_, Myb_ in zip(ids["skinBot"].T.flatten(), Lb, Mxb, Myb):
-    #     f[2::pf3.DOF][id_] = Lb_
-    #     f[3::pf3.DOF][id_] = Mxb_
-    #     f[4::pf3.DOF][id_] = Myb_ 
-
-    #assert np.isclose(f[2::pf3.DOF].sum(), L/2) #we have to compare with f not fu, cuz in fu part of the lift gets eaten by bce, but that's aight
-
-    # #applying drag
-    # f[0::pf3.DOF] += f[2::pf3.DOF]/LD #drag points towards positive x!!!
 
     #aerodynamic forces
     airplane, vlm, forces, moments = ls.vlm(les, tes, foils, op)
@@ -80,6 +50,12 @@ def fem_linear_block(consts:ty.Dict[str, object], meshOuts:ty.Dict[str,object], 
     W, Fext = ls.aero2fem(vlm, ncoords_s, ids_s, N, pf3.DOF)
     f += Fext
 
+    if debug:
+        vortex_valid = vlm.vortex_centers[:, 1] > ncoords_s[:, 1].min()
+        Fv = vlm.forces_geometry[vortex_valid].flatten()
+        Mx_v = (vlm.vortex_centers[vortex_valid][:, 1]*Fv[2::3]).sum()
+        Mx_u = (ncoords[:, 1]*Fext[2::pf3.DOF]).sum()
+        print(Mx_v, Mx_u, ' error:', Mx_u/Mx_v - 1)
 
     #applying thrust
     for mtr in up.motors:
@@ -189,7 +165,7 @@ if __name__ == "__main__":
         csts["LGL"] = lgl
         eleDict = ed.eledict(csts, cst.INITIAL, cst.CODES)
         meshOut = mesh_block(data, cst.INITIAL, eleDict, csts, cst.CODES)
-        sol = fem_linear_block(csts, meshOut, load_case, True)
+        sol = fem_linear_block(csts, meshOut, load_case, True, True)
         wfig = plot_block(sol['w'], "w", meshOut, csts)
         wfig.savefig(fr"C:\marek\studia\hpb\Results\Sensitivity Study LGL\w\K{lgl}.pdf")
         vfig = plot_block(sol['v'], "v", meshOut, csts)
