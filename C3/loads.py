@@ -48,7 +48,7 @@ def aero2fem(vlm:asb.VortexLatticeMethod, ncoords_s:nt.NDArray[np.float32], ids_
 
 def fem2aero(les:ty.List[gcl.Point3D], p:nt.NDArray[np.float32], ncoords_s:nt.NDArray[np.float32], ids_s:nt.NDArray[np.int32], N:int, DOF:int,
              number_of_neighbors=2):
-    #also skipping the twist for now
+    twists = p[len(les):]#also skipping the twist for now
     deform_dir = gcl.Direction3D(0,0,1)
     heave_displs =  p[:len(les)]
     leds = [deform_dir.step(le, p_) for le, p_ in zip(les, heave_displs)]
@@ -59,13 +59,16 @@ def fem2aero(les:ty.List[gcl.Point3D], p:nt.NDArray[np.float32], ncoords_s:nt.ND
     weights2 = (1/d**power)/((1/d**power).sum(axis=1)[:, None])
     assert np.allclose(weights2.sum(axis=1), 1)
 
-    W_u_to_p = np.zeros((len(heave_displs)*3, N))
+    W_u_to_p = np.zeros((len(p)*3, N))
 
     for j in range(number_of_neighbors):
-        for i, node_index in enumerate(node_indices):
-            W_u_to_p[i*3 + 0, DOF*node_index + 0] = weights2[i, j]
-            W_u_to_p[i*3 + 1, DOF*node_index + 1] = weights2[i, j]
-            W_u_to_p[i*3 + 2, DOF*node_index + 2] = weights2[i, j]
+        for i, node_index in enumerate(node_indices): #we have 3 forces for 2 p vars per node, so 6
+            W_u_to_p[i*6 + 0, DOF*node_index + 0] = weights2[i, j]
+            W_u_to_p[i*6 + 1, DOF*node_index + 1] = weights2[i, j]
+            W_u_to_p[i*6 + 2, DOF*node_index + 2] = weights2[i, j]
+            W_u_to_p[i*6 + 3, DOF*node_index + 0] = weights2[i, j]
+            W_u_to_p[i*6 + 4, DOF*node_index + 1] = weights2[i, j]
+            W_u_to_p[i*6 + 5, DOF*node_index + 2] = weights2[i, j]
         
     return ss.csc_matrix(W_u_to_p)
 
@@ -73,21 +76,22 @@ def vlm(les:ty.List[gcl.Point3D], tes:ty.List[gcl.Point3D], airfs:ty.List[asb.Ai
         op:asb.OperatingPoint, bres:int=20, cres:int=10, displs:ty.List[float]=None, return_sol=False):
     #allowing for initial displacements for flutter. Yet, for static analysis we dont's need displacements
     if displs is None:
-        displs = np.zeros(len(airfs))
+        displs = np.zeros(len(airfs)*2)
     heaveDir = gcl.Direction3D(0,0,1)
     cs = [te.x-le.x for te, le in zip(tes, les)] #obtaining the chord list
-    ptles = [heaveDir.step(le, displ) for le, displ in zip(les, displs)]
+    ptles = [heaveDir.step(le, displ) for le, displ in zip(les, displs[:len(airfs)])]
 
-    airplane = asb.Airplane("E9X", xyz_ref=[0,0,0],
-                            wings = [
+
+    airplane = asb.Airplane("E9X", xyz_ref=[0,0,0], wings = [
                                 asb.Wing(
                                     name="E9X_WING",
                                     symmetric=True,
                                     xsecs=[asb.WingXSec(
                                         xyz_le=[ptle.x, ptle.y, ptle.z],
                                         chord=c,
+                                        twist=twist, 
                                         airfoil=airf
-                                    )for ptle, c, airf, in zip(ptles, cs, airfs)],
+                                    )for ptle, c, airf, twist in zip(ptles, cs, airfs, displs[len(airfs):])],
                                 )
                             ])
     vlm = asb.VortexLatticeMethod(airplane, op, spanwise_resolution=bres, chordwise_resolution=cres)
@@ -110,8 +114,8 @@ def calc_dFv_dp(les:ty.List[gcl.Point3D], tes:ty.List[gcl.Point3D], airfs:ty.Lis
     v = vortex_valid.sum()*3
     Fv = vlm_.forces_geometry[vortex_valid].flatten()
 
-    dFv_dp = np.zeros((v, len(displs)*3))
-    for i in range(len(airfs)-1):
+    dFv_dp = np.zeros((v, len(displs)*3)) # NOTE remember to pass both heave and twist displacements
+    for i in range(len(displs)-1):
         p_DOF = 3*(i + 1) + 2 # heave DOF starting at second airfoil
         p2 = displs.copy()
         p2[i+1] += epsilon
@@ -136,7 +140,7 @@ def flutter_omegans(velocities, M, bu, W_u_to_p, Kuu, W,
         atmosphere=op.atmosphere
     )
         #KA *= 1/2*velocity**2*vlm.op_point.atmosphere.density()
-        vlm_, dFv_dp = calc_dFv_dp(les, tes, airfs, op_pt, ymin, bres, cres, np.zeros(len(airfs)))
+        vlm_, dFv_dp = calc_dFv_dp(les, tes, airfs, op_pt, ymin, bres, cres, np.zeros(len(airfs)*2))
         KA = W @ dFv_dp @ W_u_to_p
         KAuu = KA[bu, :][:, bu]
         k = 2
@@ -156,9 +160,9 @@ def flutter_omegans(velocities, M, bu, W_u_to_p, Kuu, W,
 
 def KA(ncoords_s, ids_s, N, DOF, les:ty.List[gcl.Point3D], tes:ty.List[gcl.Point3D], airfs:ty.List[asb.Airfoil],
         op:asb.OperatingPoint, ymin:float, bres:int=20, cres:int=10):
-    vlm_, dFv_dp = calc_dFv_dp(les, tes, airfs, op, ymin, bres, cres, np.zeros(len(airfs)))
+    vlm_, dFv_dp = calc_dFv_dp(les, tes, airfs, op, ymin, bres, cres, np.zeros(len(airfs)*2))
     W, Fext = aero2fem(vlm_, ncoords_s, ids_s, N, DOF)
-    W_u_to_p = fem2aero(les, np.zeros(len(airfs)), ncoords_s, ids_s, N, DOF)
+    W_u_to_p = fem2aero(les, np.zeros(len(airfs)*2), ncoords_s, ids_s, N, DOF)
     KA_ = W @ dFv_dp @ W_u_to_p
     return W, Fext, W_u_to_p, dFv_dp, KA_, vlm_
 
@@ -304,9 +308,9 @@ if __name__ == "__main__":
     # Plot the arrows
     arrows.plot()
 
-    vlm_, dFv_dp = calc_dFv_dp(les, tes, [asb.Airfoil("naca2412")]*6, op, ncoords_s[:, 1].min(), displs=np.zeros(6))
+    vlm_, dFv_dp = calc_dFv_dp(les, tes, [asb.Airfoil("naca2412")]*6, op, ncoords_s[:, 1].min(), displs=np.zeros(12))
     print(dFv_dp)
-    W_u_to_p = fem2aero(les, np.zeros(6), ncoords_s, ids_s, 6*ncoords.shape[0], 6)
+    W_u_to_p = fem2aero(les, np.zeros(12), ncoords_s, ids_s, 6*ncoords.shape[0], 6)
     velocities = np.linspace(30, 200, 10)
     omegans = flutter_omegans(velocities, np.eye(6*ncoords.shape[0]), bu, W_u_to_p, 
                               np.eye(6*ncoords.shape[0])[bu, :][:, bu], W, les, tes, [asb.Airfoil("naca2412")]*6,
