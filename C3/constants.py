@@ -38,6 +38,11 @@ CONSTS={
     'NIP_COEFF':1,
     'NA':5,
     'NF2':3,
+
+    #CFD settings
+    'BRES':20,
+    'CRES':10,
+    'VELOCITIES':np.linspace(50, 250, 3)
     }
 
 LOAD_C=[

@@ -131,24 +131,24 @@ def flutter_omegans(velocities, M, bu, W_u_to_p, Kuu, W,
     for velocity in velocities:
         op_pt = asb.OperatingPoint(
         velocity=velocity,      # m/s
-        alpha=5,          # degrees
-        beta=0,           # degrees
-        atmosphere=asb.Atmosphere(6000)
+        alpha=op.alpha,          # degrees
+        beta=op.beta,           # degrees
+        atmosphere=op.atmosphere
     )
         #KA *= 1/2*velocity**2*vlm.op_point.atmosphere.density()
-        vlm_, dFv_dp = calc_dFv_dp(les, tes, airfs, op_pt, ymin, bres, cres, np.zeros(6))
+        vlm_, dFv_dp = calc_dFv_dp(les, tes, airfs, op_pt, ymin, bres, cres, np.zeros(len(airfs)))
         KA = W @ dFv_dp @ W_u_to_p
         KAuu = KA[bu, :][:, bu]
         k = 2
         tol = 0
-        print(f"KAuu for {velocity} m/s:")
-        print(KAuu)
-        print(f"W_u_to_p for {velocity} m/s:")
-        print(W_u_to_p)
-        print(f"dFv_dp for {velocity} m/s:")
-        print(dFv_dp)
-        print(f"W for {velocity} m/s:")
-        print(W)
+        # print(f"KAuu for {velocity} m/s:")
+        # print(KAuu)
+        # print(f"W_u_to_p for {velocity} m/s:")
+        # print(W_u_to_p)
+        # print(f"dFv_dp for {velocity} m/s:")
+        # print(dFv_dp)
+        # print(f"W for {velocity} m/s:")
+        # print(W)
         eigvals, peigvecs = ssl.eigs(A=Kuu - KAuu, M=Muu, k=k, which='LM', tol=tol, sigma=-1.)
         omegan = np.sqrt(eigvals)
         omegans.append(omegan)
