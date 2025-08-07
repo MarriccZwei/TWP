@@ -331,6 +331,10 @@ def multi_section_sheet3D(pt1s:ty.List[Point3D], pt2s:ty.List[Point3D], nsect:in
 
     return pts
 
+def pts2numpy3D(pts:ty.List[Point3D]):
+    return np.array([[p.x, p.y, p.z] for p in pts])
+
+
 if __name__ == "__main__":
     pt1s = [Point3D(0, 0, 0), Point3D(3, 0, .5), Point3D(4, -1, -.5), Point3D(4, 0, 4)]
     pt2s = [Point3D(0, 6, 1), Point3D(2.5, 7, 0), Point3D(3, 6, -.5), Point3D(4, 5, 5)]
