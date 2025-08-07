@@ -101,7 +101,7 @@ def vlm(les:ty.List[gcl.Point3D], tes:ty.List[gcl.Point3D], airfs:ty.List[asb.Ai
         return airplane, vlm, forces, moments
 
 
-def calc_dFv_dp(les:ty.List[gcl.Point3D], tes:ty.List[gcl.Point3D], airfs:ty.List[asb.Airfoil],
+def calc_dFv_dp(les:ty.List[gcl.Point3D], tes:ty.List[gcl.Point3D], airfs:ty.List[asb.Airfoil], #TODO: refactor the displs
         op:asb.OperatingPoint, ymin:float, bres:int=20, cres:int=10, displs:ty.List[float]=None, return_sol=False, epsilon=.01):
     
     airplane, vlm_, forces, moments = vlm(les, tes, airfs, op, bres, cres, displs, return_sol)
@@ -153,6 +153,14 @@ def flutter_omegans(velocities, M, bu, W_u_to_p, Kuu, W,
         omegan = np.sqrt(eigvals)
         omegans.append(omegan)
     return omegans
+
+def KA(ncoords_s, ids_s, N, DOF, les:ty.List[gcl.Point3D], tes:ty.List[gcl.Point3D], airfs:ty.List[asb.Airfoil],
+        op:asb.OperatingPoint, ymin:float, bres:int=20, cres:int=10):
+    vlm_, dFv_dp = calc_dFv_dp(les, tes, airfs, op, ymin, bres, cres, np.zeros(len(airfs)))
+    W, Fext = aero2fem(vlm_, ncoords_s, ids_s, N, DOF)
+    W_u_to_p = fem2aero(les, np.zeros(len(airfs)), ncoords_s, ids_s, N, DOF)
+    KA_ = W @ dFv_dp @ W_u_to_p
+    return W, Fext, W_u_to_p, dFv_dp, KA_, vlm_
 
 def flutter_mode(W, W_u_to_p, dFv_dp, Kuu, vlm_, N, ymin, quads, ncoords, nid_pos):
     KA = W @ dFv_dp @ W_u_to_p

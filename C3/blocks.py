@@ -29,7 +29,7 @@ def mesh_block(cadData:str, sizerVars:ty.Dict[str,str], eleProps:ty.Dict[str,ty.
 
 def fem_linear_block(consts:ty.Dict[str, object], meshOuts:ty.Dict[str,object], loadCase:ty.Dict[str,object], ult=False, debug=False):
     KC0, M, N, x, y, z, mesh, up, ids, pts, les, tes, ncoords = tuple(meshOuts[k] for k in ['KC0', 'M', 'N', 'x', 'y', 'z', 'mesh', 'up', 'ids', 'pts', 'les', 'tes', 'ncoords'])
-    FULLSPAN, MTOM, G0, motorR, motorL, foils= tuple(consts[k] for k in ['FULLSPAN', 'MTOM', 'G0', 'MR', 'ML', 'FOILS'])
+    FULLSPAN, MTOM, G0, motorR, motorL, foils, bres, cres= tuple(consts[k] for k in ['FULLSPAN', 'MTOM', 'G0', 'MR', 'ML', 'FOILS', 'BRES', 'CRES'])
     n, nult, nlg, ndir, LD, FT, op  = tuple(loadCase[k] for k in ['n', 'nult', 'nlg', 'ndir', 'LD', 'FT', 'op'])
     
     #boundary conditions = fix at y of fuselage boundary
@@ -43,11 +43,11 @@ def fem_linear_block(consts:ty.Dict[str, object], meshOuts:ty.Dict[str,object], 
     f = np.zeros(N)
 
     #aerodynamic forces
-    airplane, vlm, forces, moments = ls.vlm(les, tes, foils, op)
+    #airplane, vlm, forces, moments = ls.vlm(les, tes, foils, op)
     ids_s = np.hstack([ids["plateTop"][:, -1].flatten(), ids["skinTop"].flatten(), ids["plateTop"][:, 0].flatten(),
                         ids["plateBot"][:, 0].flatten(), ids["skinBot"].flatten(), ids["plateBot"][:, -1].flatten()])
     ncoords_s = ncoords[ids_s, :]
-    W, Fext = ls.aero2fem(vlm, ncoords_s, ids_s, N, pf3.DOF)
+    W, Fext, W_u_to_p, dFv_dp, KA, vlm = ls.KA(ncoords_s, ids_s, N, pf3.DOF, les, tes, foils, op, up.fft.y, bres, cres)
     f += Fext
 
     if debug:
@@ -77,8 +77,9 @@ def fem_linear_block(consts:ty.Dict[str, object], meshOuts:ty.Dict[str,object], 
 
     #checks and solution
     KC0uu = KC0[bu, :][:, bu]
+    KAuu = KA[bu, :][:, bu]
     fu = f[bu]
-    uu = ppd.spsolve(KC0uu, fu)
+    uu = ppd.spsolve(KC0uu-KAuu, fu)
     u = np.zeros(N)
     u[bu] = uu
 
