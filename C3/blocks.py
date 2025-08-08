@@ -72,7 +72,7 @@ def fem_linear_block(consts:ty.Dict[str, object], meshOuts:ty.Dict[str,object], 
 
     #applying weight
     wdir = gcl.Direction3D(-ndir.x, -ndir.y, -ndir.z)
-    weight = p3g.weight(M, nult*G0, N, pf3.DOF, wdir) if ult else p3g.weight(M, n*G0, N, pf3.DOF, wdir)
+    weight = p3g.weight(M, (nult+nlg)*G0, N, pf3.DOF, wdir) if ult else p3g.weight(M, n*G0, N, pf3.DOF, wdir)
     f+=weight
 
     #checks and solution
