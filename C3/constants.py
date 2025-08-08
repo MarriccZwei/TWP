@@ -75,5 +75,7 @@ INITIAL = {
 'tskin':0.003, #m
 'tpan':0.002, #m
 'trib':0.0025, #m
-'csp':.3 #chordwise panel rib spacing (maximum) [m]
+'csp':.3, #chordwise panel rib spacing (maximum) [m]
+'v0b':None,
+'v0f':None,
 }
