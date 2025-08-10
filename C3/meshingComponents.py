@@ -260,7 +260,7 @@ def all_components(mesh:gcl.Mesh3D, up:pfc.UnpackedPoints, nbCoeff:float, na:int
     tol = .001 #so that the landing gear ribs are captured in the inertia
     ribys = [up.fft.y, (up.fft.y+up.motors[0].y)/2, up.motors[0].y, up.lg.y+tol-lgR, up.lg.y-tol+lgR, up.motors[1].y]
     ribys += [(up.motors[1].y+up.motors[2].y)/2, up.motors[2].y, (up.motors[2].y+up.motors[3].y)/2, up.motors[3].y, up.tft.y]
-    ribys = tangle_with_midpoints(ribys)
+    #ribys = tangle_with_midpoints(ribys)
 
     sparsh, sparigrd, sparSecIdxs, a1, a2, f = trigspars(mesh, ribys, nb, na, nf2, ntrig, spar, up.ffb, up.frb, up.frt, up.fft, up.tfb, up.trb, up.trt, up.tft)
 
