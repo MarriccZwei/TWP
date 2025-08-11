@@ -155,6 +155,7 @@ def eles_from_gcl(mesh:gcl.Mesh3D, eleDict:ty.Dict[str, ty.Dict[str, object]]):
         quad.c4 = pf3.DOF*nid_pos[quad.n4]
         quad.init_k_KC0 = init_k_KC0
         quad.init_k_M = init_k_M
+        quad.init_k_KG = init_k_KG
         quad.update_rotation_matrix(ncoords_flatten)
         quad.update_probe_xe(ncoords_flatten)
         quad.update_KC0(KC0r, KC0c, KC0v, shellprop) #matrix contribution, changing the matrices sent
@@ -179,6 +180,7 @@ def eles_from_gcl(mesh:gcl.Mesh3D, eleDict:ty.Dict[str, ty.Dict[str, object]]):
             spring.kxe, spring.kye, spring.kze, spring.krxe, spring.krye, spring.krze = sprop.stiffs
         spring.init_k_KC0 = init_k_KC0
         spring.init_k_M = init_k_M
+        spring.init_k_KG = init_k_KG
         spring.update_rotation_matrix(*sprop.rots)
         spring.update_KC0(KC0r, KC0c, KC0v)
         spring.update_M(Mr, Mc, Mv, sprop, init_k_M)
@@ -201,6 +203,7 @@ def eles_from_gcl(mesh:gcl.Mesh3D, eleDict:ty.Dict[str, ty.Dict[str, object]]):
         pos2 = nid_pos[beam.n2]
         beam.init_k_KC0 = init_k_KC0
         beam.init_k_M = init_k_M
+        beam.init_k_KG = init_k_KG
         beam.c1 = pf3.DOF*pos1
         beam.c2 = pf3.DOF*pos2
         beam.update_rotation_matrix(prop.xyex, prop.xyey, prop.xyez, ncoords_flatten) #OrientedBeamProp features used here
