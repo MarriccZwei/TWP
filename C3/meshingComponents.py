@@ -55,7 +55,7 @@ def ribbed_sheet_y(pt1s:ty.List[gcl.Point3D], pt2s:ty.List[gcl.Point3D], ys:ty.L
     
     return pts
 
-def skin(mesh:gcl.Mesh3D, up:pfc.UnpackedPoints, ys:ty.List[float], skinCode:str, ncCoeff=1., nbuckl=4):
+def skin(mesh:gcl.Mesh3D, up:pfc.UnpackedPoints, ys:ty.List[float], skinCode:str, ncCoeff=1., nbuckl=5):
     nc = int(np.ceil(ncCoeff*nbuckl)) #allowing for possible refinements
     def top_or_bot_sh(pt1s:ty.List[gcl.Point3D], pt2s:ty.List[gcl.Point3D], surfaceFun:ty.Callable):
         nLs = [nc]*(len(pt1s)-1)
@@ -68,219 +68,178 @@ def skin(mesh:gcl.Mesh3D, up:pfc.UnpackedPoints, ys:ty.List[float], skinCode:str
     
     idgt, ssst, idxt, idyt = top_or_bot_sh(up.fcps[1::2], up.tcps[1::2], up.surft)
     idgb, sssb, idxb, idyb = top_or_bot_sh(up.fcps[::2], up.tcps[::2], up.surfb) 
-    return idgt, ssst, idxt, idyt, idgb, sssb, idxb, idyb
+    assert np.allclose(idxt, idxb), f"idxt: {idxt}; idxb: {idxb}"
+    assert np.allclose(idyt, idyb), f"idxt: {idyt}; idxb: {idyb}"
+    return idgt, ssst, idgb, sssb, idxb, idyb
 
+def truss(mesh:gcl.Mesh3D, up:pfc.UnpackedPoints, lgendidx:int, idgt:nt.NDArray[np.int32], ssst:nt.ArrayLike, 
+          idgb:nt.NDArray[np.int32], sssb:nt.ArrayLike, idxs:ty.List[int], idys:ty.List[int],
+          lgt:str, LETEt:str, spart:str, rail:str, ribt:str, mbattot:float):
+    "1) extending the list of spanwise indices to truss locations"
+    vertical_truss_indices = [idys[0]]
+    for id1, id2 in zip(idys[:-1], idys[1:]):
+        n_extra = round(max(0, 2*(ssst[id2,0].y-ssst[id1,0].y)/(ssst[id1,0].z-sssb[id1,0].z+ssst[id2,0].z-sssb[id2,0].z))-1)
+        if n_extra:
+            vertical_truss_indices += [round(index) for index in np.linspace(id1, id2, n_extra+2)[1:-1]]
+        vertical_truss_indices.append(id2)
 
-# def trigspars(mesh:gcl.Mesh3D, ys:ty.List[float], nb:int, na:int, nf2:int, ntrig:int, 
-#               shell:str, ffb:gcl.Point3D, frb:gcl.Point3D, 
-#               frt:gcl.Point3D, fft:gcl.Point3D,tfb:gcl.Point3D, 
-#               trb:gcl.Point3D, trt:gcl.Point3D, tft:gcl.Point3D
-#               )->ty.Tuple[ty.List[nt.ArrayLike]]:
-#     def trig_crossec(fb:gcl.Point3D, rb:gcl.Point3D, rt:gcl.Point3D, 
-#                      ft:gcl.Point3D)->ty.List[gcl.Point3D]:
-#         a = fb.pythagoras(ft) #the side of the battery triangle
-#         f = (ft.pythagoras(rt)-a*ntrig)/(2*ntrig+1) #the full flange width
-#         f2 = f/2 #half flange wit=dth used for until-rivet modelling
-#         dirc = gcl.Direction3D(1, 0, 0)
-#         diru = gcl.Direction3D(1, 0, np.sqrt(3))
-#         dird = gcl.Direction3D(1, 0, -np.sqrt(3))
+    "2) mass proportionalities"
+    #proportionality will be based on ~c^2 and A^2
+    #chord proportionality
+    c2s = list() 
+    for idx in range(ssst.shape[0]):
+        c2s.append(up.c_at_y(ssst[idx, 0].y)**2) #all trusses at a spanwise idx should have same spanwise coord
+    sum_c2s = sum(c2s)
+    c2_fracs = [c2/sum_c2s for c2 in c2s] #chordwise fractions
+    
+    As = list()
+    for p1, pidx, p2 in zip(up.fcps[1:-3], up.fcps[2:-2], up.fcps[3:-1]):
+        #triangle area computation
+        As.append(.5*np.linalg.norm(np.cross([p1.x-pidx.x, p1.y-pidx.y, p1.z-pidx.z], [p2.x-pidx.x, p2.y-pidx.y, p2.z-pidx.z])))
+    sumAs = sum(As)
+    As_fracs = [area/sumAs for area in As]
+
+    #NOTE: design dependent!
+    Afts = As_fracs[1::2]
+    Afbs = As_fracs[::2]
+
+    "3) rails-regular"
+    for idx, Aft, Afb in zip(idxs[1:-1], Afts, Afbs):
+        mesh.beam_interconnect(idgt[:, idx], rail)
+        mesh.beam_interconnect(idgb[:, idx], rail)
+        for bidx, cf in enumerate(c2_fracs):
+            #rough cg of the bettery estimate
+            cgt = gcl.Direction3D(0,0,-1).step(ssst[bidx, idx], 2/3*(ssst[bidx, idx].z-sssb[bidx, idx].z))
+            mesh.inertia_attach(Aft*cf*mbattot, idgt[bidx, idx], cgt)
+            cgb = gcl.Direction3D(0,0,1).step(sssb[bidx, idx], 2/3*(ssst[bidx, idx].z-sssb[bidx, idx].z))
+            mesh.inertia_attach(Afb*cf*mbattot, idgb[bidx, idx], cgb)
+
+    "4) ribs"
+    for idxnum, idx in enumerate(idys):
+        if idxnum<=lgendidx:
+            mesh.beam_interconnect(idgt[idx, :idxs[-2]+1], ribt)
+            mesh.beam_interconnect(idgb[idx, :idxs[-2]+1], ribt)
+            #reinforced landing gear ribs
+            mesh.beam_interconnect(idgt[idx, idxs[-2]:], lgt)
+            mesh.beam_interconnect(idgb[idx, idxs[-2]:], lgt)
+        else:
+            mesh.beam_interconnect(idgt[idx, :], ribt)
+            mesh.beam_interconnect(idgb[idx, :], ribt)
+
+    "5) special booms"
+    mesh.beam_interconnect(idgt[:, 0], LETEt)
+    mesh.beam_interconnect(idgt[idys[lgendidx]:, -1], LETEt)
+    mesh.beam_interconnect(idgt[:idys[lgendidx]+1, -1], lgt)
+    mesh.beam_interconnect(idgb[:, 0], LETEt)
+    mesh.beam_interconnect(idgb[idys[lgendidx]:, -1], LETEt)
+    mesh.beam_interconnect(idgb[:idys[lgendidx]+1, -1], lgt)
+
+    "6) verticals"
+    for truss_idx_b in vertical_truss_indices:
+        mesh.beam_connect([idgt[truss_idx_b, 0]], [idgb[truss_idx_b, 0]], LETEt)
+        if truss_idx_b<=idys[lgendidx]:
+            mesh.beam_connect([idgt[truss_idx_b, -1]], [idgb[truss_idx_b, -1]], lgt)
+            mesh.beam_connect([idgt[truss_idx_b, idxs[-2]]], [idgb[truss_idx_b, -1]], lgt)
+        else:
+            mesh.beam_connect([idgt[truss_idx_b, -1]], [idgb[truss_idx_b, -1]], LETEt)
+            mesh.beam_connect([idgt[truss_idx_b, idxs[-2]]], [idgb[truss_idx_b, -1]], LETEt)
+        for idxc, topidxconn in zip(idxs[1:-1], idxs[:-2]):
+            mesh.beam_connect([idgt[truss_idx_b, idxc]], [idgb[truss_idx_b, idxc]], spart)
+            mesh.beam_connect([idgt[truss_idx_b, topidxconn]], [idgb[truss_idx_b, idxc]], spart)
+
+    "7) diagonals - this way to put diagonals in tension"
+    for truss_idx_b1, truss_idx_b2 in zip(vertical_truss_indices[:-1], vertical_truss_indices[1:]):
+        mesh.beam_connect([idgt[truss_idx_b1, 0]], [idgb[truss_idx_b2, 0]], LETEt)
+        if truss_idx_b2<=idys[lgendidx]:
+            mesh.beam_connect([idgt[truss_idx_b1, -1]], [idgb[truss_idx_b2, -1]], lgt)
+            mesh.beam_connect([idgt[truss_idx_b1, idxs[-2]]], [idgb[truss_idx_b2, -1]], lgt)
+        else:
+            mesh.beam_connect([idgt[truss_idx_b1, -1]], [idgb[truss_idx_b2, -1]], LETEt)
+            mesh.beam_connect([idgt[truss_idx_b1, idxs[-2]]], [idgb[truss_idx_b2, -1]], LETEt)
+        for idxc, topidxconn in zip(idxs[1:-1], idxs[:-2]):
+            mesh.beam_connect([idgt[truss_idx_b1, idxc]], [idgb[truss_idx_b2, idxc]], spart)
+            mesh.beam_connect([idgt[truss_idx_b1, topidxconn]], [idgb[truss_idx_b2, idxc]], spart)
         
-#         #1) first sheet, the inwards curved
-#         inf = dirc.step(fb, f2) #inwards flange midpoint
-#         tfp = dirc.step(ft, f2) #top flange midpoint - updated later
-#         pts = [inf, fb, ft, tfp] #output - list of lists of points
 
-#         #2) creating all the middle sheets
-#         for i in range(ntrig):
-#             #2.1) downhill sheet
-#             cpt = dirc.step(tfp, f2) #corner point top
-#             cpb = dird.step(cpt, a) #corner point bottom
-#             bfp = dirc.step(cpb, f2) #bottom flange midpoint
-#             pts+=[cpt, cpb, bfp]
-#             #2.2) uphill sheet
-#             cpb = dirc.step(bfp, f2) #the pts get updated
-#             cpt = diru.step(cpb, a)
-#             tfp2 = dirc.step(cpt, f2) #update with check
-#             assert np.isclose(tfp2.x, tfp.x+a+f*2)
-#             tfp = tfp2
-#             pts+=[cpb, cpt, tfp]
-        
-#         #3) creating the final sheet
-#         assert np.isclose(tfp.x, rt.x-f2)
-#         #again, an inwards-facing flange
-#         pts+=[rt, rb, dirc.step(rb, -f2)]
+def motors(mesh:gcl.Mesh3D, motors:ty.List[gcl.Point3D], motorR:float, motorL:float, motormass:float):
+    sum_in_mn = sum([ine.mn for ine in mesh.inertia])
+    for mtr in motors:
+        affected_ids = list()
+        for i, node in enumerate(mesh.nodes):
+            if (node.y >= mtr.y-motorR) and (node.y <= motorR+mtr.y) and (node.x-mtr.x <= motorL/2):
+                affected_ids.append(i)
+        mn = motormass/len(affected_ids)
+        for i in affected_ids:
+            mesh.inertia_attach(mn, i, mtr)
+    assert np.isclose(sum([ine.mn for ine in mesh.inertia])-sum_in_mn, 4*motormass)
 
-#         return pts, a, f
-    
-#     #appling the cross section generation to get sheets
-#     pt1s, a1, f = trig_crossec(ffb, frb, frt, fft)
-#     pt2s, a2, _ = trig_crossec(tfb, trb, trt, tft)
-
-#     sheet, secIdxs = ribbed_sheet_y(pt1s, pt2s, ys, nb, [nf2, na, nf2]*(2*ntrig+2), True)
-#     idspace = mesh.register(list(sheet.flatten()))
-#     idgrid = idspace.reshape(sheet.shape)
-#     #interconnection of sheets
-#     mesh.quad_interconnect(idgrid, shell)
-
-#     return sheet, idgrid, secIdxs, a1, a2, f
+def lg(mesh:gcl.Mesh3D, uplg:gcl.Point3D, lgM, lgR, lgL):
+    sum_in_mn = sum([ine.mn for ine in mesh.inertia])
+    res= mesh.inertia_smear(lgM, uplg, gcl.Point3D(uplg.x-lgL/2, uplg.y-lgR, uplg.z-lgR), gcl.Point3D(uplg.x+lgL/2, uplg.y+lgR, uplg.z+lgR))
+    assert np.isclose(sum([ine.mn for ine in mesh.inertia])-sum_in_mn, lgM)
+    return res
 
 
-# def bat_rail(mesh:gcl.Mesh3D, ntrig:int, a1:float, a2:float, f:float, 
-#              dz:float, midflids:ty.List[int], rail:str,totmass:float)->ty.Tuple[ty.List[int]]:
-#     '''nodes for midflids have to be oriented from y=0 to y=ymax'''
-#     sum_in_mn = sum([ine.mn for ine in mesh.inertia])
-#     zaxis = gcl.Direction3D(0,0,1)
-#     mesh.beam_interconnect(midflids, rail)
-
-#     #batteries - harder job. We need to define the local battery area
-#     #continuous attachment for now - subject to change
-#     props = dict()
-#     dzs = dict()
-#     for i in midflids:
-#         y = mesh.nodes[i].y
-#         y0 = mesh.nodes[midflids[0]].y
-#         ymax = mesh.nodes[midflids[-1]].y
-#         yfrac = (y-y0)/(ymax-y0)
-#         a = a2*yfrac+(1-yfrac)*a1 #linear interpolation of battery a
-#         #battery volume proportionality - july 10th page TODO:SUS
-#         prop = (a+2*f)*a*np.sqrt(3)/4
-#         assert prop>0 #if prop<0, then we have a prob - foil too thin at the tip
-#         props[i] = prop
-#         dzs[i] = np.sign(dz)*a*np.sqrt(3)/3 #oriented distance from the rail to the battery centroid
-#     propmass = totmass/(4*ntrig+2)/sum(props.values()) #how much mass a unit prop means
-#     for i in midflids:
-#         batpt = zaxis.step(mesh.nodes[i], dzs[i])
-#         #assigning the variable mass to the battery using protocol
-#         mesh.inertia_attach(props[i]*propmass, i, batpt)
-    
-#     assert np.isclose(sum([ine.mn for ine in mesh.inertia])-sum_in_mn, totmass/(4*ntrig+2))
-
-# def panel(mesh:gcl.Mesh3D, ff:gcl.Point3D, fr:gcl.Point3D, tf:gcl.Point3D, tr:gcl.Point3D, nb:int, ribys:ty.List[float], nip:int, nf:int, 
-#           floor:str, skin:str, rib:str, flange:str, panelz:ty.Callable, ribconnids:ty.List[nt.NDArray[np.int64]],
-#           cspacing:float)->ty.Tuple[ty.List[int]]:
-#     #1) lower sheet
-#     ribconnpt1s = [mesh.nodes[ptids[0]] for ptids in ribconnids]
-#     ribconnpt2s = [mesh.nodes[ptids[-1]] for ptids in ribconnids]
-#     floorsh, secs = ribbed_sheet_y([ff]+ribconnpt1s+[fr], [tf]+ribconnpt2s+[tr], ribys, nb,
-#                                               [nf]+[nip]*(len(ribconnpt1s)-1)+[nf], True)
-#     #1.1) sheet registration without the already registered connection points
-#     ribconnIdsTospend = ribconnids.copy()
-#     flidgrid = np.zeros(floorsh.shape, np.int32)
-#     for i in range(floorsh.shape[1]):
-#         if i in secs[1:-1]: #we have to replace with the original connection points
-#             flidgrid[:, i] = ribconnIdsTospend.pop(0)
-#             floorsh[:, i] = [mesh.nodes[id_] for id_ in flidgrid[:, i]]
-#         else:
-#             flidgrid[:, i] = mesh.register(list(floorsh[:, i]))
-    
-#     mesh.quad_interconnect(flidgrid, floor)
-
-#     #2) upper sheet
-#     upsh = gcl.project_np3D(floorsh, zupdate=lambda x,y,z:panelz(x,y))
-#     upidspace = mesh.register(list(upsh.flatten()))
-#     upidgrid = upidspace.reshape(upsh.shape)
-#     mesh.quad_interconnect(upidgrid, skin)    
-
-#     #3) obligatory stiffeners
-#     def stiffener(pt1s, pt2s, dir):
-#         mesh.quad_connect(pt1s, pt2s, rib)
-#         mesh.beam_interconnect(pt1s, flange, dir)
-#         mesh.beam_interconnect(pt2s,flange, dir)
-
-#     [stiffener(upidgrid[:, sec], flidgrid[:, sec], (1, 0, 0)) for sec in secs]
+def hinge(mesh:gcl.Mesh3D, uphinge:gcl.Point3D, panidTop:nt.NDArray[np.int64], mhn:float):
+    sum_in_mn = sum([ine.mn for ine in mesh.inertia])
+    xids = panidTop[-1, :]
+    mn = mhn/len(xids)
+    [mesh.inertia_attach(mn, xid, uphinge) for xid in xids]
+    assert np.isclose(sum([ine.mn for ine in mesh.inertia])-sum_in_mn, mhn)
 
 
-#     #4) chordwise stiffeners
-#     #we use bspacing - spacing along the span, as chordwise stiffeners are
-#     ribNbs = range(0, flidgrid.shape[0], nb-1) #plus 1 as you have to close the panel
-#     [stiffener(upidgrid[ribNb, :], flidgrid[ribNb, :], (0, tf.y-ff.y, tf.z-ff.z)) for ribNb in ribNbs] #creating the stiffeners
-    
-#     #5) extra spanwise stiffeners
-#     for ribNb1, ribNb2 in zip(ribNbs[:-1], ribNbs[1:]):
-#         for sec1, sec2 in zip(secs[:-1], secs[1:]):
-#             ccount = int(np.ceil((mesh.nodes[flidgrid[ribNb1, sec2]].x-mesh.nodes[flidgrid[ribNb1, sec1]].x)/cspacing))
-#             assert nip/(ccount) >= 4
-#             if ccount>1:
-#                 ribNcs = [int(np.rint(i)) for i in np.linspace(sec1, sec2, ccount+1)[1:-1]]
-#                 [stiffener(upidgrid[ribNb1:(ribNb2+1), ribNc], flidgrid[ribNb1:(ribNb2+1), ribNc], (1, 0, 0)) for ribNc in ribNcs]
+def LETE(mesh:gcl.Mesh3D, lineLE:gcl.Line3D, lineTE:gcl.Line3D, panshTop:nt.ArrayLike, panidTop:nt.NDArray[np.int64], panshBot:nt.ArrayLike, panidBot:nt.NDArray[np.int64],
+         totmassLE:float, totmassTE:float):
+    sum_in_mn = sum([ine.mn for ine in mesh.inertia])
+    '''Leading Edge'''
+    #connPtsLE = [0]*panshTop.shape[0]
+    # connPtsLE[::2] = panshTop[::2, 0]
+    # connPtsLE[1::2] = panshBot[1::2, 0]
+    connPtsLE = panshBot[::, 0]
+    # connIdsLE = [0]*panidTop.shape[0]
+    # connIdsLE[::2] = panidTop[::2, 0]
+    # connIdsLE[1::2] = panidBot[1::2, 0]
+    connIdsLE = panidBot[::, 0]
+    connIdsTLE = panidTop[::,0]
+    ptsLE = [lineLE.for_y(pt.y) for pt in connPtsLE]
+    #the distance between the points is also expressed in terms of chord fractions, it can be used as proprtionality for mass if squared
+    distsLE2 = [(pLE.pythagoras(pcLE))**2 for pLE, pcLE in zip(ptsLE, panshBot[:, 0])] #you have to take distance from the same point though
+    totDistsLE2 = sum(distsLE2)
+    msLE = [d2/totDistsLE2*totmassLE for d2 in distsLE2]
+    [mesh.inertia_attach(m/2, id_, pt) for id_, m, pt in zip(connIdsLE, msLE, ptsLE)]
+    [mesh.inertia_attach(m/2, id_, pt) for id_, m, pt in zip(connIdsTLE, msLE, ptsLE)]
+    '''Trailing Edge'''
+    # connPtsTE = [0]*panshTop.shape[0]
+    # connPtsTE[::2] = panshTop[::2, -1]
+    # connPtsTE[1::2] = panshBot[1::2, -1]
+    # connIdsTE = [0]*panidTop.shape[0]
+    # connIdsTE[::2] = panidTop[::2, 0-1]
+    # connIdsTE[1::2] = panidBot[1::2, -1]
+    connPtsTE = panshBot[::, -1]
+    connIdsTE = panidBot[::, -1]
+    connIdsTTE = panidTop[::, -1]
+    ptsTE = [lineTE.for_y(pt.y) for pt in connPtsTE]
+    #the distance between the points is also expressed in terms of chord fractions, it can be used as proprtionality for mass if squared
+    distsTE2 = [(pTE.pythagoras(pcTE))**2 for pTE, pcTE in zip(ptsTE,panshBot[:, -1])]
+    totDistsTE2 = sum(distsTE2)
+    msTE = [d2/totDistsTE2*totmassTE for d2 in distsTE2]
+    [mesh.inertia_attach(m/2, id_, pt) for id_, m, pt in zip(connIdsTE, msTE, ptsTE)]
+    [mesh.inertia_attach(m/2, id_, pt) for id_, m, pt in zip(connIdsTTE, msTE, ptsTE)]
+    assert np.isclose(sum([ine.mn for ine in mesh.inertia])-sum_in_mn, totmassLE+totmassTE)
 
-#     return floorsh, upsh, flidgrid, upidgrid
+#duplicating the ribs code from chat  
+def tangle_with_midpoints(lst):
+    result = []
+    for i in range(len(lst) - 1):
+        result.append(lst[i])
+        result.append((lst[i] + lst[i + 1]) / 2)
+    result.append(lst[-1])  # Add the last point
+    return result
 
-
-# def motors(mesh:gcl.Mesh3D, motors:ty.List[gcl.Point3D], motorR:float, motorL:float, motormass:float):
-#     sum_in_mn = sum([ine.mn for ine in mesh.inertia])
-#     for mtr in motors:
-#         affected_ids = list()
-#         for i, node in enumerate(mesh.nodes):
-#             if (node.y >= mtr.y-motorR) and (node.y <= motorR+mtr.y) and (node.x-mtr.x <= motorL/2):
-#                 affected_ids.append(i)
-#         mn = motormass/len(affected_ids)
-#         for i in affected_ids:
-#             mesh.inertia_attach(mn, i, mtr)
-#     assert np.isclose(sum([ine.mn for ine in mesh.inertia])-sum_in_mn, 4*motormass)
-
-# def lg(mesh:gcl.Mesh3D, uplg:gcl.Point3D, lgM, lgR, lgL):
-#     sum_in_mn = sum([ine.mn for ine in mesh.inertia])
-#     res= mesh.inertia_smear(lgM, uplg, gcl.Point3D(uplg.x-lgL/2, uplg.y-lgR, uplg.z-lgR), gcl.Point3D(uplg.x+lgL/2, uplg.y+lgR, uplg.z+lgR))
-#     assert np.isclose(sum([ine.mn for ine in mesh.inertia])-sum_in_mn, lgM)
-#     return res
-
-
-# def hinge(mesh:gcl.Mesh3D, uphinge:gcl.Point3D, panidTop:nt.NDArray[np.int64], mhn:float):
-#     sum_in_mn = sum([ine.mn for ine in mesh.inertia])
-#     xids = panidTop[-1, :]
-#     mn = mhn/len(xids)
-#     [mesh.inertia_attach(mn, xid, uphinge) for xid in xids]
-#     assert np.isclose(sum([ine.mn for ine in mesh.inertia])-sum_in_mn, mhn)
-
-
-# def LETE(mesh:gcl.Mesh3D, lineLE:gcl.Line3D, lineTE:gcl.Line3D, panshTop:nt.ArrayLike, panidTop:nt.NDArray[np.int64], panshBot:nt.ArrayLike, panidBot:nt.NDArray[np.int64],
-#          totmassLE:float, totmassTE:float):
-#     sum_in_mn = sum([ine.mn for ine in mesh.inertia])
-#     '''Leading Edge'''
-#     #connPtsLE = [0]*panshTop.shape[0]
-#     # connPtsLE[::2] = panshTop[::2, 0]
-#     # connPtsLE[1::2] = panshBot[1::2, 0]
-#     connPtsLE = panshBot[::, 0]
-#     # connIdsLE = [0]*panidTop.shape[0]
-#     # connIdsLE[::2] = panidTop[::2, 0]
-#     # connIdsLE[1::2] = panidBot[1::2, 0]
-#     connIdsLE = panidBot[::, 0]
-#     connIdsTLE = panidTop[::,0]
-#     ptsLE = [lineLE.for_y(pt.y) for pt in connPtsLE]
-#     #the distance between the points is also expressed in terms of chord fractions, it can be used as proprtionality for mass if squared
-#     distsLE2 = [(pLE.pythagoras(pcLE))**2 for pLE, pcLE in zip(ptsLE, panshBot[:, 0])] #you have to take distance from the same point though
-#     totDistsLE2 = sum(distsLE2)
-#     msLE = [d2/totDistsLE2*totmassLE for d2 in distsLE2]
-#     [mesh.inertia_attach(m/2, id_, pt) for id_, m, pt in zip(connIdsLE, msLE, ptsLE)]
-#     [mesh.inertia_attach(m/2, id_, pt) for id_, m, pt in zip(connIdsTLE, msLE, ptsLE)]
-#     '''Trailing Edge'''
-#     # connPtsTE = [0]*panshTop.shape[0]
-#     # connPtsTE[::2] = panshTop[::2, -1]
-#     # connPtsTE[1::2] = panshBot[1::2, -1]
-#     # connIdsTE = [0]*panidTop.shape[0]
-#     # connIdsTE[::2] = panidTop[::2, 0-1]
-#     # connIdsTE[1::2] = panidBot[1::2, -1]
-#     connPtsTE = panshBot[::, -1]
-#     connIdsTE = panidBot[::, -1]
-#     connIdsTTE = panidTop[::, -1]
-#     ptsTE = [lineTE.for_y(pt.y) for pt in connPtsTE]
-#     #the distance between the points is also expressed in terms of chord fractions, it can be used as proprtionality for mass if squared
-#     distsTE2 = [(pTE.pythagoras(pcTE))**2 for pTE, pcTE in zip(ptsTE,panshBot[:, -1])]
-#     totDistsTE2 = sum(distsTE2)
-#     msTE = [d2/totDistsTE2*totmassTE for d2 in distsTE2]
-#     [mesh.inertia_attach(m/2, id_, pt) for id_, m, pt in zip(connIdsTE, msTE, ptsTE)]
-#     [mesh.inertia_attach(m/2, id_, pt) for id_, m, pt in zip(connIdsTTE, msTE, ptsTE)]
-#     assert np.isclose(sum([ine.mn for ine in mesh.inertia])-sum_in_mn, totmassLE+totmassTE)
-
-# #duplicating the ribs code from chat  
-# def tangle_with_midpoints(lst):
-#     result = []
-#     for i in range(len(lst) - 1):
-#         result.append(lst[i])
-#         result.append((lst[i] + lst[i + 1]) / 2)
-#     result.append(lst[-1])  # Add the last point
-#     return result
+def all_components(mesh:gcl.Mesh3D, up:pfc.UnpackedPoints, totmassBat:float, motorR:float, motorL:float, motormass:float, 
+                   lgM:float, lgR:float, lgL:float, mhn:float, totmassLE:float, totmassTE:float,
+                   skinCode:str, lgCode:str, LETECode:str, sparCode:str, railCode:str, ribCode:str,
+                   ncCoeff=1., nbuckl=5):
 
 # def all_components(mesh:gcl.Mesh3D, up:pfc.UnpackedPoints, nbCoeff:float, na:int, nf2:int, nipCoeff:float, ntrig:int, cspacing:float, 
 #                    totmass:float, totmassLE:float, totmassTE:float, spar:str, plate:str, rib:str, flange:str, skin:str, rail:str, motorM:float, motorR:float,
@@ -288,11 +247,21 @@ def skin(mesh:gcl.Mesh3D, up:pfc.UnpackedPoints, ys:ty.List[float], skinCode:str
 
 #     nb = 5*nbCoeff
 
-#     '''RIB PLACEMENT DEFINITIONS'''
-#     tol = .001 #so that the landing gear ribs are captured in the inertia
-#     ribys = [up.fft.y, (up.fft.y+up.motors[0].y)/2, up.motors[0].y, up.lg.y+tol-lgR, up.lg.y-tol+lgR, up.motors[1].y]
-#     ribys += [(up.motors[1].y+up.motors[2].y)/2, up.motors[2].y, (up.motors[2].y+up.motors[3].y)/2, up.motors[3].y, up.tft.y]
-#     #ribys = tangle_with_midpoints(ribys)
+    '''RIB PLACEMENT DEFINITIONS'''
+    tol = .001 #so that the landing gear ribs are captured in the inertia
+    ribys = [up.fft.y, (up.fft.y+up.motors[0].y)/2, up.motors[0].y, up.lg.y+tol-lgR, up.lg.y-tol+lgR, up.motors[1].y]
+    ribys += [(up.motors[1].y+up.motors[2].y)/2, up.motors[2].y, (up.motors[2].y+up.motors[3].y)/2, up.motors[3].y, up.tft.y]
+    #ribys = tangle_with_midpoints(ribys) #NOTE:for now i don't think necessary
+
+    #main geometry
+    idgt, ssst, idgb, sssb, idxs, idys = skin(mesh, up, ribys, skinCode, ncCoeff, nbuckl)
+    truss(mesh, up, 4, idgt, ssst, idgb, sssb, idxs, idys, lgCode, LETECode, sparCode, railCode, ribCode, totmassBat)
+
+    #inertia additions
+    motors(mesh, up.motors, motorR, motorL, motormass)
+    lg(mesh, up.lg, lgM, lgR, lgL)
+    hinge(mesh, up.hinge, idgt, mhn)
+    LETE(mesh, up.leline, up.teline, ssst, idgt, sssb, idgb, totmassLE, totmassTE)
 
 #     sparsh, sparigrd, sparSecIdxs, a1, a2, f = trigspars(mesh, ribys, nb, na, nf2, ntrig, spar, up.ffb, up.frb, up.frt, up.fft, up.tfb, up.trb, up.trt, up.tft)
 
@@ -369,23 +338,15 @@ if __name__ == "__main__":
     temass = 3000
     lgR=.5
                                   
-    # all_components(mesh, up, 1, na, nf2, 1, ntrig, cspacing, totmass, lemass, temass, "/EXCLsp", "/EXCLpl", "/EXCLrb", "/EXCLfl", "sk", "/EXCLrl", 
-    #                1000, 0.4, 3, 3000, .5, 4, 500)
-    tol = .001 #so that the landing gear ribs are captured in the inertia
-    ribys = [up.fft.y, (up.fft.y+up.motors[0].y)/2, up.motors[0].y, up.lg.y+tol-lgR, up.lg.y-tol+lgR, up.motors[1].y]
-    ribys += [(up.motors[1].y+up.motors[2].y)/2, up.motors[2].y, (up.motors[2].y+up.motors[3].y)/2, up.motors[3].y, up.tft.y]
-    #ribys = tangle_with_midpoints(ribys)
-    idgt, ssst, idxt, idyt, idgb, sssb, idxb, idyb = skin(mesh, up, ribys, "skin")
+    all_components(mesh, up, totmass, .5, 3.5, 1000, 5000, 1, 4.5, 1000, lemass, temass, "sk", "lg", "lt", "sp", "rl", "rb")
+    
 
     plt.figure()
     #comparison of what is registered in the mesh and what the sheets are
     ax = plt.axes(projection="3d")
     specialpts = []
-    for i in idxt:
-        for j in idyt:
-            specialpts.append(ssst[j, i])
     ax.scatter(*gcl.pts2coords3D(specialpts))
-    mesh.visualise(ax)
+    mesh.visualise(ax, True)
     ax.legend()
     plt.show()
 

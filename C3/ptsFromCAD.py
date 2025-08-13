@@ -70,6 +70,8 @@ class UnpackedPoints():
         self.tte = pts[8][3]
         self.outleline = gcl.Line3D.from_pts(self.rle, self.tle)
         self.outteline = gcl.Line3D.from_pts(self.rte, self.tte)
+        #estimator of chord length at y
+        self.c_at_y = lambda y:self.outteline.for_y(y).x-self.outleline.for_y(y).x
 
     
 
