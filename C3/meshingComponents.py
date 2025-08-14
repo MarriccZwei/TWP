@@ -241,12 +241,6 @@ def all_components(mesh:gcl.Mesh3D, up:pfc.UnpackedPoints, totmassBat:float, mot
                    skinCode:str, lgCode:str, LETECode:str, sparCode:str, railCode:str, ribCode:str,
                    ncCoeff=1., nbuckl=5):
 
-# def all_components(mesh:gcl.Mesh3D, up:pfc.UnpackedPoints, nbCoeff:float, na:int, nf2:int, nipCoeff:float, ntrig:int, cspacing:float, 
-#                    totmass:float, totmassLE:float, totmassTE:float, spar:str, plate:str, rib:str, flange:str, skin:str, rail:str, motorM:float, motorR:float,
-#                    motorL, lgmass:float, lgR:float, lgL:float, hinge_:float):
-
-#     nb = 5*nbCoeff
-
     '''RIB PLACEMENT DEFINITIONS'''
     tol = .001 #so that the landing gear ribs are captured in the inertia
     ribys = [up.fft.y, (up.fft.y+up.motors[0].y)/2, up.motors[0].y, up.lg.y+tol-lgR, up.lg.y-tol+lgR, up.motors[1].y]
@@ -259,52 +253,12 @@ def all_components(mesh:gcl.Mesh3D, up:pfc.UnpackedPoints, totmassBat:float, mot
 
     #inertia additions
     motors(mesh, up.motors, motorR, motorL, motormass)
-    lg(mesh, up.lg, lgM, lgR, lgL)
+    lgids = lg(mesh, up.lg, lgM, lgR, lgL)
     hinge(mesh, up.hinge, idgt, mhn)
     LETE(mesh, up.leline, up.teline, ssst, idgt, sssb, idgb, totmassLE, totmassTE)
 
-#     sparsh, sparigrd, sparSecIdxs, a1, a2, f = trigspars(mesh, ribys, nb, na, nf2, ntrig, spar, up.ffb, up.frb, up.frt, up.fft, up.tfb, up.trb, up.trt, up.tft)
-
-#     nip = int(np.ceil(nipCoeff*(4*((a1+2*f)/cspacing+1)))) #obtaining nip so that we get the minimal required amount of elements
-
-#     sparBotConns = sparSecIdxs[0::6]
-#     sparTopConns = sparSecIdxs[3::6]
-#     sbci = [sparigrd[:,idx] for idx in sparBotConns] #spar bottom connection ids
-#     stci = [sparigrd[:,idx] for idx in sparTopConns] #spar top connection ids
-#     batTopConn1s = sparSecIdxs[2::6]
-#     batBotConn1s = sparSecIdxs[5::6][:-1] #this one would also have the semi last corner which we know should not be there
-#     sbbc1 = [sparigrd[:,idx] for idx in batBotConn1s] 
-#     stbc1 = [sparigrd[:,idx] for idx in batTopConn1s]
-#     batTopConn2s = sparSecIdxs[4::6]
-#     batBotConn2s = sparSecIdxs[7::6] #this one would also have the semi last corner which we know should not be there
-#     sbbc2 = [sparigrd[:,idx] for idx in batBotConn2s] 
-#     stbc2 = [sparigrd[:,idx] for idx in batTopConn2s] 
-
-
-#     for i, ids1, ids2 in zip(range(2,4*ntrig+2,4), sbbc1, sbbc2): #bottom batteries
-#         bat_rail(mesh, ntrig, a1, a2, f, 1, ids1,
-#                                          rail, totmass)
-#         bat_rail(mesh, ntrig, a1, a2, f, 1, ids2,
-#                                          rail, totmass)
-#     for i, ids1, ids2 in zip(range(0,4*ntrig+2,4), stbc1, stbc2): #top batteries
-#         bat_rail(mesh, ntrig, a1, a2, f, -1, ids1, #cids,
-#                                          rail, totmass)
-#         bat_rail(mesh, ntrig, a1, a2, f, -1, ids2, #cids,
-#                                          rail, totmass)
-
-#     topflsh, topsksh, topflids, topskids = panel(mesh, up.fft, up.frt, up.tft, up.trt, nb, ribys, nip, nf2, 
-#                                     plate, skin, rib, flange, up.surft, stci, cspacing)
-    
-#     botflsh, botsksh, botflids, botskids = panel(mesh, up.ffb, up.frb, up.tfb, up.trb, nb, ribys, nip, nf2, 
-#                                     plate, skin, rib, flange, up.surfb, sbci, cspacing)
-    
-#     motors(mesh, up.motors, motorR, motorL, motorM)
-#     lgids = lg(mesh, up.lg, lgmass, lgR, lgL) #saving the lg id to smear the landing load
-#     hinge(mesh, up.hinge, topflids, hinge_)
-#     LETE(mesh, up.leline, up.teline, topflsh, topflids, botflsh, botflids, totmassLE, totmassTE)
-
-#     return {"spars":sparsh, "plateTop":topflsh, "skinTop":topsksh, "plateBot":botflsh, "skinBot":botsksh}, {"spars":sparigrd, "plateTop":topflids, "skinTop":topskids, 
-#             "plateBot":botflids,"skinBot":botskids, "sparBends":sparSecIdxs, "lg":lgids}
+    return {"skinTop":ssst, "skinBot":sssb}, {"skinTop":idgt, 
+            "skinBot":idgb,"lg":lgids}
 
 if __name__ == "__main__":
     from mpl_toolkits import mplot3d

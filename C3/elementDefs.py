@@ -23,52 +23,40 @@ def prop_rail(din, E_STEEL, RHO_STEEL):
     prop_rail.intrhoz2 = RHO_STEEL*prop_rail.Iyy 
     return prop_rail
 
-'''Flange of Panel Ribs modelled as beam'''
-def rib_flange(t_rib, ribflange, E, RHO):
-    #template for the flange prop
-    prop_flange = p3g.OrientedBeamProp(0, 0, 0)
-    prop_flange.A = t_rib*ribflange
-    prop_flange.E = E
-    prop_flange.Izz = t_rib*ribflange**3/12
-    prop_flange.Iyy = ribflange*t_rib**3/12
-    prop_flange.J = prop_flange.Izz+prop_flange.Iyy
-    scf = 5/6 #ASSUMPTION, TODO: verify
-    prop_flange.G = scf*E/2/(1+0.3)
-    prop_flange.intrho = RHO*prop_flange.A
-    prop_flange.intrhoy2 = RHO*prop_flange.Izz
-    prop_flange.intrhoz2 = RHO*prop_flange.Iyy
+'''A template for a simpletruss beam elements'''
+def prop_truss(rout, ft, E, rho):
+    #NOTE: doesn't matter where - the truss is a tube hence symmetric, what matters is not aligned with the direction of any of the trusses
+    assert (ft<=.1 and ft>0), f"The truss is not thin walled! Thickness/Radius: {ft}"
+    prop_truss_ = p3g.OrientedBeamProp(1,1,1)
+    prop_truss_.E = E
+    t = rout*ft
+    rm = rout-t/2
+    prop_truss_.A = 2*np.pi*t*rm
+    prop_truss_.Iyy = .5*np.pi*t*rm**3
+    prop_truss_.Izz = prop_truss_.Iyy
+    prop_truss_.J = prop_truss_.Iyy+prop_truss_.Izz
+    scf = 5/6
+    prop_truss_.G = scf*E/2/(1+.3)
+    prop_truss_.intrho = rho*prop_truss_.A
+    prop_truss_.intrhoy2 = rho*prop_truss_.Izz
+    prop_truss_.intrhoz2 = rho*prop_truss_.Iyy
+    return prop_truss_
 
-    def prop_flange_or(dir): #oriented flange prop
-        pfor = copy.deepcopy(prop_flange)
-        pfor.xyex = dir[0]
-        pfor.xyey = dir[1]
-        pfor.xyez = dir[2]
-        return pfor
-    return prop_flange_or
 
-'''Spar quad'''
-spar_quad = lambda t_spar, E, NU, RHO: psp.isotropic_plate(thickness=t_spar, E=E, nu=NU, rho=RHO, calc_scf=True)
-
-'''Skin quad'''
+'''Skin quad - for now'''
 skin_quad = lambda t_skin, E, NU, RHO:psp.isotropic_plate(thickness=t_skin, E=E, nu=NU, rho=RHO, calc_scf=True)
-
-'''Panel Plate quad'''
-panel_plate_quad = lambda t_plate, E, NU, RHO:psp.isotropic_plate(thickness=t_plate, E=E, nu=NU, rho=RHO, calc_scf=True)
-
-'''Panel Rib quad'''
-panel_rib_quad = lambda t_rib, E, NU, RHO:psp.isotropic_plate(thickness=t_rib, E=E, nu=NU, rho=RHO, calc_scf=True)
 
 
 def eledict(consts:ty.Dict[str,object], sizerVars:ty.Dict[str,object], codes:ty.Dict[str,str]):
     '''a function that initiates them all based on sizer and constant report'''
 
-    eleProps = {"quad":{codes["spar"]:spar_quad(sizerVars["tspar"], consts["E_ALU"], consts["NU"], consts["RHO_ALU"]), 
-                        codes["skin"]:spar_quad(sizerVars["tskin"], consts["E_ALU"], consts["NU"], consts["RHO_ALU"]),
-                        codes["panelPlate"]:spar_quad(sizerVars["tpan"], consts["E_ALU"], consts["NU"], consts["RHO_ALU"]), 
-                        codes["panelRib"]:spar_quad(sizerVars["trib"], consts["E_ALU"], consts["NU"], consts["RHO_ALU"])},
+    eleProps = {"quad":{codes["skin"]:skin_quad(sizerVars["tskin"], consts["E_ALU"], consts["NU"], consts["RHO_ALU"]),},
                 "spring":{},
                 "beam":{codes["rail"]:prop_rail(consts["DIN"], consts["E_STEEL"], consts["RHO_STEEL"]), 
-                        codes["panelFlange"]:rib_flange(sizerVars["trib"], consts["RIB_FLANGE"], consts["E_ALU"], consts["RHO_ALU"])}, 
+                        codes["spar"]:prop_truss(consts["TRUSS_R"], sizerVars["fspar"], consts["E_ALU"], consts["RHO_ALU"]),
+                        codes["LETE"]:prop_truss(consts["TRUSS_R"], sizerVars["fLETE"], consts["E_ALU"], consts["RHO_ALU"]),
+                        codes["lg"]:prop_truss(consts["TRUSS_R"], sizerVars["flg"], consts["E_ALU"], consts["RHO_ALU"]),
+                        codes["rib"]:prop_truss(consts["TRUSS_R"], sizerVars["frib"], consts["E_ALU"], consts["RHO_ALU"])}, 
                 "mass":{}}
     
     return eleProps

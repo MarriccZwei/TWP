@@ -39,8 +39,7 @@ CONSTS={
     'M_HINGE':500, #Mass of the hinge
     
     #Mesh settings
-    'NB_COEFF':1,
-    'NIP_COEFF':1,
+    'N_COEFF':1,
     'NA':5,
     'NF2':3,
 
