@@ -245,7 +245,7 @@ def all_components(mesh:gcl.Mesh3D, up:pfc.UnpackedPoints, totmassBat:float, mot
     tol = .001 #so that the landing gear ribs are captured in the inertia
     ribys = [up.fft.y, (up.fft.y+up.motors[0].y)/2, up.motors[0].y, up.lg.y+tol-lgR, up.lg.y-tol+lgR, up.motors[1].y]
     ribys += [(up.motors[1].y+up.motors[2].y)/2, up.motors[2].y, (up.motors[2].y+up.motors[3].y)/2, up.motors[3].y, up.tft.y]
-    #ribys = tangle_with_midpoints(ribys) #NOTE:for now i don't think necessary
+    ribys = tangle_with_midpoints(ribys) #NOTE:for now i don't think necessary
 
     #main geometry
     idgt, ssst, idgb, sssb, idxs, idys = skin(mesh, up, ribys, skinCode, ncCoeff, nbuckl)
