@@ -304,7 +304,7 @@ if __name__ == "__main__":
     ax = plt.axes(projection="3d")
     specialpts = []
     ax.scatter(*gcl.pts2coords3D(specialpts))
-    mesh.visualise(ax)
+    mesh.visualise(ax, True)
     ax.legend()
     plt.show()
 
