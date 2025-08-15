@@ -4,7 +4,7 @@ import scipy.sparse as ss
 import typing as ty
 import geometricClasses as gcl
 import pyfe3d.beamprop as pbp
-import pyfe3d.shellprop_utils as psp
+import pyfe3d.shellprop as psp
 import copy
 
 """The file containing an interpreter of the gcl connection matrix into pyfe3D elements"""
@@ -31,6 +31,13 @@ class QuadWithProp(pf3.Quad4):
         self.probe = probe
         self.eleid = None
         self.shellprop = None
+
+class ShellPropAnddir():
+    def __init__(self, sp:psp.ShellProp, matx=0, maty=0, matz=0):
+        self.shellprop = sp
+        self.matx = matx
+        self.maty = maty
+        self.matz = matz
 
 class SpringData(): #spring data with reserved mass matrix for mass at nodes
     def __init__(self):
@@ -139,11 +146,12 @@ def eles_from_gcl(mesh:gcl.Mesh3D, eleDict:ty.Dict[str, ty.Dict[str, object]]):
     #Quad elements
     for conn in mesh.connections["quad"]:
         if conn.protocol=="":
-            shellprop = eleDict["quad"][conn.eleid]
+            shellprop_dir = eleDict["quad"][conn.eleid]
         else:
-            shellprop = eleDict["quad"][conn.eleid](conn.protocol)
+            shellprop_dir = eleDict["quad"][conn.eleid](conn.protocol)
+        shellprop = shellprop_dir.shellprop
         quad = QuadWithProp(pf3.Quad4Probe())
-        quad.shellprop = shellprop
+        quad.shellprop = shellprop #now we are usi
         quad.eleid = conn.eleid
         quad.n1 = nids[conn.ids[0]]
         quad.n2 = nids[conn.ids[1]]
@@ -156,7 +164,7 @@ def eles_from_gcl(mesh:gcl.Mesh3D, eleDict:ty.Dict[str, ty.Dict[str, object]]):
         quad.init_k_KC0 = init_k_KC0
         quad.init_k_M = init_k_M
         quad.init_k_KG = init_k_KG
-        quad.update_rotation_matrix(ncoords_flatten)
+        quad.update_rotation_matrix(ncoords_flatten, shellprop_dir.matx, shellprop_dir.maty, shellprop_dir.matz)
         quad.update_probe_xe(ncoords_flatten)
         quad.update_KC0(KC0r, KC0c, KC0v, shellprop) #matrix contribution, changing the matrices sent
         quad.update_M(Mr, Mc, Mv, shellprop)
@@ -356,7 +364,7 @@ if __name__ == "__main__":
 
     #dictionaries for the element types
     import pyfe3d.shellprop_utils as psu
-    ele_prop = {'quad':{'quad1':psu.isotropic_plate(thickness=h, E=E, nu=nu, rho=rho, calc_scf=True)},
+    ele_prop = {'quad':{'quad1':ShellPropAnddir(psu.isotropic_plate(thickness=h, E=E, nu=nu, rho=rho, calc_scf=True))},
                 'spring':{'spring1':SpringProp(1e2, 1e3, 1e4, 1e5, 1e6, 1e7, 0,0,1, 0,1,1)}, 'beam':{'beam1':prop}, 'mass':{'m1':20}}
 
     #exporting mesh to pyfe3D

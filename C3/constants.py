@@ -18,8 +18,8 @@ CONSTS={
     'TAUY_STEEL':.6*2000e6, #Pa #TODO: verify
 
     #geometry assumptions
-    'TRUSS_R':0.016, #m, radius of the trusses
-    'ORTHG_H':0.0125, #m, height of the orthogrid stiffeners
+    'TRUSS_R':0.05, #m, radius of the trusses
+    'ORTHG_H':0.03, #m, height of the orthogrid stiffeners
     'DIN':0.015, #inner diameter of the rail wormgear [m]
     'FULLSPAN':21, #m, full halfspan
     'LGR':.5, #m

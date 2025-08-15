@@ -3,7 +3,7 @@ import pyfe3Dgcl as p3g
 import numpy as np
 import typing as ty
 import copy
-import pyfe3d.shellprop_utils as psp
+import pyfe3d.shellprop_utils as psu
 
 '''Infinity Stiffness Spring'''
 ks_mount = lambda INFTY_STIFF: p3g.SpringProp(INFTY_STIFF, INFTY_STIFF, INFTY_STIFF, INFTY_STIFF, INFTY_STIFF, INFTY_STIFF)
@@ -44,13 +44,35 @@ def prop_truss(rout, ft, E, rho):
 
 
 '''Skin quad - for now'''
-skin_quad = lambda t_skin, E, NU, RHO:psp.isotropic_plate(thickness=t_skin, E=E, nu=NU, rho=RHO, calc_scf=True)
+def skin_quad(E, nu, rho, t, h, sc, sb):
+    "material direction"
+    matx = 0 #TODO: maybe refine later - we do have some sweep
+    maty = np.cos(np.radians(6))
+    matz = np.sin(np.radians(6))
 
+    sp = psu.isotropic_plate(t, E, nu, rho=rho)
+    scf = 5/6 #NOTE: Default assumtion
+    G = scf*E/2/(1+.3) #TODO: maybe later use an explicit G
+    "smeared stiffener matrix entries"
+    #A matrix
+    sp.A11+=E*h*t/sc
+    sp.A22+=E*h*t/sb
+    #B matrix
+    sp.B11+=E*h*t*(h+t)/2/sc
+    sp.B22+=E*h*t*(h+t)/2/sb
+    #D matrix
+    sp.D11+=E*h*t/4*sc*(h**2/3+(h+t)**2)
+    sp.D22+=E*h*t/4*sb*(h**2/3+(h+t)**2)
+    sp.D66+=G*h**3*t/24*(1/sc+1/sb)
+    #NOTE: neglecting the E terms for now, assume the prop sufficiently thin
+
+    return p3g.ShellPropAnddir(sp, matx, maty, matz)
 
 def eledict(consts:ty.Dict[str,object], sizerVars:ty.Dict[str,object], codes:ty.Dict[str,str]):
     '''a function that initiates them all based on sizer and constant report'''
 
-    eleProps = {"quad":{codes["skin"]:skin_quad(sizerVars["tskin"], consts["E_ALU"], consts["NU"], consts["RHO_ALU"]),},
+    eleProps = {"quad":{codes["skin"]:skin_quad(consts["E_ALU"], consts["NU"], consts["RHO_ALU"], sizerVars["tskin"],
+                                                consts["ORTHG_H"], sizerVars["csp"], sizerVars["bsp"]),},
                 "spring":{},
                 "beam":{codes["rail"]:prop_rail(consts["DIN"], consts["E_STEEL"], consts["RHO_STEEL"]), 
                         codes["spar"]:prop_truss(consts["TRUSS_R"], sizerVars["fspar"], consts["E_ALU"], consts["RHO_ALU"]),
