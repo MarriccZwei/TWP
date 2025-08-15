@@ -158,7 +158,18 @@ def truss(mesh:gcl.Mesh3D, up:pfc.UnpackedPoints, lgendidx:int, idgt:nt.NDArray[
             mesh.beam_connect([idgt[truss_idx_b1, idxs[-2]]], [idgb[truss_idx_b2, -1]], LETEt)
         for idxc, topidxconn in zip(idxs[1:-1], idxs[:-2]):
             mesh.beam_connect([idgt[truss_idx_b1, idxc]], [idgb[truss_idx_b2, idxc]], spart)
-            mesh.beam_connect([idgt[truss_idx_b1, topidxconn]], [idgb[truss_idx_b2, idxc]], spart)  
+            mesh.beam_connect([idgt[truss_idx_b1, topidxconn]], [idgb[truss_idx_b2, idxc]], spart) 
+
+    # "8) skin reinforcements" 
+    # for ribidx1, ribidx2 in zip(idys[:lgendidx+2], idys[1:lgendidx+3]):
+    #     mididx = round((ribidx1+ribidx2)/2)
+    #     mesh.beam_interconnect(idgt[mididx, :], ribt)
+    #     mesh.beam_interconnect(idgb[mididx, :], ribt)
+    # for idx1, idx2 in zip(idxs[:-1], idxs[1:]):
+    #     mididx = round((idx1+idx2)/2)
+    #     mesh.beam_interconnect(idgt[:(idys[lgendidx+2]+1), mididx], ribt)
+    #     mesh.beam_interconnect(idgb[:(idys[lgendidx+2]+1), mididx], ribt)
+
 
 def motors(mesh:gcl.Mesh3D, motors:ty.List[gcl.Point3D], motorR:float, motorL:float, motormass:float):
     sum_in_mn = sum([ine.mn for ine in mesh.inertia])
@@ -175,9 +186,10 @@ def motors(mesh:gcl.Mesh3D, motors:ty.List[gcl.Point3D], motorR:float, motorL:fl
 def lg(mesh:gcl.Mesh3D, uplg:gcl.Point3D, lgM, lgR, lgL, lgendidx:int, idgt:nt.NDArray[np.int32], idgb:nt.NDArray[np.int32],
        ribyidxs:ty.List[int], idxs:ty.List[int]):
     sum_in_mn = sum([ine.mn for ine in mesh.inertia])
-    lgidxs = list(idgt[ribyidxs[lgendidx-2]:ribyidxs[lgendidx]+1, [idxs[-2], idxs[-1]]].flatten())
-    lgidxs += list(idgb[ribyidxs[lgendidx-2]:ribyidxs[lgendidx]+1, [idxs[-2], idxs[-1]]].flatten())
-    [mesh.inertia_attach(lgM/len(lgidxs), idx, uplg) for idx in lgidxs]
+    # lgidxs = list(idgt[ribyidxs[lgendidx-2]:ribyidxs[lgendidx]+1, [idxs[-2], idxs[-1]]].flatten())
+    # lgidxs += list(idgb[ribyidxs[lgendidx-2]:ribyidxs[lgendidx]+1, [idxs[-2], idxs[-1]]].flatten())
+    # [mesh.inertia_attach(lgM/len(lgidxs), idx, uplg) for idx in lgidxs]
+    lgidxs = mesh.inertia_smear(lgM, uplg, gcl.Point3D(uplg.x-lgL/2, uplg.y-lgR, uplg.z-lgR), gcl.Point3D(uplg.x+lgL/2, uplg.y+lgR, uplg.z+lgR))
     assert np.isclose(sum([ine.mn for ine in mesh.inertia])-sum_in_mn, lgM)
     return lgidxs
 
@@ -303,7 +315,7 @@ if __name__ == "__main__":
     ax = plt.axes(projection="3d")
     specialpts = []
     ax.scatter(*gcl.pts2coords3D(specialpts))
-    mesh.visualise(ax)
+    mesh.visualise(ax, True)
     ax.legend()
     plt.show()
 
