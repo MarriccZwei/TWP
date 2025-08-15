@@ -19,7 +19,7 @@ CONSTS={
 
     #geometry assumptions
     'TRUSS_R':0.05, #m, radius of the trusses
-    'ORTHG_H':0.03, #m, height of the orthogrid stiffeners
+    'ORTHG_H':0.015, #m, height of the orthogrid stiffeners
     'DIN':0.015, #inner diameter of the rail wormgear [m]
     'FULLSPAN':21, #m, full halfspan
     'LGR':.5, #m
@@ -73,7 +73,7 @@ INITIAL = {
 #skin
 'tskin':0.005, #[m]
 'csp': 0.15, #spacing [m]
-'bsp': 0.3, #spacing [m]
+'bsp': 0.15, #spacing [m]
 
 #truss
 'fspar':0.05, #[-], spar thickness/radius fraction

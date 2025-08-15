@@ -158,8 +158,7 @@ def truss(mesh:gcl.Mesh3D, up:pfc.UnpackedPoints, lgendidx:int, idgt:nt.NDArray[
             mesh.beam_connect([idgt[truss_idx_b1, idxs[-2]]], [idgb[truss_idx_b2, -1]], LETEt)
         for idxc, topidxconn in zip(idxs[1:-1], idxs[:-2]):
             mesh.beam_connect([idgt[truss_idx_b1, idxc]], [idgb[truss_idx_b2, idxc]], spart)
-            mesh.beam_connect([idgt[truss_idx_b1, topidxconn]], [idgb[truss_idx_b2, idxc]], spart)
-        
+            mesh.beam_connect([idgt[truss_idx_b1, topidxconn]], [idgb[truss_idx_b2, idxc]], spart)  
 
 def motors(mesh:gcl.Mesh3D, motors:ty.List[gcl.Point3D], motorR:float, motorL:float, motormass:float):
     sum_in_mn = sum([ine.mn for ine in mesh.inertia])
@@ -173,11 +172,14 @@ def motors(mesh:gcl.Mesh3D, motors:ty.List[gcl.Point3D], motorR:float, motorL:fl
             mesh.inertia_attach(mn, i, mtr)
     assert np.isclose(sum([ine.mn for ine in mesh.inertia])-sum_in_mn, 4*motormass)
 
-def lg(mesh:gcl.Mesh3D, uplg:gcl.Point3D, lgM, lgR, lgL):
+def lg(mesh:gcl.Mesh3D, uplg:gcl.Point3D, lgM, lgR, lgL, lgendidx:int, idgt:nt.NDArray[np.int32], idgb:nt.NDArray[np.int32],
+       ribyidxs:ty.List[int], idxs:ty.List[int]):
     sum_in_mn = sum([ine.mn for ine in mesh.inertia])
-    res= mesh.inertia_smear(lgM, uplg, gcl.Point3D(uplg.x-lgL/2, uplg.y-lgR, uplg.z-lgR), gcl.Point3D(uplg.x+lgL/2, uplg.y+lgR, uplg.z+lgR))
+    lgidxs = list(idgt[ribyidxs[lgendidx-2]:ribyidxs[lgendidx]+1, [idxs[-2], idxs[-1]]].flatten())
+    lgidxs += list(idgb[ribyidxs[lgendidx-2]:ribyidxs[lgendidx]+1, [idxs[-2], idxs[-1]]].flatten())
+    [mesh.inertia_attach(lgM/len(lgidxs), idx, uplg) for idx in lgidxs]
     assert np.isclose(sum([ine.mn for ine in mesh.inertia])-sum_in_mn, lgM)
-    return res
+    return lgidxs
 
 
 def hinge(mesh:gcl.Mesh3D, uphinge:gcl.Point3D, panidTop:nt.NDArray[np.int64], mhn:float):
@@ -246,14 +248,15 @@ def all_components(mesh:gcl.Mesh3D, up:pfc.UnpackedPoints, totmassBat:float, mot
     ribys = [up.fft.y, (up.fft.y+up.motors[0].y)/2, up.motors[0].y, up.lg.y+tol-lgR, up.lg.y-tol+lgR, up.motors[1].y]
     ribys += [(up.motors[1].y+up.motors[2].y)/2, up.motors[2].y, (up.motors[2].y+up.motors[3].y)/2, up.motors[3].y, up.tft.y]
     ribys = tangle_with_midpoints(ribys) #NOTE:for now i don't think necessary
+    lgendid = 8 #used to be 4, but now we added 4 more ribs in between
 
     #main geometry
     idgt, ssst, idgb, sssb, idxs, idys = skin(mesh, up, ribys, skinCode, ncCoeff, nbuckl)
-    truss(mesh, up, 4, idgt, ssst, idgb, sssb, idxs, idys, lgCode, LETECode, sparCode, railCode, ribCode, totmassBat)
+    truss(mesh, up, lgendid, idgt, ssst, idgb, sssb, idxs, idys, lgCode, LETECode, sparCode, railCode, ribCode, totmassBat)
 
     #inertia additions
     motors(mesh, up.motors, motorR, motorL, motormass)
-    lgids = lg(mesh, up.lg, lgM, lgR, lgL)
+    lgids = lg(mesh, up.lg, lgM, lgR, lgL, lgendid, idgt, idgb, idys, idxs)
     hinge(mesh, up.hinge, idgt, mhn)
     LETE(mesh, up.leline, up.teline, ssst, idgt, sssb, idgb, totmassLE, totmassTE)
 
@@ -300,7 +303,7 @@ if __name__ == "__main__":
     ax = plt.axes(projection="3d")
     specialpts = []
     ax.scatter(*gcl.pts2coords3D(specialpts))
-    mesh.visualise(ax, True)
+    mesh.visualise(ax)
     ax.legend()
     plt.show()
 
