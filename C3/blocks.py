@@ -66,7 +66,8 @@ def fem_linear_block(consts:ty.Dict[str, object], meshOuts:ty.Dict[str,object], 
             f[0::pf3.DOF][i] -= dFT
 
     #applying landing load
-    f[2::pf3.DOF][ids["lg"]] += nlg*G0*MTOM/len(f[2::pf3.DOF][ids["lg"]])
+    landing_load = nlg*G0*MTOM/len(ids["lg"])
+    f[2::pf3.DOF][ids["lg"]] += landing_load
 
     #applying weight
     wdir = gcl.Direction3D(-ndir.x, -ndir.y, -ndir.z)
