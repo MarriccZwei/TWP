@@ -77,7 +77,7 @@ def eledict(consts:ty.Dict[str,object], sizerVars:ty.Dict[str,object], codes:ty.
                 "beam":{codes["rail"]:prop_rail(consts["DIN"], consts["E_STEEL"], consts["RHO_STEEL"]), 
                         codes["spar"]:prop_truss(consts["TRUSS_R"], sizerVars["fspar"], consts["E_ALU"], consts["RHO_ALU"]),
                         codes["LETE"]:prop_truss(consts["TRUSS_R"], sizerVars["fLETE"], consts["E_ALU"], consts["RHO_ALU"]),
-                        codes["lg"]:prop_truss(consts["TRUSS_R"], sizerVars["flg"], consts["E_ALU"], consts["RHO_ALU"]),
+                        codes["lg"]:prop_truss(consts["TRUSS_R"], sizerVars["flg"], consts["E_ALU"],  consts["RHO_ALU"]),
                         codes["rib"]:prop_truss(consts["TRUSS_R"], sizerVars["frib"], consts["E_ALU"], consts["RHO_ALU"])}, 
                 "mass":{}}
     

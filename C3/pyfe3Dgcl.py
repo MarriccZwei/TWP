@@ -205,6 +205,8 @@ def eles_from_gcl(mesh:gcl.Mesh3D, eleDict:ty.Dict[str, ty.Dict[str, object]]):
         beam = BeamCWithProp(pf3.BeamCProbe())
         beam.beamprop = prop
         beam.eleid = conn.eleid
+        if beam.eleid=='rb':
+            pass
         beam.n1 = nids[conn.ids[0]]
         beam.n2 = nids[conn.ids[1]]
         pos1 = nid_pos[beam.n1]
@@ -218,7 +220,7 @@ def eles_from_gcl(mesh:gcl.Mesh3D, eleDict:ty.Dict[str, ty.Dict[str, object]]):
         beam.update_probe_xe(ncoords_flatten)
         beam.update_KC0(KC0r, KC0c, KC0v, prop)
         beam.update_M(Mr, Mc, Mv, prop) #TODO: mtype?
-        beam.update_KG(KGr, KGc, KGv, prop, 1)
+        beam.update_KG(KGr, KGc, KGv, prop, 0)
         created_eles["beam"].append(beam)
         init_k_KC0 += data["beam"].KC0_SPARSE_SIZE
         init_k_M += data["beam"].M_SPARSE_SIZE

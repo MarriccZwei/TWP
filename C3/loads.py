@@ -12,7 +12,7 @@ from pyfe3d import DOF
 plus additional data and apply aerodynamic, propulsive, landing an inertial loads."""
 
 def aero2fem(vlm:asb.VortexLatticeMethod, ncoords_s:nt.NDArray[np.float32], ids_s:nt.NDArray[np.int32], N:int, DOF:int,
-             number_of_neighbors=10):
+             number_of_neighbors=100):
     """ncoords selected - only selected nodes to which we apply the loads - will have to be tracked externally with ids_s"""
 
     # x, y, z coordinates of each node, NOTE assuming same order for DOFs
@@ -282,6 +282,8 @@ if __name__ == "__main__":
     airplane, vlm_, forces, moments = vlm(les, tes, [asb.Airfoil("naca2412")]*6, op)
     W, fext = aero2fem(vlm_, ncoords_s, ids_s, 6*ncoords.shape[0], 6)
     fz = fext[2::6]
+    fx = fext[0::6]
+    print(fx.sum())
 
     #plotting
     import pyvista as pv
