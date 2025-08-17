@@ -43,7 +43,7 @@ def fem_linear_block(consts:ty.Dict[str, object], meshOuts:ty.Dict[str,object], 
 
     #aerodynamic forces
     #airplane, vlm, forces, moments = ls.vlm(les, tes, foils, op)
-    ids_s = np.hstack([ids["skinTop"].flatten(), ids["skinBot"][:, 0].flatten()])
+    ids_s = np.hstack([ids["skinTop"].flatten(), ids["skinBot"].flatten()])
     ncoords_s = ncoords[ids_s, :]
     W, Fext, W_u_to_p, dFv_dp, KA, vlm = ls.KA(ncoords_s, ids_s, N, pf3.DOF, les, tes, foils, op, up.fft.y, bres, cres)
     f += Fext
@@ -84,7 +84,7 @@ def fem_linear_block(consts:ty.Dict[str, object], meshOuts:ty.Dict[str,object], 
     w = u[2::pf3.DOF]
     v = u[0::pf3.DOF]
 
-    return {'u':u, 'w':w, 'v':v, 'bu':bu, 'bk':bk, 'KC0uu':KC0uu, 'W':W, 'ncoords_s':ncoords_s, 'ids_s':ids_s, 'KA':KA, 'KAuu':KAuu}
+    return {'u':u, 'w':w, 'v':v, 'bu':bu, 'bk':bk, 'KC0uu':KC0uu, 'W':W, 'ncoords_s':ncoords_s, 'ids_s':ids_s, 'KA':KA, 'KAuu':KAuu, 'weight':weight, 'Fext':Fext}
 
 def post_processor_block(defl:ty.Dict[str, nt.NDArray[np.float64]], meshOuts:ty.Dict[str,object]):
     eleDict = meshOuts["elements"]
