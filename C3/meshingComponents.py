@@ -186,10 +186,12 @@ def motors(mesh:gcl.Mesh3D, motors:ty.List[gcl.Point3D], motorR:float, motorL:fl
 def lg(mesh:gcl.Mesh3D, uplg:gcl.Point3D, lgM, lgR, lgL, lgendidx:int, idgt:nt.NDArray[np.int32], idgb:nt.NDArray[np.int32],
        ribyidxs:ty.List[int], idxs:ty.List[int]):
     sum_in_mn = sum([ine.mn for ine in mesh.inertia])
-    # lgidxs = list(idgt[ribyidxs[lgendidx-2]:ribyidxs[lgendidx]+1, [idxs[-2], idxs[-1]]].flatten())
-    # lgidxs += list(idgb[ribyidxs[lgendidx-2]:ribyidxs[lgendidx]+1, [idxs[-2], idxs[-1]]].flatten())
-    # [mesh.inertia_attach(lgM/len(lgidxs), idx, uplg) for idx in lgidxs]
-    lgidxs = mesh.inertia_smear(lgM, uplg, gcl.Point3D(uplg.x-lgL/2, uplg.y-lgR, uplg.z-lgR), gcl.Point3D(uplg.x+lgL/2, uplg.y+lgR, uplg.z+lgR))
+    lgidxs = list(idgt[ribyidxs[lgendidx-3]:ribyidxs[lgendidx+1]+1, [idxs[-3], idxs[-2], idxs[-1]]].flatten())
+    lgidxs += list(idgb[ribyidxs[lgendidx-3]:ribyidxs[lgendidx+1]+1, [idxs[-3], idxs[-2], idxs[-1]]].flatten())
+    lgidxs += list(idgt[[ribyidxs[lgendidx-3], ribyidxs[lgendidx-2], ribyidxs[lgendidx-1], ribyidxs[lgendidx], ribyidxs[lgendidx+1]], idxs[-3]:idxs[-1]+1].flatten())
+    lgidxs += list(idgb[[ribyidxs[lgendidx-3], ribyidxs[lgendidx-2], ribyidxs[lgendidx-1], ribyidxs[lgendidx], ribyidxs[lgendidx+1]], idxs[-3]:idxs[-1]+1].flatten())
+    [mesh.inertia_attach(lgM/len(lgidxs), idx, uplg) for idx in lgidxs]
+    # lgidxs = mesh.inertia_smear(lgM, uplg, gcl.Point3D(uplg.x-lgL/2, uplg.y-lgR, uplg.z-lgR), gcl.Point3D(uplg.x+lgL/2, uplg.y+lgR, uplg.z+lgR))
     assert np.isclose(sum([ine.mn for ine in mesh.inertia])-sum_in_mn, lgM)
     return lgidxs
 
