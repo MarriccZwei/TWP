@@ -293,11 +293,11 @@ def eles_from_gcl(mesh:gcl.Mesh3D, eleDict:ty.Dict[str, ty.Dict[str, object]]):
                              'KGv':KGv, 'KGr':KGr, 'KGc':KGc}
 
 def weight(M:ss.coo_matrix, g:float, N:int, DOF:int, wd:gcl.Direction3D):
-    diag = M.diagonal()
-    Wvec = np.zeros(N)
-    Wvec[0::DOF] = g*wd.x*diag[0::DOF]
-    Wvec[1::DOF] = g*wd.y*diag[1::DOF]
-    Wvec[2::DOF] = g*wd.z*diag[2::DOF]
+    gvec = np.zeros(N)
+    gvec[0::DOF] = wd.x*g
+    gvec[1::DOF] = wd.y*g
+    gvec[2::DOF] = wd.z*g
+    Wvec = M@gvec
     return Wvec
 
 if __name__ == "__main__":

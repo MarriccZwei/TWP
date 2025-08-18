@@ -115,14 +115,14 @@ def truss(mesh:gcl.Mesh3D, up:pfc.UnpackedPoints, lgendidx:int, idgt:nt.NDArray[
             mesh.inertia_attach(Afb*cf*mbattot, idgb[bidx, idx], cgb)
 
     "4) ribs"
-    for idxnum, idx in enumerate(idys[:3]):
-        # if idxnum<=lgendidx:
-        #     mesh.beam_interconnect(idgt[idx, :idxs[-2]+1], ribt)
-        #     mesh.beam_interconnect(idgb[idx, :idxs[-2]+1], ribt)
-        #     #reinforced landing gear ribs
-        #     mesh.beam_interconnect(idgt[idx, idxs[-2]:], ribt)
-        #     mesh.beam_interconnect(idgb[idx, idxs[-2]:], ribt)
-        # else:
+    for idxnum, idx in enumerate(vertical_truss_indices):
+        if idxnum<=lgendidx:
+            mesh.beam_interconnect(idgt[idx, :idxs[-2]+1], ribt)
+            mesh.beam_interconnect(idgb[idx, :idxs[-2]+1], ribt)
+            #reinforced landing gear ribs
+            mesh.beam_interconnect(idgt[idx, idxs[-2]:], ribt)
+            mesh.beam_interconnect(idgb[idx, idxs[-2]:], ribt)
+        else:
             mesh.beam_interconnect(idgt[idx, :], ribt)
             mesh.beam_interconnect(idgb[idx, :], ribt)
 
