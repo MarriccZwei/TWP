@@ -334,6 +334,12 @@ def multi_section_sheet3D(pt1s:ty.List[Point3D], pt2s:ty.List[Point3D], nsect:in
 def pts2numpy3D(pts:ty.List[Point3D]):
     return np.array([[p.x, p.y, p.z] for p in pts])
 
+def centroid2D(pts:ty.List[Point2D], areas:ty.List[Point2D], returnAtot=False):
+    Atot = sum(areas)
+    if returnAtot:
+        return Point2D(sum([pt.x*a for pt, a in zip(pts, areas)])/Atot, sum([pt.y*a for pt, a in zip(pts, areas)])/Atot), Atot
+    return Point2D(sum([pt.x*a for pt, a in zip(pts, areas)])/Atot, sum([pt.y*a for pt, a in zip(pts, areas)])/Atot)
+
 
 if __name__ == "__main__":
     pt1s = [Point3D(0, 0, 0), Point3D(3, 0, .5), Point3D(4, -1, -.5), Point3D(4, 0, 4)]
