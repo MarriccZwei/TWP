@@ -43,6 +43,14 @@ class Direction2D():
         #to unpack we need to convert it back to an array
         rotated = np.array(np.matmul(rotation_matrix, np.asmatrix([[dir.x], [dir.y]])))
         return cls(rotated[0][0], rotated[1][0])
+    
+    @classmethod
+    def normal_towards(cls, target_dir, dir):
+        dir1 = cls.rotate(dir, np.pi/2)
+        dir2 = cls.rotate(dir, np.pi/2)
+        angle_1 = np.arccos(dir1.x+target_dir.x+dir1.y+target_dir.y)
+        angle_2 = np.arccos(dir2.x+target_dir.x+dir2.y+target_dir.y)
+        return dir1 if angle_1<angle_2 else dir2
 
 
 class Line2D():
