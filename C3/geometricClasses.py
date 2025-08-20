@@ -58,6 +58,11 @@ class Line2D():
         m = (-line.dir.x*(line.pt.y-self.pt.y)+line.dir.y*(line.pt.x-self.pt.x))/(-self.dir.y*line.dir.x+self.dir.x*line.dir.y)
         return self.dir.step(self.pt, m)
     
+    def point_distance(self, point)->float:
+        line2 = Line2D(point, Direction2D.rotate(self.dir, np.pi/2))
+        isect = self.intersect(line2)
+        return isect.pythagoras(point)
+    
 
 class Point3D():
     def __init__(self, x:float, y:float, z:float):
@@ -342,6 +347,13 @@ def centroid2D(pts:ty.List[Point2D], areas:ty.List[Point2D], returnAtot=False):
 
 
 if __name__ == "__main__":
+
+    #testing the 2d distance functionality
+    pt1 = Point2D(0, 0)
+    pt2 = Point2D(1, 0)
+    pt3 = Point2D(0, -1)
+    print(Line2D.from_pts(pt3, pt2).point_distance(pt1))
+
     pt1s = [Point3D(0, 0, 0), Point3D(3, 0, .5), Point3D(4, -1, -.5), Point3D(4, 0, 4)]
     pt2s = [Point3D(0, 6, 1), Point3D(2.5, 7, 0), Point3D(3, 6, -.5), Point3D(4, 5, 5)]
     ns = 7
