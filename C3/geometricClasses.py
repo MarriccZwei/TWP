@@ -345,6 +345,9 @@ def centroid2D(pts:ty.List[Point2D], areas:ty.List[Point2D], returnAtot=False):
         return Point2D(sum([pt.x*a for pt, a in zip(pts, areas)])/Atot, sum([pt.y*a for pt, a in zip(pts, areas)])/Atot), Atot
     return Point2D(sum([pt.x*a for pt, a in zip(pts, areas)])/Atot, sum([pt.y*a for pt, a in zip(pts, areas)])/Atot)
 
+def momentSign2D(arm_dir:Direction2D, magn_dir:Direction2D):
+    return np.sign(arm_dir.x*magn_dir.y-arm_dir.y*magn_dir.x)
+
 
 if __name__ == "__main__":
 
