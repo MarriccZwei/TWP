@@ -7,6 +7,7 @@ import pyfe3d as pf3
 import scipy.sparse.linalg as ssl
 import pypardiso as ppd
 import loads as ls
+import postProcessorsUtils as ppu
 
 import typing as ty
 import matplotlib.pyplot as plt
@@ -87,18 +88,16 @@ def fem_linear_block(consts:ty.Dict[str, object], meshOuts:ty.Dict[str,object], 
 
     return {'u':u, 'w':w, 'v':v, 'bu':bu, 'bk':bk, 'KC0uu':KC0uu, 'W':W, 'ncoords_s':ncoords_s, 'ids_s':ids_s, 'KA':KA, 'KAuu':KAuu, 'Fext':Fext, 'f':f, 'weight':weight}
 
-def post_processor_block(defl:ty.Dict[str, nt.NDArray[np.float64]], meshOuts:ty.Dict[str,object]):
-    eleDict = meshOuts["elements"]
-    fi = np.zeros(meshOuts["N"])
-    #only for quads and beams as of now - that's all we are using
-    for quad in eleDict["quad"]:
-        quad.update_probe_finte(quad.shellprop)
-        quad.update_fint(fi, quad.shellprop)
-    for beam in eleDict["beam"]:
-        beam.update_probe_finte(beam.beamprop)
-        beam.update_fint(fi, beam.beamprop)
-
-    return {"elements":eleDict, "fi":fi}
+def post_processor_block(defl:ty.Dict[str, nt.NDArray[np.float64]], meshOut:ty.Dict[str,object], 
+                         sizerVars:ty.Dict[str, float], csts:ty.Dict[str, object]):
+    fi, KGuu, KG = ppu.update_after_displacement(meshOut, defl)
+    load_mult, eigenvals, eigenvects = ppu.buckling(defl, meshOut, KGuu)
+    omega_n, modes = ppu.natfreq(defl, meshOut)
+    buckl_ratio_max_b, tau_ratio_max_b, sigma_ratio_max_b, beams2plot = ppu.beam_stresses(meshOut, sizerVars, csts)
+    tau_ratio_max_s, sigma_ratio_max_s, quads2plot = ppu.quad_stresses(meshOut, sizerVars, csts)
+    return {'fi':fi, 'KGuu':KGuu, 'KG':KG, 'lm':load_mult, "ew":eigenvals, "ev":eigenvects, "wn":omega_n, "modes":modes, 
+            "tau_b":tau_ratio_max_b, "tau_s":tau_ratio_max_s, "sgm_b":sigma_ratio_max_b, "sgm_s":sigma_ratio_max_s,
+            "buc_b":buckl_ratio_max_b, "b2plot":beams2plot, "q2plot": quads2plot}
 
 def plot_block(w:nt.NDArray, wtxt:str, meshOuts:ty.Dict[str, object], consts:ty.Dict[str, object], unit="m", plusonly=False,):
     KC0, M, N, x, y, z, mesh, up, ids, pts = tuple(meshOuts[k] for k in ['KC0', 'M', 'N', 'x', 'y', 'z', 'mesh', 'up', 'ids', 'pts'])
@@ -130,18 +129,31 @@ if __name__ == "__main__":
     import copy
 
     data = cst.CAD_DATA
-    lgl_infs = [4, 4.5, 5, 6] #preparing the k infinity values
-    csts = copy.deepcopy(cst.CONSTS) #not to touch the actual constants dict
+    csts = cst.CONSTS #not to touch the actual constants dict
     load_case = cst.LOAD_C[2] #landing load case used in the sensitivity study
     load_case["FT"] = 5000 #landing at full thrust - a weird load case that tests everything at once
 
-    for lgl in lgl_infs:
-        csts["LGL"] = lgl
-        eleDict = ed.eledict(csts, cst.INITIAL, cst.CODES)
-        meshOut = mesh_block(data, cst.INITIAL, eleDict, csts, cst.CODES)
-        sol = fem_linear_block(csts, meshOut, load_case, True, True)
-        wfig = plot_block(sol['w'], "w", meshOut, csts)
-        wfig.savefig(fr"C:\marek\studia\hpb\Results\Sensitivity Study LGL\w\K{lgl}.pdf")
-        vfig = plot_block(sol['v'], "v", meshOut, csts)
-        vfig.savefig(fr"C:\marek\studia\hpb\Results\Sensitivity Study LGL\v\K{lgl}.pdf")
-        print(f"{lgl} is done")
+    eleDict = ed.eledict(csts, cst.INITIAL, cst.CODES)
+    meshOut = mesh_block(data, cst.INITIAL, eleDict, csts, cst.CODES)
+    sol = fem_linear_block(csts, meshOut, load_case, True, True)
+    ppcres = post_processor_block(sol, meshOut, cst.INITIAL, csts)
+
+    wfig = plot_block(sol['w'], "w", meshOut, csts)
+    wfig.savefig(fr"C:\marek\studia\hpb\Results\Initial\w.pdf")
+    vfig = plot_block(sol['v'], "v", meshOut, csts)
+    vfig.savefig(fr"C:\marek\studia\hpb\Results\Initial\v.pdf")
+    Fxfig = plot_block(ppcres['fi'][0::pf3.DOF], 'Fx', meshOut, csts, 'N')
+    Fxfig.savefig(fr"C:\marek\studia\hpb\Results\Initial\Fx.pdf")
+    Fyfig = plot_block(ppcres['fi'][1::pf3.DOF], 'Fy', meshOut, csts, 'N')
+    Fyfig.savefig(fr"C:\marek\studia\hpb\Results\Initial\Fy.pdf")
+    Fzfig = plot_block(ppcres['fi'][2::pf3.DOF], 'Fz', meshOut, csts, 'N')
+    Fzfig.savefig(fr"C:\marek\studia\hpb\Results\Initial\Fz.pdf")
+    Mxfig = plot_block(ppcres['fi'][3::pf3.DOF], 'Mx', meshOut, csts, 'N')
+    Mxfig.savefig(fr"C:\marek\studia\hpb\Results\Initial\Mx.pdf")
+    mode1 = plot_block(ppcres['modes'][0, 2::pf3.DOF], "mode1z", meshOut, cst.CONSTS, "m")
+    mode1.savefig(fr"C:\marek\studia\hpb\Results\Initial\mode1z.pdf")
+    bmode1 = plot_block(ppcres['ev'][0, 2::pf3.DOF], "buckl_mode1z", meshOut, cst.CONSTS, "m")
+    bmode1.savefig(fr"C:\marek\studia\hpb\Results\Initial\buckl_mode1z.pdf")
+
+    print(ppcres["ew"])
+    print(ppcres["wn"])
