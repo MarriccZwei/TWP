@@ -63,8 +63,6 @@ if __name__ == "__main__":
 
     optimVars = np.array([cst.INITIAL["tskin"], cst.INITIAL["bsp"], cst.INITIAL["csp"], cst.INITIAL["fspar"],
                           cst.INITIAL["frib"], cst.INITIAL["fLETE"], cst.INITIAL["flg"]])
-    sanity_check = _load_c_analysis(tuple(optimVars))
-    print("Sanity check of the calculation function passed")
 
     res = opt.minimize(weight_objective, optimVars, method="COBYLA", constraints=[bucC, aelC])
 
