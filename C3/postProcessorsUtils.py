@@ -42,7 +42,7 @@ def buckling(sol:ty.Dict[str, object], meshOut:ty.Dict[str, object], KGuu:nt.NDA
     done = False
 
     '''step 1) searching for the order of magnitude range'''
-    ew, ev = ssl.eigs(A=K_KAuu, M=KGuu, k=n_modes, which="LM", sigma=initial)
+    ew, ev = ssl.eigs(A=K_KAuu, M=KGuu, k=n_modes, which="LM", sigma=initial, ncv=60)
     nim = np.count_nonzero(np.imag(ew))
     if nim==len(ew): #All results are non-real
         ew1 = ew
@@ -50,7 +50,7 @@ def buckling(sol:ty.Dict[str, object], meshOut:ty.Dict[str, object], KGuu:nt.NDA
         while nim==len(ew1):
             prev_initial = initial
             initial*=10
-            ew1, ev1 = ssl.eigs(A=K_KAuu, M=KGuu, k=n_modes, which="LM", sigma=initial)
+            ew1, ev1 = ssl.eigs(A=K_KAuu, M=KGuu, k=n_modes, which="LM", sigma=initial, ncv=60)
             nim = np.count_nonzero(np.imag(ew1))
             print(f"nim: {nim}")
         ew = ew1 #we only update eigpairs if we know there are any real ones in the range
@@ -61,7 +61,7 @@ def buckling(sol:ty.Dict[str, object], meshOut:ty.Dict[str, object], KGuu:nt.NDA
         while nim<len(ew):
             prev_initial = initial
             initial/=10
-            ew1, ev1 = ssl.eigs(A=K_KAuu, M=KGuu, k=n_modes, which="LM", sigma=initial)
+            ew1, ev1 = ssl.eigs(A=K_KAuu, M=KGuu, k=n_modes, which="LM", sigma=initial, ncv=60)
             nim = np.count_nonzero(np.imag(ew1)) #again not to leave afully complex output
             print(f"nim: {nim}")
         lower_bound = initial
@@ -72,7 +72,7 @@ def buckling(sol:ty.Dict[str, object], meshOut:ty.Dict[str, object], KGuu:nt.NDA
     for i in range(5): #three iterations should be enough for convergence
         print(f"lb: {lower_bound}, ub: {upper_bound}, nim: {nim}")
         sgm = (lower_bound+upper_bound)/2
-        ew1, ev1 = ssl.eigs(A=K_KAuu, M=KGuu, k=n_modes, which="LM", sigma=sgm)
+        ew1, ev1 = ssl.eigs(A=K_KAuu, M=KGuu, k=n_modes, which="LM", sigma=sgm, ncv=60)
         nim = np.count_nonzero(np.imag(ew1))
         if nim==len(ew1): #We landed in a fully complex region
             lower_bound = sgm
@@ -92,7 +92,7 @@ def natfreq(sol:ty.Dict[str, object], meshOut:ty.Dict[str, object]):
     n_modes=7#TODO: How many to use
     eigenvects = np.zeros((meshOut["N"], n_modes), dtype=np.complex128)
 
-    ew, ev = ssl.eigs(A=K_KAuu, M=Muu, k=n_modes, which="LM", sigma=-1.) #TODO: copy pasted. verify it still holds
+    ew, ev = ssl.eigs(A=K_KAuu, M=Muu, k=n_modes, which="LM", sigma=-1., ncv=120) #TODO: copy pasted. verify it still holds
     eigenvects[sol["bu"], :] = ev
 
     #reformatting the result as omega_ns and an array of eigenvectors
