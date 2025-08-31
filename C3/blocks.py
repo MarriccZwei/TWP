@@ -72,7 +72,7 @@ def fem_linear_block(consts:ty.Dict[str, object], meshOuts:ty.Dict[str,object], 
 
     #applying weight
     wdir = gcl.Direction3D(-ndir.x, -ndir.y, -ndir.z)
-    weight = p3g.weight(M, (nult+nlg)*G0, N, pf3.DOF, wdir) if ult else p3g.weight(M, n*G0, N, pf3.DOF, wdir)
+    weight = p3g.weight(M, (nult+nlg)*G0, N, pf3.DOF, wdir) if ult else p3g.weight(M, (n+nlg)*G0, N, pf3.DOF, wdir)
     f+=weight
 
     #checks and solution
@@ -130,12 +130,12 @@ if __name__ == "__main__":
 
     data = cst.CAD_DATA
     csts = cst.CONSTS #not to touch the actual constants dict
-    load_case = cst.LOAD_C[2] #landing load case used in the sensitivity study
-    load_case["FT"] = 5000 #landing at full thrust - a weird load case that tests everything at once
+    load_case = cst.LOAD_C[0] #landing load case used in the sensitivity study
+    #load_case["FT"] = 5000 #landing at full thrust - a weird load case that tests everything at once
 
     eleDict = ed.eledict(csts, cst.INITIAL, cst.CODES)
     meshOut = mesh_block(data, cst.INITIAL, eleDict, csts, cst.CODES)
-    sol = fem_linear_block(csts, meshOut, load_case, True, True)
+    sol = fem_linear_block(csts, meshOut, load_case, False, True)
     ppcres = post_processor_block(sol, meshOut, cst.INITIAL, csts)
 
     wfig = plot_block(sol['w'], "w", meshOut, csts)

@@ -30,9 +30,9 @@ def prop_truss(rout, ft, E, rho):
     prop_truss_ = p3g.OrientedBeamProp(1,1,1)
     prop_truss_.E = E
     t = rout*ft
-    rm = rout-t/2
-    prop_truss_.A = 2*np.pi*t*rm
-    prop_truss_.Iyy = .5*np.pi*t*rm**3
+    rin = rout-t
+    prop_truss_.A = np.pi*rout**2-np.pi*rin**2
+    prop_truss_.Iyy = .5*np.pi*(rout**4-rin**2)
     prop_truss_.Izz = prop_truss_.Iyy
     prop_truss_.J = prop_truss_.Iyy+prop_truss_.Izz
     scf = 5/6
