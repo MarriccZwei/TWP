@@ -26,8 +26,8 @@ CONSTS={
     'LGL':5, #m
     'ML': 3.5, #m
     'MR': .4, #m
-    'FOIL_YS': [0, 1.6, 10, 18, 21], #m, ys at which airfoilchords should be sampled
-    'FOILS':[asb.Airfoil("naca2412")]*5,
+    'FOIL_YS': [0, 1.6, 6, 10, 14, 18, 21], #m, ys at which airfoilchords should be sampled
+    'FOILS':[asb.Airfoil("naca2412")]*7,
 
     #masses
     'BAT_MASS_1WING':17480, #kg
