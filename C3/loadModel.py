@@ -1,19 +1,19 @@
 import numpy as np
 import numpy.typing as nt
-import funtools as ft
+import functools as ft
 import typing as ty
 
 '''Model of the aerodynamic load acting on the wing as eliptically distributed spanwise and NACA2412 cp-distributed chordwise'''
 #derivative multiplier means to be multiplied with the toatal lift!
 npeak = 4 # a parameter required to model the cp distribution
 
-#@ft.cache
+@ft.cache
 def per_b_half(yPerB2:nt.NDArray[np.float64]) -> nt.NDArray[np.float64]:
     '''derivative multiplier of Lift force with respect to fraction of halfspan,
     computed from the properties of elliptical distribution'''
     return 2/np.pi*np.sqrt(1-yPerB2**2)
 
-#@ft.cache
+@ft.cache
 def per_x_c(xPerC:nt.NDArray[np.float64], top:bool) -> nt.NDArray[np.float64]:
     '''derivative multiplier of Lift force with respect to fraction of chord,
     computed from the properties of cp distribution'''
