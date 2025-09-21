@@ -32,11 +32,11 @@ CONSTS={
     #masses
     'BAT_MASS_1WING':17480, #kg
     'MTOM':76000, #kg
-    'M_MOTOR':1000, #Entire engine group of a single engine [kg]
-    'M_LG':5000, #Mass of the entire landing gear group [kg]
+    'M_MOTOR':694.625, #Entire engine group of a single engine [kg]
+    'M_LG':1269.5, #Mass of the entire landing gear group [kg]
     'M_LE':1000, #Mass of all other LE eqpt: thermal management, avionics, 1/2 cable/pipe mass etc. [kg]
-    'M_TE':3000, #Mass of all TE eqpt: hlds, 1/2 cable/pipe mass etc. [kg]
-    'M_HINGE':500, #Mass of the hinge
+    'M_TE':928, #Mass of all TE eqpt: hlds, 1/2 cable/pipe mass etc. [kg]
+    'M_HINGE':200, #Mass of the hinge
     
     #Mesh settings
     'N_COEFF':1,
@@ -55,7 +55,7 @@ LOAD_C=[
     {'n':1, 'nult':1.5, 'nlg': 0, 'ndir':gcl.Direction3D(0, 0, -1), "LD":16, "FT":2500,
      'op':asb.OperatingPoint(asb.Atmosphere(7000), .6*310, -3)}, #negative load factor
     {'n':1.5, 'nult':1.5*1.5, 'nlg': 2, 'ndir':gcl.Direction3D(0, 0, 1), "LD":14, "FT":0,
-     'op':asb.OperatingPoint(asb.Atmosphere(7000), .6*310, 5)}, #landing loads
+     'op':asb.OperatingPoint(asb.Atmosphere(7000), 100, 15)}, #landing loads
     ]
 
 #internal ids of element types
