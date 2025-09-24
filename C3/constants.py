@@ -54,7 +54,7 @@ LOAD_C=[
      'op':asb.OperatingPoint(asb.Atmosphere(7000), .6*310, 3)}, #symmetric coordinated turn
     {'n':1, 'nult':1.5, 'nlg': 0, 'ndir':gcl.Direction3D(0, 0, -1), "LD":16, "FT":2500,
      'op':asb.OperatingPoint(asb.Atmosphere(7000), .6*310, -3)}, #negative load factor
-    {'n':1.5, 'nult':1.5*1.5, 'nlg': 2, 'ndir':gcl.Direction3D(0, 0, 1), "LD":14, "FT":0,
+    {'n':1, 'nult':1.5+.5*1.5, 'nlg': 1.5, 'ndir':gcl.Direction3D(0, 0, 1), "LD":14, "FT":0,
      'op':asb.OperatingPoint(asb.Atmosphere(7000), 100, 15)}, #landing loads
     ]
 

@@ -104,6 +104,7 @@ def truss(mesh:gcl.Mesh3D, up:pfc.UnpackedPoints, lgendidx:int, idgt:nt.NDArray[
     Afbs = As_fracs[::2]
 
     "3) rails-regular"
+    sum_in_mn = sum([ine.mn for ine in mesh.inertia])
     for idx, Aft, Afb in zip(idxs[1:-1], Afts, Afbs):
         mesh.beam_interconnect(idgt[:, idx], rail)
         mesh.beam_interconnect(idgb[:, idx], rail)
@@ -113,6 +114,8 @@ def truss(mesh:gcl.Mesh3D, up:pfc.UnpackedPoints, lgendidx:int, idgt:nt.NDArray[
             mesh.inertia_attach(Aft*cf*mbattot, idgt[bidx, idx], cgt)
             cgb = gcl.Direction3D(0,0,1).step(sssb[bidx, idx], 2/3*(ssst[bidx, idx].z-sssb[bidx, idx].z))
             mesh.inertia_attach(Afb*cf*mbattot, idgb[bidx, idx], cgb)
+    inertia_added= sum([ine.mn for ine in mesh.inertia])-sum_in_mn
+    assert np.isclose(inertia_added, mbattot), f"inertia added: {inertia_added}, nominal: {mbattot}"
 
     "4) ribs"
     for idxnum, idx in enumerate(vertical_truss_indices):

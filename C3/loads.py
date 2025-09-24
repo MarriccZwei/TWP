@@ -311,12 +311,15 @@ if __name__ == "__main__":
     arrows.plot()
 
     vlm_, dFv_dp = calc_dFv_dp(les, tes, [asb.Airfoil("naca2412")]*6, op, ncoords_s[:, 1].min(), displs=np.zeros(12))
-    print(dFv_dp)
+    #print(dFv_dp)
+    print(forces)
     W_u_to_p = fem2aero(les, np.zeros(12), ncoords_s, ids_s, 6*ncoords.shape[0], 6)
     velocities = np.linspace(30, 200, 10)
-    omegans = flutter_omegans(velocities, np.eye(6*ncoords.shape[0]), bu, W_u_to_p, 
-                              np.eye(6*ncoords.shape[0])[bu, :][:, bu], W, les, tes, [asb.Airfoil("naca2412")]*6,
-                                op, ncoords_s[:, 1].min())
-    plt.figure(figsize=(5,5))
-    plt.plot(velocities, omegans)
-    plt.show()
+    # omegans = flutter_omegans(velocities, np.eye(6*ncoords.shape[0]), bu, W_u_to_p, 
+    #                           np.eye(6*ncoords.shape[0])[bu, :][:, bu], W, les, tes, [asb.Airfoil("naca2412")]*6,
+    #                             op, ncoords_s[:, 1].min())
+    # plt.figure(figsize=(5,5))
+    # plt.plot(velocities, omegans)
+    # plt.show()
+
+    
