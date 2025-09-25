@@ -53,7 +53,7 @@ for i, y in enumerate(y_positions):
 airplane = asb.Airplane(
     name="Custom 8-Engine Aircraft",
     wings=[wing],
-    propulsors=propulsors
+    #propulsors=propulsors
 )
 
 def run_vlm_force_analysis_custom_cp(
