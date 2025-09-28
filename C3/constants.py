@@ -50,6 +50,7 @@ CONSTS={
     }
 
 LOAD_C=[
+    #TODO: assume aoa=pitch angle and rotate weight direction
     {'n':2.5, 'nult':2.5*1.5, 'nlg': 0, 'ndir':gcl.Direction3D(0, 0, 1), "LD":20, "FT":5000,
      'op':asb.OperatingPoint(asb.Atmosphere(7000), .6*310, 3)}, #symmetric coordinated turn
     {'n':1, 'nult':1.5, 'nlg': 0, 'ndir':gcl.Direction3D(0, 0, -1), "LD":16, "FT":2500,
