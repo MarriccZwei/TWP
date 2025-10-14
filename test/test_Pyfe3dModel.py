@@ -1,7 +1,7 @@
 import pyfe3d.shellprop_utils as psu
 import scipy.sparse.linalg as ssl
 import pyfe3d as pf3
-import pyfe3d.shellprop_utils as psu
+import pyfe3d.beamprop as pbp
 import numpy as np
 
 from ..C4.Pyfe3DModel import Pyfe3DModel
@@ -115,7 +115,7 @@ def test_quads():
         #assert qm.c2 == qcorrect.c2
         #assert qm.c3 == qcorrect.c3
         #assert qm.c4 == qcorrect.c4
-        print("quad asserted")
+    print("quads asserted")
 
     #@# actually solving the fem model
     uu, info = ssl.cg(model.KC0uu, fu, atol=1e-9)
@@ -140,6 +140,135 @@ def test_quads():
         plt.colorbar()
         plt.show()
 
+def test_beams():
+    n = 50
+    L = 3
+
+    E = 203.e9 # Pa
+    rho = 7.83e3 # kg/m3
+
+    x = np.linspace(0, L, n)
+    y = np.ones_like(x)
+    b = 0.05 # m
+    h = 0.05 # m
+    A = h*b
+    Izz = b*h**3/12
+    Iyy = b**3*h/12
+    prop = pbp.BeamProp()
+    prop.A = A
+    prop.E = E
+    scf = 5/6.
+    prop.G = scf*E/2/(1+0.3)
+    prop.Izz = Izz
+    prop.Iyy = Iyy
+    prop.intrho = rho*A
+    prop.intrhoy2 = rho*Izz
+    prop.intrhoz2 = rho*Iyy
+    prop.J = Izz + Iyy
+
+    ncoords = np.vstack((x, y, np.zeros_like(x))).T
+    nids = 1 + np.arange(ncoords.shape[0])
+    nid_pos = dict(zip(nids, np.arange(len(nids))))
+
+    n1s = nids[0:-1]
+    n2s = nids[1:]
+
+    num_elements = len(n1s)
+    print('num_elements', num_elements)
+
+    #adjusting to the poses
+    pos1s = [nid_pos[n1] for n1 in n1s]
+    pos2s = [nid_pos[n2] for n2 in n2s]
+
+    #model creation
+    def boundary(x,y,z):
+        is_bk = np.isclose(x, 0)
+        return (is_bk, is_bk, is_bk ,is_bk, is_bk, is_bk)
+    
+    print("boundary")
+    model = Pyfe3DModel(ncoords=ncoords, boundary=boundary)
+    for pos1, pos2 in zip(pos1s, pos2s):
+        model.load_beam(pos1, pos2)
+    
+    model.KC0_M_update([prop]*num_elements, [(0,1,1)]*num_elements, [], [], [])
+
+    #comparison with the original model
+    data = pf3.BeamCData()
+    probe = pf3.BeamCProbe()
+    ncoords_flatten =ncoords.flatten()
+
+    print("old_model")
+
+    KC0r = np.zeros(data.KC0_SPARSE_SIZE*num_elements, dtype=pf3.INT)
+    KC0c = np.zeros(data.KC0_SPARSE_SIZE*num_elements, dtype=pf3.INT)
+    KC0v = np.zeros(data.KC0_SPARSE_SIZE*num_elements, dtype=pf3.DOUBLE)
+    Mr = np.zeros(data.M_SPARSE_SIZE*num_elements, dtype=pf3.INT)
+    Mc = np.zeros(data.M_SPARSE_SIZE*num_elements, dtype=pf3.INT)
+    Mv = np.zeros(data.M_SPARSE_SIZE*num_elements, dtype=pf3.DOUBLE)
+    N = pf3.DOF*n
+
+    print("matrices")
+
+    beams = []
+    init_k_KC0 = 0
+    init_k_M = 0
+    for n1, n2 in zip(n1s, n2s):
+        pos1 = nid_pos[n1]
+        pos2 = nid_pos[n2]
+        beam = pf3.BeamC(probe)
+        beam.init_k_KC0 = init_k_KC0
+        beam.init_k_M = init_k_M
+        beam.n1 = n1
+        beam.n2 = n2
+        beam.c1 = pf3.DOF*pos1
+        beam.c2 = pf3.DOF*pos2
+        beam.update_rotation_matrix(1., 1., 0, ncoords_flatten)
+        beam.update_probe_xe(ncoords_flatten)
+        beam.update_KC0(KC0r, KC0c, KC0v, prop)
+        beam.update_M(Mr, Mc, Mv, prop)
+        beams.append(beam)
+        init_k_KC0 += data.KC0_SPARSE_SIZE
+        init_k_M += data.M_SPARSE_SIZE
+
+    print("correct elements created")
+
+    for beam, beamcorrect in zip(model.beams, beams):
+        assert beam.n1==beamcorrect.n1, f"n1 {beam.n1}, {beamcorrect.n1}"
+        assert beam.n1==beamcorrect.n1, f"n1 {beam.n2}, {beamcorrect.n2}"
+        assert beam.c1==beamcorrect.c1, f"n1 {beam.c1}, {beamcorrect.c1}"
+        assert beam.c2==beamcorrect.c2, f"n1 {beam.c2}, {beamcorrect.c2}"
+        assert beam.init_k_KC0==beamcorrect.init_k_KC0
+        assert beam.init_k_M==beamcorrect.init_k_M
+    for i in range(len(KC0v)):
+        assert np.isclose(KC0v[i], model.KC0v[i], atol=.001, rtol=.001), f"{KC0v[i]}, {model.KC0v[i]}, i: {i}"
+
+
+    #solution testing
+    num_eigenvalues = 6
+    eigvals, eigvecsu = ssl.eigsh(A=model.KC0uu, M=model.Muu, sigma=-1., which='LM',
+            k=num_eigenvalues, tol=1e-4)
+    omegan = eigvals**0.5
+
+    alpha123 = np.array([1.875, 4.694, 7.885])
+    omega123 = alpha123**2*np.sqrt(E*Izz/(rho*A*L**4))
+    print('Theoretical omega123', omega123)
+    print('Numerical omega123', omegan)
+    print()
+    assert np.allclose(np.repeat(omega123, 2), omegan, rtol=0.015)
+
+
+def test_inertia():
+    ncoords = np.array([[1,2,3], [4,5,6], [5,6,7]])
+    model = Pyfe3DModel(ncoords, lambda x,y,z:(np.isclose(x,1),np.isclose(x,1),np.isclose(x,1),True,True,True))
+    model.load_inertia(0)
+    model.load_inertia(2)
+    model.KC0_M_update([], [], [], [], [(2.,1.,3.,7.), (6.,9.,9.,7.)])
+    assert np.allclose([2,2,2,1,3,7,0,0,0,0,0,0,6,6,6,9,9,7], model.M.diagonal())
+    assert np.allclose([0,0,0,6,6,6], model.Muu.diagonal())
+    
+
 if __name__ == "__main__":
     PLOT=True
+    test_beams()
+    test_inertia()
     test_quads()
