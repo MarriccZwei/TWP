@@ -176,6 +176,7 @@ def truss(mesh:gcl.Mesh3D, up:pfc.UnpackedPoints, lgendidx:int, idgt:nt.NDArray[
 
 def motors(mesh:gcl.Mesh3D, motors:ty.List[gcl.Point3D], motorR:float, motorL:float, motormass:float):
     sum_in_mn = sum([ine.mn for ine in mesh.inertia])
+    affected_ids_per_motor = list()
     for mtr in motors:
         affected_ids = list()
         for i, node in enumerate(mesh.nodes):
@@ -184,7 +185,9 @@ def motors(mesh:gcl.Mesh3D, motors:ty.List[gcl.Point3D], motorR:float, motorL:fl
         mn = motormass/len(affected_ids)
         for i in affected_ids:
             mesh.inertia_attach(mn, i, mtr)
+        affected_ids_per_motor.append(affected_ids)
     assert np.isclose(sum([ine.mn for ine in mesh.inertia])-sum_in_mn, 4*motormass)
+    return affected_ids_per_motor
 
 def lg(mesh:gcl.Mesh3D, uplg:gcl.Point3D, lgM, lgR, lgL, lgendidx:int, idgt:nt.NDArray[np.int32], idgb:nt.NDArray[np.int32],
        ribyidxs:ty.List[int], idxs:ty.List[int]):
@@ -272,13 +275,13 @@ def all_components(mesh:gcl.Mesh3D, up:pfc.UnpackedPoints, totmassBat:float, mot
     truss(mesh, up, lgendid, idgt, ssst, idgb, sssb, idxs, idys, lgCode, LETECode, sparCode, railCode, ribCode, totmassBat)
 
     #inertia additions
-    motors(mesh, up.motors, motorR, motorL, motormass)
+    perMotorIds = motors(mesh, up.motors, motorR, motorL, motormass)
     lgids = lg(mesh, up.lg, lgM, lgR, lgL, lgendid, idgt, idgb, idys, idxs)
     hinge(mesh, up.hinge, idgt, mhn)
     LETE(mesh, up.leline, up.teline, ssst, idgt, sssb, idgb, totmassLE, totmassTE)
 
     return {"skinTop":ssst, "skinBot":sssb}, {"skinTop":idgt, 
-            "skinBot":idgb,"lg":lgids}
+            "skinBot":idgb,"lg":lgids, "motor":perMotorIds}
 
 if __name__ == "__main__":
     from mpl_toolkits import mplot3d
