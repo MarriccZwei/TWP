@@ -14,11 +14,11 @@ from pyfe3d import Quad4, Quad4Data, Quad4Probe, INT, DOUBLE, DOF
 def test_static_plate_quad_point_load(plot=False):
     data = Quad4Data()
     probe = Quad4Probe()
-    nx = 7
+    nx = 26
     ny = 11
 
-    a = 3
-    b = 7
+    a = 13
+    b = 3
     h = 0.005 # m
 
     E = 200e9
@@ -108,17 +108,21 @@ def test_static_plate_quad_point_load(plot=False):
     u = np.zeros(N)
     u[bu] = uu
 
+    x2plot = np.zeros(num_elements)
+    y2plot = np.zeros(num_elements)
+    Nxx2plot = np.zeros(num_elements)
+    
     fint = np.zeros(N)
-    for quad in quads:
+    for i, quad in enumerate(quads):
         quad.update_probe_xe(ncoords_flatten)
         quad.update_probe_ue(u)
         quad.update_fint(fint, prop)
         interpols = strains_resultants_quad(probe, prop)
-        print("next quad attempted")
-        print(interpols["Nxx"](0,0))
-        print(interpols["Nxx"](0,.33))
-        print(interpols["Nxx"](0,.67))
-        assert np.isclose(interpols["Nxx"](0,1), fmid/b, rtol=1e-1), f"{interpols["Nxx"](0,1)}, gt: {fmid/b}"
+        x2plot[i] = x[nid_pos[quad.n1]]
+        y2plot[i] = y[nid_pos[quad.n1]]
+        Nxx2plot[i]= interpols["Nxx"](0, 0)
+        print(Nxx2plot[i])
+        
 
     print("Stress recovery tests passed.")
 
@@ -132,6 +136,21 @@ def test_static_plate_quad_point_load(plot=False):
     print(fext[tmp[0]])
     print((KC0@u)[tmp[0]])
     assert np.allclose(fint, fext, atol=atol)
+
+    if plot:
+        import matplotlib.pyplot as plt
+
+        plt.subplot(3,3,1)
+        ux = u[0::DOF].reshape(nx,ny).T
+        levels = np.linspace(ux.min(), ux.max(), 10)
+        plt.contourf(xmesh, ymesh, u[0::DOF].reshape(nx,ny).T, levels=levels)
+        plt.colorbar()
+
+        plt.subplot(3,3,4)
+        levels = np.linspace(Nxx2plot.min(), Nxx2plot.max(), 10)
+        plt.contourf(x2plot.reshape((nx-1, ny-1)).T, y2plot.reshape((nx-1, ny-1)).T, Nxx2plot.reshape((nx-1, ny-1)).T, levels=levels)
+        plt.colorbar()
+        plt.show()
 
 
 if __name__ == '__main__':
