@@ -92,16 +92,24 @@ def test_static_plate_quad_point_load(plot=False):
 
     bu = ~bk
 
-    # point load at center node
+    #load application
     fext = np.zeros(N)
     fmid = 1.
-    check = np.isclose(x, a)
-    fext[0::DOF][check] = fmid/(ny-1)
-    check = np.isclose(x, a) & (np.isclose(y,b) | np.isclose(y,0))
-    fext[0::DOF][check] /= 2
+    check1 = np.isclose(x, a)
+    check2 = np.isclose(x, a) & (np.isclose(y,b) | np.isclose(y,0))
+
+    def uniform_load(dof): 
+        fext[dof::DOF][check1] = fmid/(ny-1)
+        fext[dof::DOF][check2] /= 2
+    
+    # uniform tension, transverse shear
+    uniform_load(0)
+    uniform_load(2)
+
+    #torque with transverse shear forces
 
     KC0uu = KC0[bu, :][:, bu]
-    assert np.isclose(fext[bu].sum(), fmid)
+    assert np.isclose(fext[bu].sum(), fmid*2)
 
     uu = spsolve(KC0uu, fext[bu])
 
@@ -111,6 +119,10 @@ def test_static_plate_quad_point_load(plot=False):
     x2plot = np.zeros(num_elements)
     y2plot = np.zeros(num_elements)
     Nxx2plot = np.zeros(num_elements)
+    Nxy2plot = np.zeros(num_elements)
+    Myy2plot = np.zeros(num_elements)
+    Mxy2plot = np.zeros(num_elements)
+    Qyz2plot = np.zeros(num_elements)
     
     fint = np.zeros(N)
     for i, quad in enumerate(quads):
@@ -121,7 +133,18 @@ def test_static_plate_quad_point_load(plot=False):
         x2plot[i] = x[nid_pos[quad.n1]]
         y2plot[i] = y[nid_pos[quad.n1]]
         Nxx2plot[i]= interpols["Nxx"](0, 0)
-        print(Nxx2plot[i])
+        Myy2plot[i]= interpols["Myy"](0, 0)
+        Mxy2plot[i]= interpols["Mxy"](0, 0)
+        Qyz2plot[i]= interpols["Qyz"](1, -1)
+
+        if 2*b<x2plot[i]<a-1.5*b: #Saint-Venant principle
+            def assert_res_uniform(resultant, expr):
+                ResAround = np.array([interpols[resultant](xi, eta) for xi, eta in [(-1,-1), (1,-1), (-1, 1), (1,1), (0,0)]])
+                assert np.allclose(ResAround, expr, rtol = 1e-2), f"{ResAround}, gt: {expr}, @x {x2plot[i]}"
+            assert_res_uniform("Nxx", fmid/b)
+            #assert_res_uniform("Qyz", fmid/b)
+            #assert_res_uniform("Myy", -(a-x2plot[i])*fmid/b)
+
         
 
     print("Stress recovery tests passed.")
@@ -140,16 +163,26 @@ def test_static_plate_quad_point_load(plot=False):
     if plot:
         import matplotlib.pyplot as plt
 
-        plt.subplot(3,3,1)
-        ux = u[0::DOF].reshape(nx,ny).T
-        levels = np.linspace(ux.min(), ux.max(), 10)
-        plt.contourf(xmesh, ymesh, u[0::DOF].reshape(nx,ny).T, levels=levels)
+        ax = plt.subplot(2,2,1)
+        uz = u[2::DOF].reshape(nx,ny).T
+        levels = np.linspace(uz.min(), uz.max(), 20)
+        plt.contourf(xmesh, ymesh, uz, levels=levels)
         plt.colorbar()
+        ax.set_title("u_z")
 
-        plt.subplot(3,3,4)
-        levels = np.linspace(Nxx2plot.min(), Nxx2plot.max(), 10)
-        plt.contourf(x2plot.reshape((nx-1, ny-1)).T, y2plot.reshape((nx-1, ny-1)).T, Nxx2plot.reshape((nx-1, ny-1)).T, levels=levels)
-        plt.colorbar()
+        def resultant_plot(i, qty, title):
+            ax = plt.subplot(2,2,i)
+            levels = np.linspace(qty.min(), qty.max(), 20)
+            plt.contourf(x2plot.reshape((nx-1, ny-1)).T, 
+                         y2plot.reshape((nx-1, ny-1)).T, 
+                         qty.reshape((nx-1, ny-1)).T, levels=levels)
+            plt.colorbar()
+            ax.set_title(title)
+
+        resultant_plot(2, Nxx2plot, "Nxx")
+        resultant_plot(3, Qyz2plot, "Qyz")
+        resultant_plot(4, Myy2plot, "Myy")
+
         plt.show()
 
 
