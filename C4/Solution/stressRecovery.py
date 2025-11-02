@@ -52,7 +52,7 @@ def strains_resultants_quad(probe:pf3.Quad4Probe, shellprop:psp.ShellProp):
     E45 = shellprop.E45
     E55 = shellprop.E55
 
-    for xi, eta in [(0,0), (1,0), (0,1), (1,1)]:
+    for xi, eta in [(-1,-1), (-1,1), (1,-1), (1,1)]:
         probe.update_BL(xi, eta)
         exx.append(np.dot(probe.BLexx, probe.ue))
         eyy.append(np.dot(probe.BLeyy, probe.ue))
@@ -77,6 +77,13 @@ def strains_resultants_quad(probe:pf3.Quad4Probe, shellprop:psp.ShellProp):
         Qyz.append(E45*gxz[-1]+E55*gyz[-1])
 
     # linear interpolation coefficients
+    lambdas = dict()
+
+    def interpol(strains):
+        N1 = eta*xi/4. - eta/4. - xi/4. + 1/4.
+        N2 = -eta*xi/4. - eta/4. + xi/4. + 1/4.
+        N3 = eta*xi/4. + eta/4. + xi/4. + 1/4.
+        N4 = -eta*xi/4. + eta/4. - xi/4. + 1/4.
 
     Cexx = exx[0]
     Aexx = exx[1]-Cexx
