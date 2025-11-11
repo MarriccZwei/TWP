@@ -32,7 +32,7 @@ def get_ABDE(prop:psp.ShellProp):
                          [0, 0, 0, 0, 0, 0, prop.E45, prop.E55]], dtype=pf3.DOUBLE)
 
 def recover_stresses(strains:nt.NDArray[np.float32], E:float, nu:float, sc:float):
-    
+    '''Stress recovery for an isotropic plate'''
 
     G = E/2/(1+nu)
     E_pois = E/(1-nu**2)
@@ -55,8 +55,14 @@ def recover_stresses(strains:nt.NDArray[np.float32], E:float, nu:float, sc:float
     return normal_stresses, shear_stress, tau_yz, tau_xz
 
 
-def tripple_mohr(normal_stresses:ty.Callable, shear_stress:ty.Callable, tau_yz:float, tau_xz:float, zc:float, zs:float) -> ty.Tuple[float]:
+def tripple_mohr(normal_stresses:ty.Callable, shear_stress:ty.Callable, tau_yz:float, tau_xz:float, zmax:float) -> float:
     '''
-    Computes the highest mohr circle radius for a set of strains
+    Computes the highest mohr circle radius for a set of strains for a layer within a plate
+    '''
+    return 0
+
+def sandwich_recovery(probe:pf3.Quad4Probe, zs:float, zc:float, E:float, nu:float, sc:float) -> ty.Tuple[float]:
+    '''
+    Computes the mohr radii for the core (zc) and the sheet (zs)
     '''
     
