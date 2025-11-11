@@ -1,5 +1,7 @@
 import pyfe3d as pf3
 import numpy as np 
+import numpy.typing as nt
+import typing as ty
 import pyfe3d.shellprop as psp
 
 def strains_quad(probe:pf3.Quad4Probe):
@@ -28,3 +30,33 @@ def get_ABDE(prop:psp.ShellProp):
                          [prop.B16, prop.B26, prop.B66, prop.D16, prop.D26, prop.D66, 0, 0],
                          [0, 0, 0, 0, 0, 0, prop.E44, prop.E45],
                          [0, 0, 0, 0, 0, 0, prop.E45, prop.E55]], dtype=pf3.DOUBLE)
+
+def recover_stresses(strains:nt.NDArray[np.float32], E:float, nu:float, sc:float):
+    
+
+    G = E/2/(1+nu)
+    E_pois = E/(1-nu**2)
+    exx = strains[0]
+    eyy = strains[1]
+    gxy = strains[2]
+    kxx = strains[3]
+    kyy = strains[4]
+    kxy = strains[5]
+    gyz = strains[6]
+    gxz = strains[7]
+
+    #TODO: curvature signs - in the test when it bends up kappas are negative, we want negative strain on top if
+    # bends up,so adding kxx and kyy seems right.Ultimately it also does not matter because the sandwich is symmetric
+    normal_stresses = lambda z:E_pois*np.array([[1, nu], [nu, 1]])@np.array([kxx*z+exx, kyy*z+eyy])
+    shear_stress = lambda z:G*(gxy+kxy*z) #same story sign does not matter as you would pythagoras this anyway
+    tau_yz = G*sc*gyz
+    tau_xz = G*sc*gxz
+
+    return normal_stresses, shear_stress, tau_yz, tau_xz
+
+
+def tripple_mohr(normal_stresses:ty.Callable, shear_stress:ty.Callable, tau_yz:float, tau_xz:float, zc:float, zs:float) -> ty.Tuple[float]:
+    '''
+    Computes the highest mohr circle radius for a set of strains
+    '''
+    
