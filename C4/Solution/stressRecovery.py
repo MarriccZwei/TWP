@@ -59,10 +59,31 @@ def tripple_mohr(normal_stresses:ty.Callable, shear_stress:ty.Callable, tau_yz:f
     '''
     Computes the highest mohr circle radius for a set of strains for a layer within a plate
     '''
-    return 0
+    mohr_R = lambda sx, sy, txy: (((sx-sy)/2)**2+txy**2)**.5
+    sx_zmin, sy_zmin = normal_stresses(-zmax)
+    sx_zmax, sy_zmax = normal_stresses(zmax)
+    txy_min = shear_stress(-zmax)
+    txy_max = shear_stress(zmax)
+    return max(mohr_R(sx_zmin, sy_zmin, txy_min),
+               mohr_R(sx_zmax, sy_zmax, txy_max),
+               mohr_R(sx_zmin, 0, tau_yz),
+               mohr_R(sx_zmax, 0, tau_yz),
+               mohr_R(sy_zmin, 0, tau_xz),
+               mohr_R(sy_zmax, 0, tau_xz))
 
-def sandwich_recovery(probe:pf3.Quad4Probe, zs:float, zc:float, E:float, nu:float, sc:float) -> ty.Tuple[float]:
+
+def sandwich_recovery(probe:pf3.Quad4Probe, zmaxs:ty.List[float], Es:ty.List[float], nus:ty.List[float], sc:float) -> ty.List[float]:
     '''
-    Computes the mohr radii for the core (zc) and the sheet (zs)
+    Computes the mohr radii for each of the isotropic layers of a symmetric sandwich
     '''
+    strains = strains_quad(probe)
+    Rs = list()
+    
+    for zmax, E, nu in zip(zmaxs, Es, nus):
+        normal_core, shear_core, tyz_core, txz_core = recover_stresses(strains, E, nu, sc)
+        Rs.append(tripple_mohr(normal_core, shear_core, tyz_core, txz_core, zmax))
+
+    return Rs
+
+    
     

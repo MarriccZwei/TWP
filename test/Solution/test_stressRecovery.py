@@ -8,7 +8,7 @@ from scipy.sparse.linalg import spsolve
 from scipy.sparse import coo_matrix
 import typing as ty
 
-from pyfe3d.shellprop_utils import isotropic_plate
+from pyfe3d.shellprop_utils import laminated_plate
 from pyfe3d import Quad4, Quad4Data, Quad4Probe, INT, DOUBLE, DOF
 
 
@@ -20,10 +20,16 @@ def test_static_plate_quad_point_load(xdim:float, ydim:float, loads2apply:ty.Lis
 
     a = xdim
     b = ydim
-    h = 0.01 # m
+    h = 0.02 # m
 
     E = 200e9
     nu = 0.3
+
+    #sandwich data
+    Ec = 20e9
+    nuc = .5
+    hc = .019 # m
+    hs = (h-hc)/2
 
     xtmp = np.linspace(0, a, nx)
     ytmp = np.linspace(0, b, ny)
@@ -49,7 +55,7 @@ def test_static_plate_quad_point_load(xdim:float, ydim:float, loads2apply:ty.Lis
     KC0v = np.zeros(data.KC0_SPARSE_SIZE*num_elements, dtype=DOUBLE)
     N = DOF*nx*ny
 
-    prop = isotropic_plate(thickness=h, E=E, nu=nu, calc_scf=True)
+    prop = laminated_plate([0,0,0], laminaprops=[(E, nu), (Ec, nuc), (E, nu)], plyts=[hs, hc, hs])
 
     quads = []
     init_k_KC0 = 0
@@ -136,6 +142,9 @@ def test_static_plate_quad_point_load(xdim:float, ydim:float, loads2apply:ty.Lis
     Nxx, Nyy,Nxy, Mxx, Myy, Mxy, Qxz, Qyz = (np.zeros(num_elements), np.zeros(num_elements), 
     np.zeros(num_elements), np.zeros(num_elements), np.zeros(num_elements), np.zeros(num_elements), np.zeros(num_elements),
     np.zeros(num_elements))
+
+    sheetR, coreR, sheetR_gt, coreR_gt = (np.zeros(num_elements), np.zeros(num_elements), 
+    np.zeros(num_elements), np.zeros(num_elements))
     
     ABDE = get_ABDE(prop)
 
@@ -164,6 +173,34 @@ def test_static_plate_quad_point_load(xdim:float, ydim:float, loads2apply:ty.Lis
         Mxy[i] = resultants[5]
         Qxz[i] = resultants[6]
         Qyz[i] = resultants[7]
+        coreR[i], sheetR[i] = sandwich_recovery(probe, [hc/2, h/2], [Ec,E], [nuc, nu], prop.scf_k13)
+
+        #Gt computation
+        if not 2 in loads2apply:
+            #NOTE: gt does not account for saint venant - compare far from boundaries
+            Mgt_i = (a-x2plot[i])/b if a>b else (b-y2plot[i])/a
+            Ngt_i = 1/b if a>b else 1/a
+            #Qgt_i = Ngt_i
+
+            Ns = Ngt_i/(1+Ec/E)
+            Ms = Mgt_i/(1+Ec*hc**3/6/E/(hc+hs)**2/hs)
+            Nc = Ngt_i/(1+E/Ec)
+            Mc = Mgt_i/(1+E/hc**3*6/Ec*(hc+hs)**2*hs)
+
+            sheetR_gt[i] = (.25*(Ms/hs/(hs+hc)+Ns/2/hs)**2+(Ns/2/hs)**2)**.5
+            coreR_gt[i] = (.25*(6*Mc/hc**2+Nc/hc)**2+(Nc/hc)**2)**.5
+        else:
+            Qs = Nxy[i]/(1+Ec/E)
+            Ts = Mxy[i]/(1+Ec*hc**3/6/E/(hc+hs)**2/hs)
+            Ns = (Nyy[i]-Nxx[i])/(1+Ec/E) #what goes into mohr
+            Qc = Nxy[i]/(1+E/Ec)
+            Tc = Mxy[i]/(1+E/hc**3*6/Ec*(hc+hs)**2*hs)
+            Nc = (Nyy[i]-Nxx[i])/(1+E/Ec)
+
+            sheetR_gt[i] = (.25*(Ns/2/hs)**2+(Qs/2/hs+Ts/hs/(hs+hc))**2)**.5
+            coreR_gt[i] = (.25*(Nc/hc)**2+(Qc/hc+6*Tc/hc**2)**2)**.5
+
+
 
     # NOTE adding reaction forces to external force vector
     Kku = KC0[bk, :][:, bu]
@@ -176,11 +213,11 @@ def test_static_plate_quad_point_load(xdim:float, ydim:float, loads2apply:ty.Lis
     print((KC0@u)[tmp[0]])
     assert np.allclose(fint, fext, atol=atol)
 
-    if plot:
+    if len(plot)>0:
         import matplotlib.pyplot as plt
 
-        def resultant_plot(i, qty, title):
-            ax = plt.subplot(2,4,i)
+        def resultant_plot(i, qty, title, rows=2, cols=4):
+            ax = plt.subplot(rows,cols,i)
             levels = np.linspace(qty.min(), qty.max(), 50)
             plt.contourf(x2plot.reshape((nx-1, ny-1)).T, 
                          y2plot.reshape((nx-1, ny-1)).T, 
@@ -188,30 +225,42 @@ def test_static_plate_quad_point_load(xdim:float, ydim:float, loads2apply:ty.Lis
             plt.colorbar()
             ax.set_title(title)
 
-        resultant_plot(1, exx, "exx")
-        resultant_plot(2, eyy, "eyy")
-        resultant_plot(3, gxy, "gxy")
-        resultant_plot(4, gxz, "gxz")
-        resultant_plot(8, gyz, "gyz")
-        resultant_plot(5, kxx, "kxx")
-        resultant_plot(6, kyy, "kyy")
-        resultant_plot(7, kxy, "kxy")
+        if 0 in plot:
+            resultant_plot(1, exx, "exx")
+            resultant_plot(2, eyy, "eyy")
+            resultant_plot(3, gxy, "gxy")
+            resultant_plot(4, gxz, "gxz")
+            resultant_plot(8, gyz, "gyz")
+            resultant_plot(5, kxx, "kxx")
+            resultant_plot(6, kyy, "kyy")
+            resultant_plot(7, kxy, "kxy")
 
-        plt.show()
+            plt.subplots_adjust(wspace=.5)
+            plt.show()
 
-        resultant_plot(1, Nxx, "Nxx")
-        resultant_plot(2, Nyy, "Nyy")
-        resultant_plot(3, Nxy, "Nxy")
-        resultant_plot(4, Qxz, "Qxz")
-        resultant_plot(8, Qyz, "Qyz")
-        resultant_plot(5, Mxx, "Mxx")
-        resultant_plot(6, Myy, "Myy")
-        resultant_plot(7, Mxy, "Mxy")
+        if 1 in plot:
+            resultant_plot(1, Nxx, "Nxx")
+            resultant_plot(2, Nyy, "Nyy")
+            resultant_plot(3, Nxy, "Nxy")
+            resultant_plot(4, Qxz, "Qxz")
+            resultant_plot(8, Qyz, "Qyz")
+            resultant_plot(5, Mxx, "Mxx")
+            resultant_plot(6, Myy, "Myy")
+            resultant_plot(7, Mxy, "Mxy")
 
-        plt.show()
+            plt.subplots_adjust(wspace=.5)
+            plt.show()
+
+        if 2 in plot:
+            resultant_plot(1, coreR, "core R", 2, 2)
+            resultant_plot(2, sheetR, "sheet R", 2, 2)
+            resultant_plot(3, coreR_gt, "core GT", 2, 2)
+            resultant_plot(4, sheetR_gt, "sheet GT", 2, 2)
+            plt.show()
 
 
 if __name__ == '__main__':
-    test_static_plate_quad_point_load(1, .1, [0,6], plot=True)
-    test_static_plate_quad_point_load(.1, 1, [1,7], plot=True)
-    test_static_plate_quad_point_load(.1, 1, [2,5], plot=True)
+    #plot is empty => don't plot plot has 0 plot strains, plot has 1 plot resultants, plot has 2 - plot radii
+    test_static_plate_quad_point_load(1, .1, [0,6], plot=[2])
+    test_static_plate_quad_point_load(.1, 1, [1,7], plot=[2])
+    test_static_plate_quad_point_load(.1, 1, [2,5], plot=[2])

@@ -8,7 +8,7 @@ from scipy.sparse import coo_matrix
 from pyfe3d.beamprop import BeamProp
 from pyfe3d import BeamC, BeamCData, BeamCProbe, DOF, INT, DOUBLE
 
-def test_nat_freq_cantilever(refinement=1, mtypes=range(2)):
+def test_nat_freq_cantilever(refinement=2, mtypes=range(2)):
     for mtype in mtypes:
         print('mtype', mtype)
         n = 50*refinement
