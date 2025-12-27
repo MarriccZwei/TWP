@@ -106,7 +106,7 @@ class Pyfe3DModel():
 
 
     def load_inertia(self, pos:int):
-        '''loads a holder for additional per node inertia, initialised form te node pos'''
+        '''loads a holder for additional per node inertia, initialised form the node pos'''
         self.inertia_poses.append(pos)
 
 
@@ -249,8 +249,8 @@ class Pyfe3DModel():
         The mass of beams and quads, NOT including inertias
         '''
         structmass = 0
-        structmass += [self._beam_mass(beam, beamprop) for beam, beamprop in zip(self.beams, self.beamprops)]
-        structmass += [self._quad_mass(quad, rho, thickness) for quad in self.quads]
+        structmass += sum(self._beam_mass(beam, beamprop) for beam, beamprop in zip(self.beams, self.beamprops))
+        structmass += sum(self._quad_mass(quad, rho, thickness) for quad in self.quads)
         return structmass
 
 
@@ -268,6 +268,6 @@ class Pyfe3DModel():
         #area of the skin
         area = .5*(np.linalg.norm(np.cross(coords4-coords1, coords2-coords1))+ 
                 np.linalg.norm(np.cross(coords2-coords3, coords4-coords3)))
-        #TODO: mass contributions of the stiffeners
+        #NOTE: it is assumed the quad is a uniform plate - to use with sandwiches one has to use equivalent density
 
         return rho*thickness*area
