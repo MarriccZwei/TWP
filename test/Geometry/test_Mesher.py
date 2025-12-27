@@ -34,6 +34,18 @@ def test_ine_beam_quad_mesh():
     assert np.allclose(quadIdx, np.array([0,1,2,3,4,5,6]))
     assert np.allclose(quadCoord, np.array([(0.,0.,0.), (0., 1., 0.), (-1., 1., 0.), (-1.,0.,0.), (0.01,0.,0.), (1., 1., 0.), (1.,0.,0.)]), atol=2e-2)
 
+    cIdx, cCoord = mesher.get_submesh('c')
+    assert np.allclose(cIdx, np.array([7,1]))
+    assert np.allclose(cCoord, np.array([(0.,-0.01,0.), (0.,1.,0.)]), atol=2e-2)
+
+    bIdx, bCoord = mesher.get_submesh('b')
+    assert np.allclose(bIdx, np.array([0,3]))
+    assert np.allclose(bCoord, np.array([(0.,-0.005,0.), (-1.001,0.,0.)]), atol=2e-2)
+
+    iIdx, iCoord = mesher.get_submesh('i')
+    assert np.allclose(iIdx, np.array([5]))
+    assert np.allclose(iCoord, np.array([(1.,1.,0.),]), atol=2e-2)
+
 if __name__ == "__main__":
     test_ine_beam_quad_mesh()
     print("test Mesher passed")
