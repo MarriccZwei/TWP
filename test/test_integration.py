@@ -4,7 +4,8 @@ from ..C4.LoadCase import LoadCase
 
 import aerosandbox as asb 
 import pyfe3d as pf3
-import scipy.sparse.linalg as ssl
+#import scipy.sparse.linalg as ssl
+from pypardiso import spsolve
 import numpy as np
 import pyvista as pv
 
@@ -38,12 +39,11 @@ def test_self_weight():
     f = lc.loadstack()
 
     fu = f[model.bu]
-    uu, info = ssl.cg(model.KC0uu, fu, atol=1e-4)
-    print(info)
+    uu = spsolve(model.KC0uu, fu, atol=1e-4)
     u = np.zeros(model.N)
     u[model.bu] = uu
     u = u.reshape((model.N//pf3.DOF, pf3.DOF))[:,:3] #3d displacements
-    coords = model.ncoords+u#for scailing
+    coords = model.ncoords+5*u#for scaling
     print(fu)
 
     cells = list()
