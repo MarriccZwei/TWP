@@ -34,11 +34,11 @@ class Pyfe3DModel():
 
         self.beams:ty.List[pf3.BeamC] = list()
         self.beamprops:ty.List[pbp.BeamProp] = list()
-        self.beamorients:ty.List[ty.Tuple[int]] = list()
+        self.beamorients:ty.List[ty.Tuple[float]] = list()
 
         self.quads:ty.List[pf3.Quad4] = list()
         self.shellprops:ty.List[psp.ShellProp] = list()
-        self.matdirs:ty.List[ty.Tuple[int]] = list()
+        self.matdirs:ty.List[ty.Tuple[float]] = list()
 
         self.inertia_poses:ty.List[int]=list() #list of poses for inertia to be added at
         self.inertia_vals:ty.List[ty.Tuple[float]] = list() #(m, Jxx, Jyy, Jzz) the inertia additions

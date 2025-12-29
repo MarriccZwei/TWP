@@ -6,9 +6,10 @@ import C4.Geometry.meshingComponents as mc
 import constants as cst
 import Solution as sol
 import scipy.optimize as opt
+import typing as ty
 
 class Optimiser():
-    def __init__(self):
+    def __init__(self, desvars:ty.Dict[str,float]):
         '''Initializes the optimzer based on the constants file'''
 
     def constraints(self):

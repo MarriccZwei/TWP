@@ -1,1 +1,0 @@
-'''Here be element prop definition for every code from cst.Codes - eleDict but refactored for not using inherited elements'''
