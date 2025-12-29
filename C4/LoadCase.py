@@ -3,7 +3,6 @@ import numpy as np
 import numpy.typing as nt
 import scipy.sparse as ss
 import typing as ty
-import geometricClasses as gcl
 import scipy.spatial as ssp
 
 class LoadCase():
@@ -12,6 +11,7 @@ class LoadCase():
         self.nlg = nlg #landing gear normal force load factor
         self.N = N #total number of degrees of freedom in the model
         self.DOF = DOF #number of degrees of freedom per node
+        assert N%DOF==0
         self.g0 = g0 #ravitational acceleration
         self.Ft = thrust_per_motor
         self.op = op_point
@@ -19,13 +19,15 @@ class LoadCase():
         self.A = np.zeros(N) #here be the aerodynamic loads (basically lift)
         self.W = np.zeros(N) #the current value of the model's weight
         self.T = np.zeros(N) #here be the thrust
+        self.L = np.zeros(N) #here be the landing loads
         self.KA = np.zeros((N, N)) #here be the aerodynamic matrix
 
 
     def apply_aero(self, ncoords_affected:nt.NDArray[np.float32], nid_pos_affected:nt.NDArray[np.int32],
-                   les:ty.List[gcl.Point3D], tes:ty.List[gcl.Point3D], airfs:ty.List[asb.Airfoil],
+                   les:ty.List, tes:ty.List, airfs:ty.List[asb.Airfoil],
                    ymin:float, bres:int=20, cres:int=10):
         '''Conducting an aerodynamic simulation based on skin nodes, returning Fext and KA'''
+        #TODO: remove gcl refs
         vlm_, dFv_dp = self._calc_dFv_dp(les, tes, airfs, self.op, ymin, bres, cres, np.zeros(len(airfs)*2))
         W, self.A = self._aero2fem(vlm_, ncoords_affected, nid_pos_affected, self.N, self.DOF)
         W_u_to_p = self._fem2aero(les, np.zeros(len(airfs)*2), ncoords_affected, nid_pos_affected, self.N, self.DOF)
@@ -38,13 +40,20 @@ class LoadCase():
 
     def update_weight(self, M:ss.coo_matrix):
         '''Applying weight to every node using a passed mass matrix, inclues weight rotation wrt aoa'''
-    
+        aoa = np.deg2rad(self.op.alpha)
+        nNodes = self.N//self.DOF
+        ntot = self.n+self.nlg
+        gvect = [0]*self.DOF
+        gvect[0] = ntot*self.g0*np.sin(aoa)
+        gvect[2] = -ntot*self.g0*np.cos(aoa) 
+        gvect = np.array(gvect*nNodes)  
+        self.W = M@gvect
 
     def apply_landing(self, nid_pos_affected:nt.NDArray[np.int32]):
         '''Applying the landing load to every node affected, assume uniformly distributed, against the direction of weight'''
     
     def loadstack(self):
-        return self.L+self.T+self.W
+        return self.A+self.T+self.W+self.L
 
     #=====IMPLEMENTATION OF ROTATION WRT AOA==============================
     def _rotate_4_aoa(self, load:nt.NDArray[np.float32]):
@@ -86,7 +95,7 @@ class LoadCase():
 
         return ss.csc_matrix(W), Fext
 
-    def _fem2aero(self, les:ty.List[gcl.Point3D], p:nt.NDArray[np.float32], ncoords_s:nt.NDArray[np.float32], ids_s:nt.NDArray[np.int32], N:int, DOF:int,
+    def _fem2aero(self, les:ty.List, p:nt.NDArray[np.float32], ncoords_s:nt.NDArray[np.float32], ids_s:nt.NDArray[np.int32], N:int, DOF:int,
                 number_of_neighbors=2):
         twists = p[len(les):]#also skipping the twist for now
         deform_dir = gcl.Direction3D(0,0,1)
@@ -112,7 +121,7 @@ class LoadCase():
             
         return ss.csc_matrix(W_u_to_p)
 
-    def _vlm(self, les:ty.List[gcl.Point3D], tes:ty.List[gcl.Point3D], airfs:ty.List[asb.Airfoil],
+    def _vlm(self, les:ty.List, tes:ty.List, airfs:ty.List[asb.Airfoil],
             op:asb.OperatingPoint, bres:int=20, cres:int=10, displs:ty.List[float]=None, return_sol=False):
         #allowing for initial displacements for flutter. Yet, for static analysis we dont's need displacements
         if displs is None:
@@ -145,7 +154,7 @@ class LoadCase():
             return airplane, vlm, forces, moments
 
 
-    def _calc_dFv_dp(self, les:ty.List[gcl.Point3D], tes:ty.List[gcl.Point3D], airfs:ty.List[asb.Airfoil], #TODO: refactor the displs
+    def _calc_dFv_dp(self, les:ty.List, tes:ty.List, airfs:ty.List[asb.Airfoil], #TODO: refactor the displs
             op:asb.OperatingPoint, ymin:float, bres:int=20, cres:int=10, displs:ty.List[float]=None, return_sol=False, epsilon=.01):
         
         airplane, vlm_, forces, moments = self._vlm(les, tes, airfs, op, bres, cres, displs, return_sol)

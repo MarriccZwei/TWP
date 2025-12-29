@@ -24,7 +24,7 @@ def geometry_init(catiaout:str, collisionDecimalPlaces:int=5) -> ty.Tuple[Pyfe3D
     #2) initialising the model
     ncoords = np.array(mesher.nodes)
     yfus = ncoords[:,1].min()
-    boundary = lambda x,y,z:tuple([np.isclose(y, yfus, atol=10**collisionDecimalPlaces)]*pf3.DOF)
+    boundary = lambda x,y,z:tuple([np.isclose(y, yfus, atol=.1**collisionDecimalPlaces)]*pf3.DOF)
     model = Pyfe3DModel(np.array(mesher.nodes), boundary)
 
     #3) loading the elements into the model
