@@ -3,18 +3,18 @@ import numpy as np
 import numpy.typing as nt
 
 class Mesher:
-    def __init__(self, decimalPlaces:int=2):
+    def __init__(self, decimalPlaces:int=5):
         self.nodes:ty.List[ty.Tuple[float]] = list() #tuples in format (x, y, z)
         
         self.eleTypes:ty.List[str] = list()
         self.eleNodePoses:ty.List[ty.List[int]] = list()
-        self.eleArgs:ty.List[ty.Dict[str, object]] = list()
+        self.eleArgs:ty.List[ty.List[float]] = list()
 
         self._nodesHashMap:ty.Dict[ty.Tuple[int], int] = dict()
         self._DECIMAL_PLACES = decimalPlaces
         self._submeshIdxHashMap:ty.Dict[str, ty.Dict[int,object]] = dict()
 
-    def load_ele(self, eleNodes:ty.List[ty.Tuple], eleType:str, eleArg:ty.Dict[str, object]):
+    def load_ele(self, eleNodes:ty.List[ty.Tuple[float]], eleType:str, eleArg:ty.List[float]):
         '''
         Adds an element to the mesh
         
@@ -22,8 +22,8 @@ class Mesher:
         :type eleNodes: ty.List[ty.Tuple]
         :param eleType: a string id corresponding to the in-model element types, i.e. a skin panel - 'sk'
         :type eleType: str
-        :param eleArg: keyword arguments needed to initialise an element of a given eleType
-        :type eleArg: ty.Dict[str, object]
+        :param eleArg: arguments needed to initialise an element of a given eleType
+        :type eleArg: ty.List[float]
         '''
         #0) passing forth the eleType and eleArg
         self.eleTypes.append(eleType)
