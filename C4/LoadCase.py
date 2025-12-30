@@ -6,7 +6,7 @@ import typing as ty
 import scipy.spatial as ssp
 
 class LoadCase():
-    def __init__(self, n:float, nlg:float, DOF:float, N:float, g0:float, thrust_per_motor:float, op_point:asb.OperatingPoint):
+    def __init__(self, n:float, nlg:float, DOF:float, N:float, g0:float, thrust_per_motor:float, op_point:asb.OperatingPoint, aeroelastic:bool=False):
         self.n = n #load factor
         self.nlg = nlg #landing gear normal force load factor
         self.N = N #total number of degrees of freedom in the model
@@ -15,6 +15,7 @@ class LoadCase():
         self.g0 = g0 #ravitational acceleration
         self.Ft = thrust_per_motor
         self.op = op_point
+        self.aeroelastic = aeroelastic #do we evaluate flutter for this load case
 
         self.A = np.zeros(N) #here be the aerodynamic loads (basically lift)
         self.W = np.zeros(N) #the current value of the model's weight
@@ -23,7 +24,7 @@ class LoadCase():
         self.KA = np.zeros((N, N)) #here be the aerodynamic matrix
 
 
-    def apply_aero(self, ncoords_affected:nt.NDArray[np.float32], nid_pos_affected:nt.NDArray[np.int32],
+    def aerodynamic_matrix(self, ncoords_affected:nt.NDArray[np.float32], nid_pos_affected:nt.NDArray[np.int32],
                    les:ty.List, tes:ty.List, airfs:ty.List[asb.Airfoil],
                    ymin:float, bres:int=20, cres:int=10):
         '''Conducting an aerodynamic simulation based on skin nodes, returning Fext and KA'''
@@ -33,6 +34,15 @@ class LoadCase():
         W_u_to_p = self._fem2aero(les, np.zeros(len(airfs)*2), ncoords_affected, nid_pos_affected, self.N, self.DOF)
         self.KA = W @ dFv_dp @ W_u_to_p 
     
+    def apply_aero(self, nid_pos_affected:nt.NDArray[np.int32], coords_affect:nt.NDArray[np.float64]):
+        '''
+        Applying the aerodynamic load to the given subset of nodes
+
+        :param nid_pos_affected: matrix indices of the affected nodes
+        :type nid_pos_affected: nt.NDArray[np.int32]
+        :param coords_affect: ncoords-formatted coordinates of the nodes affected
+        :type coords_affect: nt.NDArray[np.float64]
+        '''
 
     def apply_thrust(self, nid_pos_affected:nt.NDArray[np.int32]):
         '''Applying the thrust at the affected nodes'''
