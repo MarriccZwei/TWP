@@ -9,11 +9,10 @@ from pypardiso import spsolve
 import pyfe3d as pf3
 import scipy.sparse as ss
 import scipy.sparse.linalg as ssl
-
-from . import stressRecovery as sr
+import pyvista as pv
 
 def process_load_case(model:Pyfe3DModel, lc:LoadCase, materials:ty.Dict[str, float], desvars:ty.Dict[str, float],
-                      beamTypes:ty.List[str], quadTypes:ty.List[str], plot:bool=False, saveDir:str=None)->nt.NDArray[np.float64]:
+                      beamTypes:ty.List[str], quadTypes:ty.List[str], plot:bool=False, savePath:str=None)->nt.NDArray[np.float64]:
     '''
     Docstring for process_load_case
     
@@ -24,8 +23,8 @@ def process_load_case(model:Pyfe3DModel, lc:LoadCase, materials:ty.Dict[str, flo
     :type lc: LoadCase
     :param plot: whether or not to plot to results
     :type plot: bool
-    :param saveDir: where to save results, if set to None, but plot==True, will show the plots instead
-    :type saveDir: str
+    :param savePath: where to save results, if set to None, but plot==True, will show the plots instead
+    :type savePath: str
     :returns: An array with maximum quad stress margin, beam stress margin, buckling load multiplier, flutter bool as float, 0.=>stable
     :type return: NDArray[float64]
     '''
@@ -42,20 +41,13 @@ def process_load_case(model:Pyfe3DModel, lc:LoadCase, materials:ty.Dict[str, flo
     KGr = np.zeros(model.sizeKG, dtype=pf3.INT)
     KGc = np.zeros(model.sizeKG, dtype=pf3.INT)
     KGv = np.zeros(model.sizeKG, dtype=pf3.DOUBLE)
-
-    Ea = materials["E_ALU"]
-    Ef = materials["E_FOAM"]
-    nua = materials["NU_ALU"]
-    nuf = materials["NU_FOAM"]
-    rhoa = materials["RHO_ALU"]
-    rhof = materials["RHO_FOAM"]
     
     #2.1) quad postprocessing
     for quad, matdir, shellprop, quadType in zip(model.quads, model.matdirs, model.shellprops, quadTypes):
         quad.update_probe_xe(model.ncoords_flatten)
         quad.update_probe_ue(u)
         quad.update_KG(KGr, KGc, KGv, shellprop)
-        quad_failure_margins.append(quad_stress_recovery(desvars, materials, quad, shellprop, matdir, quadType))
+        quad_failure_margins.append(quad_stress_recovery(desvars, materials, quad, shellprop, matdir, quadType, model.quadprobe))
 
     #2.3) buckling
     KG = ss.coo_matrix((KGv, (KGr, KGc)), shape=(model.N, model.N)).tocsc()
@@ -68,8 +60,48 @@ def process_load_case(model:Pyfe3DModel, lc:LoadCase, materials:ty.Dict[str, flo
     eigvecs[model.bu] = eigvecsu
     load_mult = eigvals[0]
 
+    if plot:
+        displ = u.reshape((model.N//pf3.DOF, pf3.DOF))[:,:3] #3d displacements
+        coords = model.ncoords+5*displ#for scaling
+        cells = list()
+        for quad in model.quads:
+            cells.append([4, model.nid_pos[quad.n1], model.nid_pos[quad.n2], model.nid_pos[quad.n3], model.nid_pos[quad.n4]])
+        cells = np.array(cells).flatten()
+
+        cell_types = np.full(len(model.quads), pv.CellType.QUAD)
+        mesh = pv.UnstructuredGrid(cells, cell_types, coords)
+
+        pts = list()
+        for ine in model.inertia_poses:
+            pts.append(coords[ine,:])
+        pts = np.array(pts)
+        cloud = pv.PolyData(pts)
+
+        plotter = pv.Plotter()
+        
+        mesh.cell_data["stress"] = np.array(quad_failure_margins)
+        plotter.add_mesh(
+            mesh,
+            show_edges=True,
+            cmap="coolwarm",
+            scalars="stress",
+            edge_color="black"
+        )
+
+        plotter.add_mesh(
+            cloud,
+            point_size=6,
+            render_points_as_spheres=True,
+            cmap="viridis"
+        )
+
+        if savePath is None:
+            plotter.show()
+        else:
+            raise NotImplementedError
+
     return np.array([
-        0.,
+        max(quad_failure_margins),
         0.,
         load_mult,
         0.

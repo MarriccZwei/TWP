@@ -2,6 +2,7 @@ import pyfe3d as pf3
 import numpy as np 
 import numpy.typing as nt
 import typing as ty
+import scipy.linalg as sl
 import pyfe3d.shellprop as psp
 
 def strains_quad(probe:pf3.Quad4Probe):
@@ -54,7 +55,7 @@ def recover_stresses(strains:nt.NDArray[np.float32], E:float, nu:float, sc:float
 
     return normal_stresses, shear_stress, tau_yz, tau_xz
 
-
+#TODO: get rid of
 def tripple_mohr(normal_stresses:ty.Callable, shear_stress:ty.Callable, tau_yz:float, tau_xz:float, zmax:float) -> float:
     '''
     Computes the highest mohr circle radius for a set of strains for a layer within a plate
@@ -84,6 +85,14 @@ def sandwich_recovery(probe:pf3.Quad4Probe, zmaxs:ty.List[float], Es:ty.List[flo
         Rs.append(tripple_mohr(normal_core, shear_core, tyz_core, txz_core, zmax))
 
     return Rs
+#=====================================
+    
+def von_mises(s_11, s_22, s_33, s_12, s_23, s_13):
+    return np.sqrt(((s_11-s_22)**2+(s_22-s_33)**2+(s_33-s_11)**2)/2+3*(s_12**2+s_23**2+s_13**2))
 
-    
-    
+def foam_crit(s_11, s_22, s_33, s_12, s_23, s_13, nu):
+    alpha2 = 9*(.5-nu)/(1+nu)
+    s_princ = sl.eigh(np.array([(s_11, s_12, s_13), (s_12, s_22, s_23), (s_13, s_23, s_33)]), eigvals_only=True)
+    s_v2 = ((s_princ[0]-s_princ[1])**2+(s_princ[1]-s_princ[2])**2+(s_princ[2]-s_princ[0])**2)/2
+    s_m2 = np.average(s_princ)**2
+    return np.sqrt((s_v2+alpha2*s_m2)/(1+alpha2/9))

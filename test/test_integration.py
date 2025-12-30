@@ -26,10 +26,12 @@ def test_self_weight():
     materials = {
         'E_ALU':72.4e9,
         'NU_ALU':.33,
-        'RHO_ALU':2780,
+        'RHO_ALU':2780.,
+        'SF_ALU':323.33e6,
         'E_FOAM':6.68e9,
         'NU_FOAM':.275,
-        'RHO_FOAM':688
+        'RHO_FOAM':688.,
+        'SF_FOAM':45e6
     }
 
     ep = load_ele_props(desvars, materials, mesher.eleTypes, mesher.eleArgs)
@@ -49,44 +51,11 @@ def test_self_weight():
     uu = spsolve(model.KC0uu, fu, atol=1e-4)
     u = np.zeros(model.N)
     u[model.bu] = uu
-    u = u.reshape((model.N//pf3.DOF, pf3.DOF))[:,:3] #3d displacements
-    coords = model.ncoords+5*u#for scaling
     
     #post processing
-    margins = process_load_case(model, lc, materials, desvars, ep["beamtypes"], ep["quadtypes"])
+    margins = process_load_case(model, lc, materials, desvars, ep["beamtypes"], ep["quadtypes"], plot=True)
     print(margins)
 
-    cells = list()
-    for quad in model.quads:
-        cells.append([4, model.nid_pos[quad.n1], model.nid_pos[quad.n2], model.nid_pos[quad.n3], model.nid_pos[quad.n4]])
-    cells = np.array(cells).flatten()
-
-    cell_types = np.full(len(model.quads), pv.CellType.QUAD)
-    mesh = pv.UnstructuredGrid(cells, cell_types, coords)
-
-    pts = list()
-    for ine in model.inertia_poses:
-        pts.append(coords[ine,:])
-    pts = np.array(pts)
-    cloud = pv.PolyData(pts)
-
-    plotter = pv.Plotter()
-    
-    plotter.add_mesh(
-        mesh,
-        show_edges=True,
-        color="lightblue",
-        edge_color="black"
-    )
-
-    plotter.add_mesh(
-        cloud,
-        point_size=6,
-        render_points_as_spheres=True,
-        cmap="viridis"
-    )
-
-    plotter.show()
 
 if __name__ == "__main__":
     test_self_weight()
