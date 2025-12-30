@@ -1,5 +1,6 @@
 from ..C4.Geometry.geometryInit import geometry_init
 from ..C4.Solution.eleProps import load_ele_props
+from ..C4.Solution.processLoadCase import process_load_case
 from ..C4.LoadCase import LoadCase
 
 import aerosandbox as asb 
@@ -31,9 +32,15 @@ def test_self_weight():
         'RHO_FOAM':688
     }
 
-    beamprops, beamorients, shellprops, matdirs, inertiavals = load_ele_props(desvars, materials, mesher.eleTypes, mesher.eleArgs)
+    ep = load_ele_props(desvars, materials, mesher.eleTypes, mesher.eleArgs)
 
-    model.KC0_M_update(beamprops, beamorients, shellprops, matdirs, inertiavals)
+    beamprops = ep["beamprops"]
+    beamorients = ep["beamorients"]
+    shellprops = ep["shellprops"]
+    matdirs = ep["matdirs"]
+    inertia_vals = ep["inertia_vals"]
+
+    model.KC0_M_update(beamprops, beamorients, shellprops, matdirs, inertia_vals)
     lc = LoadCase(1.5, 1., pf3.DOF, model.N, 9.81, 0, asb.OperatingPoint(alpha=15.))
     lc.update_weight(model.M)
     f = lc.loadstack()
@@ -44,7 +51,10 @@ def test_self_weight():
     u[model.bu] = uu
     u = u.reshape((model.N//pf3.DOF, pf3.DOF))[:,:3] #3d displacements
     coords = model.ncoords+5*u#for scaling
-    print(fu)
+    
+    #post processing
+    margins = process_load_case(model, lc, materials, desvars, ep["beamtypes"], ep["quadtypes"])
+    print(margins)
 
     cells = list()
     for quad in model.quads:
