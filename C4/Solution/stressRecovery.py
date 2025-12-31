@@ -109,10 +109,10 @@ def beam_strains(probe:pf3.Quad4Probe)->ty.Tuple[ty.Callable[[float, float], flo
     '''
     L = probe.xe[3]-probe.xe[0]
     epsilon = (probe.ue[6]-probe.ue[0])/L
-    kappa_y = -(probe.ue[10]-probe.ue[4])/L
-    kappa_z = (probe.ue[11]-probe.ue[5])/L
-    gamma_y = (probe.ue[7]-probe.ue[1])/L-(probe.ue[10]+probe.ue[4])/2
-    gamma_z = (probe.ue[8]-probe.ue[2])/L+(probe.ue[11]+probe.ue[5])/2
+    kappa_y = -(probe.ue[11]-probe.ue[5])/L
+    kappa_z = (probe.ue[10]-probe.ue[4])/L
+    gamma_y = (probe.ue[7]-probe.ue[1])/L-(probe.ue[11]+probe.ue[5])/2
+    gamma_z = (probe.ue[8]-probe.ue[2])/L+(probe.ue[10]+probe.ue[4])/2
     kappa_x = (probe.ue[9]-probe.ue[3])/L
 
     e_xx = lambda ye, ze: epsilon+kappa_y*ye+kappa_z*ze

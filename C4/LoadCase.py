@@ -4,17 +4,19 @@ import numpy.typing as nt
 import scipy.sparse as ss
 import typing as ty
 import scipy.spatial as ssp
+import pyfe3d as pf3
 
 class LoadCase():
-    def __init__(self, n:float, nlg:float, DOF:float, N:float, g0:float, thrust_per_motor:float, op_point:asb.OperatingPoint, aeroelastic:bool=False):
+    def __init__(self, n:float, nlg:float, MTOM:float, N:float, g0:float, 
+                 thrust_per_motor:float, op_point:asb.OperatingPoint, aeroelastic:bool=False):
         self.n = n #load factor
         self.nlg = nlg #landing gear normal force load factor
         self.N = N #total number of degrees of freedom in the model
-        self.DOF = DOF #number of degrees of freedom per node
-        assert N%DOF==0
+        assert N%pf3.DOF==0
         self.g0 = g0 #ravitational acceleration
         self.Ft = thrust_per_motor
         self.op = op_point
+        self.MTOM = MTOM
         self.aeroelastic = aeroelastic #do we evaluate flutter for this load case
 
         self.A = np.zeros(N) #here be the aerodynamic loads (basically lift)
@@ -30,11 +32,11 @@ class LoadCase():
         '''Conducting an aerodynamic simulation based on skin nodes, returning Fext and KA'''
         #TODO: remove gcl refs
         vlm_, dFv_dp = self._calc_dFv_dp(les, tes, airfs, self.op, ymin, bres, cres, np.zeros(len(airfs)*2))
-        W, self.A = self._aero2fem(vlm_, ncoords_affected, nid_pos_affected, self.N, self.DOF)
-        W_u_to_p = self._fem2aero(les, np.zeros(len(airfs)*2), ncoords_affected, nid_pos_affected, self.N, self.DOF)
+        W, self.A = self._aero2fem(vlm_, ncoords_affected, nid_pos_affected, self.N, pf3.DOF)
+        W_u_to_p = self._fem2aero(les, np.zeros(len(airfs)*2), ncoords_affected, nid_pos_affected, self.N, pf3.DOF)
         self.KA = W @ dFv_dp @ W_u_to_p 
     
-    def apply_aero(self, nid_pos_affected:nt.NDArray[np.int32], coords_affect:nt.NDArray[np.float64]):
+    def apply_aero(self, nid_pos_affected:nt.NDArray[np.int32], coords_affected:nt.NDArray[np.float64]):
         '''
         Applying the aerodynamic load to the given subset of nodes
 
@@ -44,23 +46,50 @@ class LoadCase():
         :type coords_affect: nt.NDArray[np.float64]
         '''
 
-    def apply_thrust(self, nid_pos_affected:nt.NDArray[np.int32]):
+    def apply_thrust(self, nid_pos_affected:nt.NDArray[np.int32], coords_affected:nt.NDArray[np.float64]):
         '''Applying the thrust at the affected nodes'''
     
 
     def update_weight(self, M:ss.coo_matrix):
         '''Applying weight to every node using a passed mass matrix, inclues weight rotation wrt aoa'''
         aoa = np.deg2rad(self.op.alpha)
-        nNodes = self.N//self.DOF
+        nNodes = self.N//pf3.DOF
         ntot = self.n+self.nlg
-        gvect = [0]*self.DOF
+        gvect = [0]*pf3.DOF
         gvect[0] = ntot*self.g0*np.sin(aoa)
         gvect[2] = -ntot*self.g0*np.cos(aoa) 
         gvect = np.array(gvect*nNodes)  
         self.W = M@gvect
 
-    def apply_landing(self, nid_pos_affected:nt.NDArray[np.int32]):
+
+    def apply_landing(self, nid_pos_affected:nt.NDArray[np.int32], coords_affected:nt.NDArray[np.float64]):
         '''Applying the landing load to every node affected, assume uniformly distributed, against the direction of weight'''
+        nnodes = len(nid_pos_affected)
+        fl = np.zeros(nnodes*pf3.DOF)
+        NL = self.MTOM*self.g0*self.nlg/2/nnodes #overall landing load per node in the earth upwards direction
+        NLx = NL*np.sin(np.deg2rad(self.op.alpha))
+        NLz = NL*np.cos(np.deg2rad(self.op.alpha))
+        fl[0::pf3.DOF] = NLx
+        fl[2::pf3.DOF] = NLz
+        
+        #moment correction -split the nodes into top and bottom ones and apply loads in opposing directions to those parts
+        zavg = np.average(coords_affected[:,2])
+        up_criterion = coords_affected[:,2]>=zavg
+        down_criterion = ~up_criterion
+        nu = np.count_nonzero(up_criterion)
+        nd = np.count_nonzero(down_criterion)
+        y = coords_affected[:,1]
+        ys_up_sum = y[up_criterion].sum()
+        ys_down_sum = y[down_criterion].sum()
+        x = coords_affected[:,0]
+        x_LG = max(x) #assumption, roughly corresponds to the drawings
+        F = NLz*(x_LG-x)/(ys_up_sum/nu-ys_down_sum/nd)
+        fl[0::pf3.DOF][up_criterion] += F/nu
+        fl[0::pf3.DOF][down_criterion] -= F/nd
+
+        self.L = np.zeros(self.N)
+        self.L[0::pf3.DOF][nid_pos_affected] = fl[0::pf3.DOF]
+        self.L[2::pf3.DOF][nid_pos_affected] = fl[2::pf3.DOF]
     
     def loadstack(self):
         return self.A+self.T+self.W+self.L
