@@ -1,6 +1,6 @@
 from ..Pyfe3DModel import Pyfe3DModel
 from ..LoadCase import LoadCase
-from .eleProps import quad_stress_recovery
+from .eleProps import quad_stress_recovery, beam_stress_recovery
 
 import numpy.typing as nt
 import numpy as np
@@ -38,16 +38,24 @@ def process_load_case(model:Pyfe3DModel, lc:LoadCase, materials:ty.Dict[str, flo
 
     #2) post-processing
     quad_failure_margins = list()
+    beam_failure_margins = list()
     KGr = np.zeros(model.sizeKG, dtype=pf3.INT)
     KGc = np.zeros(model.sizeKG, dtype=pf3.INT)
     KGv = np.zeros(model.sizeKG, dtype=pf3.DOUBLE)
     
     #2.1) quad postprocessing
     for quad, matdir, shellprop, quadType in zip(model.quads, model.matdirs, model.shellprops, quadTypes):
-        quad.update_probe_xe(model.ncoords_flatten)
         quad.update_probe_ue(u)
+        quad.update_probe_xe(model.ncoords_flatten)
         quad.update_KG(KGr, KGc, KGv, shellprop)
         quad_failure_margins.append(quad_stress_recovery(desvars, materials, quad, shellprop, matdir, quadType, model.quadprobe))
+
+    #2.2) beam postprocessing
+    for beam, beamorient, beamprop, beamType in zip(model.beams, model.beamorients, model.beamprops, beamTypes):
+        beam.update_probe_ue(u)
+        beam.update_probe_xe(model.ncoords_flatten)
+        beam.update_KG(KGr, KGc, KGv, beamprop)
+        beam_failure_margins.append(beam_stress_recovery(desvars, materials, beam, beamprop, beamorient, beamType, model.beamprobe))
 
     #2.3) buckling
     KG = ss.coo_matrix((KGv, (KGr, KGc)), shape=(model.N, model.N)).tocsc()
@@ -77,6 +85,13 @@ def process_load_case(model:Pyfe3DModel, lc:LoadCase, materials:ty.Dict[str, flo
         pts = np.array(pts)
         cloud = pv.PolyData(pts)
 
+        bcells = list()
+        for beam in model.beams:
+            bcells.append([2, model.nid_pos[beam.n1], model.nid_pos[beam.n2]])
+        bcells = np.array(bcells)
+        bcell_types = np.full(len(model.beams), pv.CellType.LINE)
+        bmesh = pv.UnstructuredGrid(bcells, bcell_types, coords)
+
         plotter = pv.Plotter()
         
         mesh.cell_data["stress"] = np.array(quad_failure_margins)
@@ -86,6 +101,14 @@ def process_load_case(model:Pyfe3DModel, lc:LoadCase, materials:ty.Dict[str, flo
             cmap="coolwarm",
             scalars="stress",
             edge_color="black"
+        )
+
+        bmesh.cell_data["stress"] = np.array(beam_failure_margins)
+        plotter.add_mesh(
+            bmesh,
+            cmap="coolwarm",
+            scalars="stress",
+            line_width=8
         )
 
         plotter.add_mesh(
@@ -102,7 +125,7 @@ def process_load_case(model:Pyfe3DModel, lc:LoadCase, materials:ty.Dict[str, flo
 
     return np.array([
         max(quad_failure_margins),
-        0.,
+        max(beam_failure_margins),
         load_mult,
         0.
     ])

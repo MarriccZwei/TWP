@@ -55,6 +55,7 @@ def recover_stresses(strains:nt.NDArray[np.float32], E:float, nu:float, sc:float
 
     return normal_stresses, shear_stress, tau_yz, tau_xz
 
+#===============================
 #TODO: get rid of
 def tripple_mohr(normal_stresses:ty.Callable, shear_stress:ty.Callable, tau_yz:float, tau_xz:float, zmax:float) -> float:
     '''
@@ -96,3 +97,25 @@ def foam_crit(s_11, s_22, s_33, s_12, s_23, s_13, nu):
     s_v2 = ((s_princ[0]-s_princ[1])**2+(s_princ[1]-s_princ[2])**2+(s_princ[2]-s_princ[0])**2)/2
     s_m2 = np.average(s_princ)**2
     return np.sqrt((s_v2+alpha2*s_m2)/(1+alpha2/9))
+
+def beam_strains(probe:pf3.Quad4Probe)->ty.Tuple[ty.Callable[[float, float], float]]:
+    '''
+    obtains the three meaningful strains for beam elements as functions of ye and ze
+    
+    :param probe: element probe with ue and xe already updated
+    :type probe: pf3.Quad4Probe
+    :return: the e_xx, e_xy, e_xz lambdas
+    :rtype: Tuple[Callable[[float, float], float]]
+    '''
+    L = probe.xe[3]-probe.xe[0]
+    epsilon = (probe.ue[6]-probe.ue[0])/L
+    kappa_y = -(probe.ue[10]-probe.ue[4])/L
+    kappa_z = (probe.ue[11]-probe.ue[5])/L
+    gamma_y = (probe.ue[7]-probe.ue[1])/L-(probe.ue[10]+probe.ue[4])/2
+    gamma_z = (probe.ue[8]-probe.ue[2])/L+(probe.ue[11]+probe.ue[5])/2
+    kappa_x = (probe.ue[9]-probe.ue[3])/L
+
+    e_xx = lambda ye, ze: epsilon+kappa_y*ye+kappa_z*ze
+    e_xy = lambda ze: gamma_y-kappa_x*ze
+    e_xz = lambda ye: gamma_z+kappa_x*ye
+    return e_xx, e_xy, e_xz

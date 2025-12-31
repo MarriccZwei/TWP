@@ -21,7 +21,7 @@ class LoadCase():
         self.W = np.zeros(N) #the current value of the model's weight
         self.T = np.zeros(N) #here be the thrust
         self.L = np.zeros(N) #here be the landing loads
-        self.KA = np.zeros((N, N)) #here be the aerodynamic matrix
+        #self.KA = np.zeros((N, N)) #here be the aerodynamic matrix
 
 
     def aerodynamic_matrix(self, ncoords_affected:nt.NDArray[np.float32], nid_pos_affected:nt.NDArray[np.int32],

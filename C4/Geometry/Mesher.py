@@ -32,7 +32,7 @@ class Mesher:
             self._submeshIdxHashMap[eleType] = dict()
 
         #1) preparing hash entries for the element coordinates
-        to_tuple_entry = lambda _float:int(_float*10**self._DECIMAL_PLACES)
+        to_tuple_entry = lambda _float:int(round(_float*10**self._DECIMAL_PLACES))
         hashEntries = [(to_tuple_entry(eleNode[0]), to_tuple_entry(eleNode[1]), to_tuple_entry(eleNode[2])) for eleNode in eleNodes]
 
         #2) creating a set of elemnt node ids corresponding to hash entries, adding the original hash entries to the hash dict and node ids

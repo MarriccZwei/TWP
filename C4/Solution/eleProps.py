@@ -47,14 +47,32 @@ def load_ele_props(desvars:ty.Dict[str,float], materials:ty.Dict[str,float], ele
             shellprops.append(psu.laminated_plate([0,0,0], laminaprops=[(Ea, nua), (Ef, nuf), (Ea, nua)], 
                                                   plyts=[t, h, t], rhos=[rhoa, rhof, rhoa]))
             matdirs.append((0., 1., 0.))
+
         elif eleType[1] == 'i': #inertia elements
             inertia_vals.append(tuple(eleArg))
+
         elif eleType == 'rb': #rails -special case of a beam
             raise NotImplementedError
+
         elif eleType[1] == 'b': #other beams - rib elements
-            raise NotImplementedError
+            W = desvars[f"W_{eleType}"]
+            H = eleArg[0]
+            prop_truss_ = pbp.BeamProp()
+            prop_truss_.E = Ea
+            prop_truss_.A = W*H
+            prop_truss_.Iyy = W*H**3/12
+            prop_truss_.Izz = W**3*H/12
+            prop_truss_.J = prop_truss_.Iyy+prop_truss_.Izz
+            scf = (5+5*nua)/(6+5*nua)
+            prop_truss_.G = scf*Ea/2/(1+nua)
+            prop_truss_.intrho = rhoa*prop_truss_.A
+            prop_truss_.intrhoy2 = rhoa*prop_truss_.Izz
+            prop_truss_.intrhoz2 = rhoa*prop_truss_.Iyy
+            beamprops.append(prop_truss_)
+            beamorients.append((0.,1.,0.))
+
         else:
-            raise ValueError(f"Invalid element ype code {eleType}!!!")
+            raise ValueError(f"Invalid element code for a quad {eleType}!!!")
         
         #extracting beam and quad types into separate lists for postprocessing
         if eleType[1] == 'q':
@@ -121,3 +139,50 @@ def quad_stress_recovery(desvars:ty.Dict[str,float], materials:ty.Dict[str,float
         margins.append(sr.foam_crit(s_xx, s_yy, 0., t_xy, tau_yz_core, tau_xz_core, nuf)/sff)
 
     return max(margins)
+
+
+def beam_stress_recovery(desvars:ty.Dict[str,float], materials:ty.Dict[str,float], beam:pf3.BeamC, beamprop:pbp.BeamProp,
+                          beamorient:ty.Tuple[float], beamType:str, beamprobe:pf3.BeamCProbe)->float:
+    '''
+    Returns a failure margin for a beam element
+    
+    :param desvars: current value of design variables
+    :type desvars: ty.Dict[str, float]
+    :param materials: a dictionary of material properties
+    :type materials:Dict[string, float]
+    :param beam: The examined beam element
+    :type beam: pf3.BeamC
+    :param beamprop: BeamProp belonging to the element
+    :type beamprop: pbp.BeamProp
+    :param beamorient: beam orientation belonging to the elemnt
+    :type beamorients: ty.Tuple[float]
+    :param beamType: beam element type code
+    :type beamType: str
+    :param beamprobe: an updated probe set to the element
+    :type beamprobe: pf3.BeamCProbe
+    :return: Ratio of stress experienced by the beam element to the failure stress
+    :rtype: float
+    '''
+    E = beamprop.E
+    G = beamprop.G
+    sfa = materials["SF_ALU"]
+
+    if beamType[1]=='b':
+        exx, exy, exz = sr.beam_strains(beamprobe)
+    else:
+        raise ValueError(f"Expected, beam elements, got a non beam: {beamType}!!!")
+    
+    if beamType=='rb': #rail evaluation
+        raise NotImplementedError
+    else: #rib evaluation
+        W = desvars[f"W_{beamType}"]
+        H = beamprop.A/W
+        Wper2 = W/2
+        Hper2 = H/2
+        s_vmises = list()
+        for ye, ze in zip([Wper2, -Wper2, -Wper2, Wper2], [Hper2, Hper2, -Hper2, -Hper2]):
+            sigma = exx(ye, ze)*E
+            tau_xy = exy(ze)*G
+            tau_xz = exz(ye)*G
+            s_vmises.append(sr.von_mises(sigma, 0., 0., tau_xy, tau_xz, 0.))
+        return max(s_vmises)/sfa
