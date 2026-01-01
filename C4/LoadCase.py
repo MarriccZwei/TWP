@@ -67,7 +67,7 @@ class LoadCase():
         nnodes = len(nid_pos_affected)
         fl = np.zeros(nnodes*pf3.DOF)
         NL = self.MTOM*self.g0*self.nlg/2/nnodes #overall landing load per node in the earth upwards direction
-        NLx = NL*np.sin(np.deg2rad(self.op.alpha))
+        NLx = -NL*np.sin(np.deg2rad(self.op.alpha))
         NLz = NL*np.cos(np.deg2rad(self.op.alpha))
         fl[0::pf3.DOF] = NLx
         fl[2::pf3.DOF] = NLz

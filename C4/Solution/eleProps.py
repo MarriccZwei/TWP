@@ -5,6 +5,7 @@ import pyfe3d.beamprop as pbp
 import pyfe3d.shellprop as psp
 import pyfe3d.shellprop_utils as psu
 import pyfe3d as pf3
+import numpy as np
 
 def load_ele_props(desvars:ty.Dict[str,float], materials:ty.Dict[str,float], eleTypes:ty.List[str], eleArgs:ty.List[float])->ty.Dict[
     str,ty.List[object]]:
@@ -39,6 +40,12 @@ def load_ele_props(desvars:ty.Dict[str,float], materials:ty.Dict[str,float], ele
     rhoa = materials["RHO_ALU"]
     rhof = materials["RHO_FOAM"]
 
+    #Timoshenko 1922 https://doi.org/10.1080/14786442208633855
+    scfr = (5+5*nua)/(6+5*nua)
+    Gr = scfr*Ea/2/(1+nua)
+    scfc = (6+12*nua+6*nua**2)/(7+12*nua+4*nua**2)
+    Gc = scfc*Ea/2/(1+nua)
+
     for eleType, eleArg in zip(eleTypes, eleArgs):
         if eleType[1] == 'q': #sandwich elements
             H = eleArg[0]
@@ -52,7 +59,19 @@ def load_ele_props(desvars:ty.Dict[str,float], materials:ty.Dict[str,float], ele
             inertia_vals.append(tuple(eleArg))
 
         elif eleType == 'rb': #rails -special case of a beam
-            raise NotImplementedError
+            D = eleArg[0]
+            prop_rail = pbp.BeamProp()
+            prop_rail.E = Ea
+            prop_rail.A = np.pi/4*D**2
+            prop_rail.Iyy = np.pi/64*D**4
+            prop_rail.Izz = prop_rail.Iyy
+            prop_rail.J = prop_rail.Iyy+prop_rail.Izz
+            prop_rail.G = Gc
+            prop_rail.intrho = rhoa*prop_rail.A
+            prop_rail.intrhoy2 = rhoa*prop_rail.Izz
+            prop_rail.intrhoz2 = rhoa*prop_rail.Iyy
+            beamprops.append(prop_rail)
+            beamorients.append((1.,0.,0.))
 
         elif eleType[1] == 'b': #other beams - rib elements
             W = desvars[f"W_{eleType}"]
@@ -63,8 +82,7 @@ def load_ele_props(desvars:ty.Dict[str,float], materials:ty.Dict[str,float], ele
             prop_truss_.Iyy = W*H**3/12
             prop_truss_.Izz = W**3*H/12
             prop_truss_.J = prop_truss_.Iyy+prop_truss_.Izz
-            scf = (5+5*nua)/(6+5*nua)
-            prop_truss_.G = scf*Ea/2/(1+nua)
+            prop_truss_.G = Gr
             prop_truss_.intrho = rhoa*prop_truss_.A
             prop_truss_.intrhoy2 = rhoa*prop_truss_.Izz
             prop_truss_.intrhoz2 = rhoa*prop_truss_.Iyy
@@ -172,17 +190,30 @@ def beam_stress_recovery(desvars:ty.Dict[str,float], materials:ty.Dict[str,float
     else:
         raise ValueError(f"Expected, beam elements, got a non beam: {beamType}!!!")
     
+    #cross section points to evaluate
+    yes = list()
+    zes = list()
+
     if beamType=='rb': #rail evaluation
-        raise NotImplementedError
+        R = np.sqrt(beamprop.A/np.pi)
+        EVAL_PTS = 16 #how many points to evaluate around cross-section
+        theta = np.linspace(0, np.pi*2, EVAL_PTS+1)[:-1]
+        yes = R*np.sin(theta)
+        zes = R*np.cos(theta)
+        
     else: #rib evaluation
         W = desvars[f"W_{beamType}"]
         H = beamprop.A/W
         Wper2 = W/2
         Hper2 = H/2
-        s_vmises = list()
-        for ye, ze in zip([Wper2, -Wper2, -Wper2, Wper2], [Hper2, Hper2, -Hper2, -Hper2]):
-            sigma = exx(ye, ze)*E
-            tau_xy = exy(ze)*G
-            tau_xz = exz(ye)*G
-            s_vmises.append(sr.von_mises(sigma, 0., 0., tau_xy, tau_xz, 0.))
-        return max(s_vmises)/sfa
+        yes = [Wper2, -Wper2, -Wper2, Wper2]
+        zes = [Hper2, Hper2, -Hper2, -Hper2]
+
+    #standard von mises evaluation procedure at selected cross section points
+    s_vmises = list()
+    for ye, ze in zip(yes, zes):
+        sigma = exx(ye, ze)*E
+        tau_xy = exy(ze)*G
+        tau_xz = exz(ye)*G
+        s_vmises.append(sr.von_mises(sigma, 0., 0., tau_xy, tau_xz, 0.))
+    return max(s_vmises)/sfa
