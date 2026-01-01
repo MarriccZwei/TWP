@@ -56,7 +56,9 @@ def test_self_weight():
     inertia_vals = ep["inertia_vals"]
 
     model.KC0_M_update(beamprops, beamorients, shellprops, matdirs, inertia_vals)
-    lc = LoadCase(1.5, 1., pf3.DOF, model.N, 9.81, 0, asb.OperatingPoint(alpha=15.))
+    lc = LoadCase(1.5, 1., 76000, model.N, 9.81, 112800, asb.OperatingPoint(alpha=15.))
+    lc.apply_thrust(mesher.get_submesh('mi')[0])
+    lc.apply_landing(*mesher.get_submesh('li'))
     lc.update_weight(model.M)
     f = lc.loadstack()
 

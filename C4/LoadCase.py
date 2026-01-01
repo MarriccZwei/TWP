@@ -8,13 +8,13 @@ import pyfe3d as pf3
 
 class LoadCase():
     def __init__(self, n:float, nlg:float, MTOM:float, N:float, g0:float, 
-                 thrust_per_motor:float, op_point:asb.OperatingPoint, aeroelastic:bool=False):
+                 thrust_total:float, op_point:asb.OperatingPoint, aeroelastic:bool=False):
         self.n = n #load factor
         self.nlg = nlg #landing gear normal force load factor
         self.N = N #total number of degrees of freedom in the model
         assert N%pf3.DOF==0
         self.g0 = g0 #ravitational acceleration
-        self.Ft = thrust_per_motor
+        self.Ft = thrust_total
         self.op = op_point
         self.MTOM = MTOM
         self.aeroelastic = aeroelastic #do we evaluate flutter for this load case
@@ -46,8 +46,9 @@ class LoadCase():
         :type coords_affect: nt.NDArray[np.float64]
         '''
 
-    def apply_thrust(self, nid_pos_affected:nt.NDArray[np.int32], coords_affected:nt.NDArray[np.float64]):
+    def apply_thrust(self, nid_pos_affected:nt.NDArray[np.int32]):
         '''Applying the thrust at the affected nodes'''
+        self.T[0::pf3.DOF][nid_pos_affected] = -self.Ft/2/len(nid_pos_affected)
     
 
     def update_weight(self, M:ss.coo_matrix):
@@ -78,18 +79,25 @@ class LoadCase():
         down_criterion = ~up_criterion
         nu = np.count_nonzero(up_criterion)
         nd = np.count_nonzero(down_criterion)
-        y = coords_affected[:,1]
-        ys_up_sum = y[up_criterion].sum()
-        ys_down_sum = y[down_criterion].sum()
+        z = coords_affected[:,2]
+        zs_up_sum = z[up_criterion].sum()
+        zs_down_sum = z[down_criterion].sum()
         x = coords_affected[:,0]
         x_LG = max(x) #assumption, roughly corresponds to the drawings
-        F = NLz*(x_LG-x)/(ys_up_sum/nu-ys_down_sum/nd)
-        fl[0::pf3.DOF][up_criterion] += F/nu
-        fl[0::pf3.DOF][down_criterion] -= F/nd
+        F = NLz*(x_LG-x).sum()/(zs_up_sum/nu-zs_down_sum/nd)
+        fl[0::pf3.DOF][up_criterion] -= F/nu
+        fl[0::pf3.DOF][down_criterion] += F/nd
 
         self.L = np.zeros(self.N)
         self.L[0::pf3.DOF][nid_pos_affected] = fl[0::pf3.DOF]
         self.L[2::pf3.DOF][nid_pos_affected] = fl[2::pf3.DOF]
+
+        assert np.isclose(self.L[0::pf3.DOF].sum(), NLx*nnodes, rtol=1e-2), f"{self.L[0::pf3.DOF].sum()} {NLx*nnodes}"
+        assert np.isclose(self.L[2::pf3.DOF].sum(), NLz*nnodes)
+        moment_sum = np.sum(fl[0::pf3.DOF]*z+fl[2::pf3.DOF]*(x_LG-x)) #about the landing gear point
+        #the only moment left should be the one resulting from the NLx contributions.
+        #this moment is left uncorrected as we do not know the actual landing gear attachment point z
+        assert np.isclose(np.sum(moment_sum), np.sum(NLx*z), atol=1e-2), moment_sum
     
     def loadstack(self):
         return self.A+self.T+self.W+self.L
