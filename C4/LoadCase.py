@@ -38,11 +38,15 @@ class LoadCase():
     def aerodynamic_matrix(self, nid_pos_affected:nt.NDArray[np.int32], ncoords_affected:nt.NDArray[np.float32]):
         '''Conducting an aerodynamic simulation based on skin nodes, updating A and KA'''
         #TODO: remove gcl refs
-        vlm_, dFv_dp = self._calc_dFv_dp(ncoords_affected[:,1].min())
-        W, self.A = self._aero2fem(vlm_, ncoords_affected, nid_pos_affected)
+        _, vlm, forces, _ = self._vlm()
+        ratio = self.MTOM*self.g0*self.n*np.cos(np.deg2rad(self.op.alpha))/forces[2]
+
+        vlm_, dFv_dp = self._calc_dFv_dp(ncoords_affected[:,1].min(), ratio)
+        W, self.A = self._aero2fem(vlm_, ncoords_affected, nid_pos_affected, ratio)
         W_u_to_p = self._fem2aero(np.zeros(len(self.airfs)*2), ncoords_affected, nid_pos_affected)
         self.KA = W @ dFv_dp @ W_u_to_p 
     
+
     def apply_aero(self, nid_pos_affected:nt.NDArray[np.int32], coords_affected:nt.NDArray[np.float64]):
         '''
         Applying the aerodynamic load to the given subset of nodes
@@ -52,9 +56,10 @@ class LoadCase():
         :param coords_affect: ncoords-formatted coordinates of the nodes affected
         :type coords_affect: nt.NDArray[np.float64]
         '''
-        _, vlm, _, _ = self._vlm()
-        _, self.A = self._aero2fem(vlm, coords_affected, nid_pos_affected) 
-        print(self.A)
+        _, vlm, forces, _ = self._vlm()
+        ratio = self.MTOM*self.g0*self.n*np.cos(np.deg2rad(self.op.alpha))/forces[2]
+        _, self.A = self._aero2fem(vlm, coords_affected, nid_pos_affected, ratio)
+
 
     def apply_thrust(self, nid_pos_affected:nt.NDArray[np.int32]):
         '''Applying the thrust at the affected nodes'''
@@ -109,15 +114,13 @@ class LoadCase():
         #this moment is left uncorrected as we do not know the actual landing gear attachment point z
         assert np.isclose(np.sum(moment_sum), np.sum(NLx*z), atol=1e-2), moment_sum
     
+
     def loadstack(self):
         return self.A+self.T+self.W+self.L
-
-    #=====IMPLEMENTATION OF ROTATION WRT AOA==============================
-    def _rotate_4_aoa(self, load:nt.NDArray[np.float32]):
-        '''rotates a load from a global coordinate system to the body-centered coordinate system'''
     
+
     #=====IMPLEMENTATION AERODYNAMIC LOAD==================================
-    def _aero2fem(self, vlm:asb.VortexLatticeMethod, ncoords_s:nt.NDArray[np.float32], ids_s:nt.NDArray[np.int32]):
+    def _aero2fem(self, vlm:asb.VortexLatticeMethod, ncoords_s:nt.NDArray[np.float32], ids_s:nt.NDArray[np.int32], ratio:int):
         """ncoords selected - only selected nodes to which we apply the loads - will have to be tracked externally with ids_s"""
 
         # x, y, z coordinates of each node, NOTE assuming same order for DOFs
@@ -144,7 +147,6 @@ class LoadCase():
 
         Fv = vlm.forces_geometry[vortex_valid].flatten()
         #re-scaling the aerodynamic load to match the specified load factor, done due to some load factors not being achievable w\o hlds
-        ratio = self.MTOM*self.g0*self.n*np.cos(np.deg2rad(self.op.alpha))/Fv[2::3].sum()
         Fv = ratio*Fv
         Fext = W @ Fv #external forces to be applied to the fem model
 
@@ -154,9 +156,9 @@ class LoadCase():
 
         return ss.csc_matrix(W), Fext
 
+
     def _fem2aero(self, p:nt.NDArray[np.float32], ncoords_s:nt.NDArray[np.float32], ids_s:nt.NDArray[np.int32],
                 number_of_neighbors=2):
-        twists = p[len(self.les):]#also skipping the twist for now
         heave_displs =  p[:len(self.les)]
         leds = [self.les[i, :]+np.array([0.,0.,heave_displs[i]]) for i in range(self.les.shape[0])]
 
@@ -178,6 +180,7 @@ class LoadCase():
                 W_u_to_p[i*6 + 5, pf3.DOF*ids_s[node_index] + 2] = weights2[i, j]
             
         return ss.csc_matrix(W_u_to_p)
+
 
     def _vlm(self, displs:ty.List[float]=None, return_sol=False):
         #allowing for initial displacements for flutter. Yet, for static analysis we dont's need displacements
@@ -210,7 +213,7 @@ class LoadCase():
             return airplane, vlm, forces, moments
 
 
-    def _calc_dFv_dp(self, ymin, bres:int=20, cres:int=10, displs:ty.List[float]=None, return_sol=False, epsilon=.01):
+    def _calc_dFv_dp(self, ymin:float, ratio:int, bres:int=20, cres:int=10, displs:ty.List[float]=None, return_sol=False, epsilon=.01):
         
         if displs is None:
             displs = np.zeros(len(self.airfs)*2)
@@ -218,16 +221,18 @@ class LoadCase():
 
         vortex_valid = vlm_.vortex_centers[:, 1] > ymin
         v = vortex_valid.sum()*3
-        Fv = vlm_.forces_geometry[vortex_valid].flatten()
+        Fv = vlm_.forces_geometry[vortex_valid].flatten()*ratio #re-scaling for load factor
 
         dFv_dp = np.zeros((v, len(displs)*3)) # NOTE remember to pass both heave and twist displacements
         for i in range(len(displs)-1):
-            p_DOF = 3*(i + 1) + 2 # heave DOF starting at second airfoil
-            p2 = displs.copy()
-            p2[i+1] += epsilon
+            if i != len(self.les): #we skip the twist of the first foil, just as we skip its displacement
+                p_DOF = 3*(i + 1) + 2 # heave DOF starting at second airfoil
+                p2 = displs.copy()
+                p2[i+1] += epsilon
 
-            plane2, vlm2, f2, M2 = self._vlm(p2, return_sol)
-            Fv2 = vlm2.forces_geometry[vortex_valid].flatten()
-            dFv_dp[:, p_DOF] += (Fv2 - Fv)/epsilon
+                plane2, vlm2, f2, M2 = self._vlm(p2, return_sol)
+                Fv2 = vlm2.forces_geometry[vortex_valid].flatten()*ratio
+                dFv_dp[:, p_DOF] += (Fv2 - Fv)/epsilon
+
         dFv_dp = ss.csc_matrix(dFv_dp)
         return vlm_, dFv_dp
