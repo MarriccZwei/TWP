@@ -35,14 +35,12 @@ class LoadCase():
         #self.KA = np.zeros((N, N)) #here be the aerodynamic matrix
 
 
-    def aerodynamic_matrix(self, ncoords_affected:nt.NDArray[np.float32], nid_pos_affected:nt.NDArray[np.int32],
-                   les:ty.List, tes:ty.List, airfs:ty.List[asb.Airfoil],
-                   ymin:float, bres:int=20, cres:int=10):
-        '''Conducting an aerodynamic simulation based on skin nodes, returning Fext and KA'''
+    def aerodynamic_matrix(self, nid_pos_affected:nt.NDArray[np.int32], ncoords_affected:nt.NDArray[np.float32]):
+        '''Conducting an aerodynamic simulation based on skin nodes, updating A and KA'''
         #TODO: remove gcl refs
-        vlm_, dFv_dp = self._calc_dFv_dp(les, tes, airfs, self.op, ymin, bres, cres, np.zeros(len(airfs)*2))
-        W, self.A = self._aero2fem(vlm_, ncoords_affected, nid_pos_affected, self.N, pf3.DOF)
-        W_u_to_p = self._fem2aero(les, np.zeros(len(airfs)*2), ncoords_affected, nid_pos_affected, self.N, pf3.DOF)
+        vlm_, dFv_dp = self._calc_dFv_dp(ncoords_affected[:,1].min())
+        W, self.A = self._aero2fem(vlm_, ncoords_affected, nid_pos_affected)
+        W_u_to_p = self._fem2aero(np.zeros(len(self.airfs)*2), ncoords_affected, nid_pos_affected)
         self.KA = W @ dFv_dp @ W_u_to_p 
     
     def apply_aero(self, nid_pos_affected:nt.NDArray[np.int32], coords_affected:nt.NDArray[np.float64]):
@@ -156,29 +154,28 @@ class LoadCase():
 
         return ss.csc_matrix(W), Fext
 
-    def _fem2aero(self, les:ty.List, p:nt.NDArray[np.float32], ncoords_s:nt.NDArray[np.float32], ids_s:nt.NDArray[np.int32], N:int, DOF:int,
+    def _fem2aero(self, p:nt.NDArray[np.float32], ncoords_s:nt.NDArray[np.float32], ids_s:nt.NDArray[np.int32],
                 number_of_neighbors=2):
-        twists = p[len(les):]#also skipping the twist for now
-        deform_dir = gcl.Direction3D(0,0,1)
-        heave_displs =  p[:len(les)]
-        leds = [deform_dir.step(le, p_) for le, p_ in zip(les, heave_displs)]
+        twists = p[len(self.les):]#also skipping the twist for now
+        heave_displs =  p[:len(self.les)]
+        leds = [self.les[i, :]+np.array([0.,0.,heave_displs[i]]) for i in range(self.les.shape[0])]
 
         tree = ssp.cKDTree(ncoords_s)
-        d, node_indices = tree.query(gcl.pts2numpy3D(leds), k=number_of_neighbors)
+        d, node_indices = tree.query(leds, k=number_of_neighbors)
         power = 2
         weights2 = (1/d**power)/((1/d**power).sum(axis=1)[:, None])
         assert np.allclose(weights2.sum(axis=1), 1)
 
-        W_u_to_p = np.zeros((len(p)*3, N))
+        W_u_to_p = np.zeros((len(p)*3, self.N))
 
         for j in range(number_of_neighbors):
             for i, node_index in enumerate(node_indices): #we have 3 forces for 2 p vars per node, so 6
-                W_u_to_p[i*6 + 0, DOF*ids_s[node_index] + 0] = weights2[i, j]
-                W_u_to_p[i*6 + 1, DOF*ids_s[node_index] + 1] = weights2[i, j]
-                W_u_to_p[i*6 + 2, DOF*ids_s[node_index] + 2] = weights2[i, j]
-                W_u_to_p[i*6 + 3, DOF*ids_s[node_index] + 0] = weights2[i, j]
-                W_u_to_p[i*6 + 4, DOF*ids_s[node_index] + 1] = weights2[i, j]
-                W_u_to_p[i*6 + 5, DOF*ids_s[node_index] + 2] = weights2[i, j]
+                W_u_to_p[i*6 + 0, pf3.DOF*ids_s[node_index] + 0] = weights2[i, j]
+                W_u_to_p[i*6 + 1, pf3.DOF*ids_s[node_index] + 1] = weights2[i, j]
+                W_u_to_p[i*6 + 2, pf3.DOF*ids_s[node_index] + 2] = weights2[i, j]
+                W_u_to_p[i*6 + 3, pf3.DOF*ids_s[node_index] + 0] = weights2[i, j]
+                W_u_to_p[i*6 + 4, pf3.DOF*ids_s[node_index] + 1] = weights2[i, j]
+                W_u_to_p[i*6 + 5, pf3.DOF*ids_s[node_index] + 2] = weights2[i, j]
             
         return ss.csc_matrix(W_u_to_p)
 
@@ -213,10 +210,11 @@ class LoadCase():
             return airplane, vlm, forces, moments
 
 
-    def _calc_dFv_dp(self, les:ty.List, tes:ty.List, airfs:ty.List[asb.Airfoil], #TODO: refactor the displs
-            op:asb.OperatingPoint, ymin:float, bres:int=20, cres:int=10, displs:ty.List[float]=None, return_sol=False, epsilon=.01):
+    def _calc_dFv_dp(self, ymin, bres:int=20, cres:int=10, displs:ty.List[float]=None, return_sol=False, epsilon=.01):
         
-        airplane, vlm_, forces, moments = self._vlm(les, tes, airfs, op, bres, cres, displs, return_sol)
+        if displs is None:
+            displs = np.zeros(len(self.airfs)*2)
+        airplane, vlm_, forces, moments = self._vlm(displs, return_sol)
 
         vortex_valid = vlm_.vortex_centers[:, 1] > ymin
         v = vortex_valid.sum()*3
@@ -228,7 +226,7 @@ class LoadCase():
             p2 = displs.copy()
             p2[i+1] += epsilon
 
-            plane2, vlm2, f2, M2 = self._vlm(les, tes, airfs, op, bres, cres, p2, return_sol)
+            plane2, vlm2, f2, M2 = self._vlm(p2, return_sol)
             Fv2 = vlm2.forces_geometry[vortex_valid].flatten()
             dFv_dp[:, p_DOF] += (Fv2 - Fv)/epsilon
         dFv_dp = ss.csc_matrix(dFv_dp)

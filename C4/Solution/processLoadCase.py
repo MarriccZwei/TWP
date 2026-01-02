@@ -12,7 +12,8 @@ import scipy.sparse.linalg as ssl
 import pyvista as pv
 
 def process_load_case(model:Pyfe3DModel, lc:LoadCase, materials:ty.Dict[str, float], desvars:ty.Dict[str, float],
-                      beamTypes:ty.List[str], quadTypes:ty.List[str], plot:bool=False, savePath:str=None)->nt.NDArray[np.float64]:
+                      beamTypes:ty.List[str], quadTypes:ty.List[str], flutter_re_digits:int=2,
+                      plot:bool=False, savePath:str=None)->nt.NDArray[np.float64]:
     '''
     Docstring for process_load_case
     
@@ -67,6 +68,28 @@ def process_load_case(model:Pyfe3DModel, lc:LoadCase, materials:ty.Dict[str, flo
     eigvals = -1./eigvals
     eigvecs[model.bu] = eigvecsu
     load_mult = eigvals[0]
+
+    #2.4) flutter
+    if lc.aeroelastic:
+        KAuu = model.uu_matrix(lc.KA)
+        k=7
+        eigvals, peigvecs = ssl.eigs(A=model.KC0uu - KAuu, M=model.Muu, k=k, which='LM', sigma=-1.)
+        omegan = np.sqrt(eigvals)
+        re_omegan = np.real(omegan)
+
+        #checking if the real parts are close enough
+        hash_omegan = np.int32(np.round(re_omegan*10**flutter_re_digits))
+        om_comp_dict = dict()
+        for hash in hash_omegan:
+            om_comp_dict[hash]=0
+        for hash in hash_omegan:
+            om_comp_dict[hash]+=1
+
+        #will be 0 if no repetitions more if there are reps
+        score = float(np.count_nonzero(np.array(list(om_comp_dict.values()), dtype=np.int16)-1))
+        print(omegan)
+    else:
+        score = 0.
 
     if plot:
         displ = u.reshape((model.N//pf3.DOF, pf3.DOF))[:,:3] #3d displacements
@@ -127,5 +150,5 @@ def process_load_case(model:Pyfe3DModel, lc:LoadCase, materials:ty.Dict[str, flo
         max(quad_failure_margins),
         max(beam_failure_margins),
         load_mult,
-        0.
+        score
     ])

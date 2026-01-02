@@ -66,8 +66,8 @@ def test_self_weight():
     tes = tes_flat.reshape((len(les_flat)//3, 3)) #should have same length
     airfs = [asb.Airfoil(f"naca241{i}") for i in reversed(range(9))] #from naca 2418 to naca 2410
 
-    lc = LoadCase(1.5, 1., 76000, model.N, 9.81, 112800, asb.OperatingPoint(alpha=15., velocity=100.), les, tes, airfs)
-    lc.apply_aero(*mesher.get_submesh('sq'))
+    lc = LoadCase(1.5, 1., 76000, model.N, 9.81, 112800, asb.OperatingPoint(alpha=15., velocity=100.), les, tes, airfs, aeroelastic=True)
+    lc.aerodynamic_matrix(*mesher.get_submesh('sq'))
     lc.apply_thrust(mesher.get_submesh('mi')[0])
     lc.apply_landing(*mesher.get_submesh('li'))
     lc.update_weight(model.M)
