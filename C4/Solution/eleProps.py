@@ -48,7 +48,7 @@ def load_ele_props(desvars:ty.Dict[str,float], materials:ty.Dict[str,float], ele
 
     for eleType, eleArg in zip(eleTypes, eleArgs):
         if eleType[1] == 'q': #sandwich elements
-            H = eleArg[0]
+            H = eleArg[0]*desvars[f"(H'/H)_{eleType}"]
             t = desvars[f"(2t/H)_{eleType}"]/2*H
             h = H-2*t
             shellprops.append(psu.laminated_plate([0,0,0], laminaprops=[(Ea, nua), (Ef, nuf), (Ea, nua)], 

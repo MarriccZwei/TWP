@@ -22,15 +22,6 @@ def strains_quad(probe:pf3.Quad4Probe):
                       np.asarray(probe.BLgyz_rot)+np.asarray(probe.BLgyz_grad),
                       np.asarray(probe.BLgxz_rot)+np.asarray(probe.BLgxz_grad),])@np.asarray(probe.ue)
 
-def get_ABDE(prop:psp.ShellProp):
-    return np.array([[prop.A11, prop.A12, prop.A16, prop.B11, prop.B12, prop.B16, 0, 0],
-                         [prop.A12, prop.A22, prop.A26, prop.B12, prop.B22, prop.B26, 0, 0],
-                         [prop.A16, prop.A26, prop.A66, prop.B16, prop.B26, prop.B66, 0, 0],
-                         [prop.B11, prop.B12, prop.B16, prop.D11, prop.D12, prop.D16, 0, 0],
-                         [prop.B12, prop.B22, prop.B26, prop.D12, prop.D22, prop.D26, 0, 0],
-                         [prop.B16, prop.B26, prop.B66, prop.D16, prop.D26, prop.D66, 0, 0],
-                         [0, 0, 0, 0, 0, 0, prop.E44, prop.E45],
-                         [0, 0, 0, 0, 0, 0, prop.E45, prop.E55]], dtype=pf3.DOUBLE)
 
 def recover_stresses(strains:nt.NDArray[np.float32], E:float, nu:float, sc:float):
     '''Stress recovery for an isotropic plate'''
@@ -46,57 +37,30 @@ def recover_stresses(strains:nt.NDArray[np.float32], E:float, nu:float, sc:float
     gyz = strains[6]
     gxz = strains[7]
 
-    #TODO: curvature signs - in the test when it bends up kappas are negative, we want negative strain on top if
-    # bends up,so adding kxx and kyy seems right.Ultimately it also does not matter because the sandwich is symmetric
+    #NOTE: curvature signs - in the test when it bends up kappas are negative, we want negative strain on top if
+    # bends up,so adding kxx and kyy seems right.
     normal_stresses = lambda z:E_pois*np.array([[1, nu], [nu, 1]])@np.array([kxx*z+exx, kyy*z+eyy])
-    shear_stress = lambda z:G*(gxy+kxy*z) #same story sign does not matter as you would pythagoras this anyway
+    shear_stress = lambda z:G*(gxy+kxy*z)
     tau_yz = G*sc*gyz
     tau_xz = G*sc*gxz
 
     return normal_stresses, shear_stress, tau_yz, tau_xz
 
-#===============================
-#TODO: get rid of
-def tripple_mohr(normal_stresses:ty.Callable, shear_stress:ty.Callable, tau_yz:float, tau_xz:float, zmax:float) -> float:
-    '''
-    Computes the highest mohr circle radius for a set of strains for a layer within a plate
-    '''
-    mohr_R = lambda sx, sy, txy: (((sx-sy)/2)**2+txy**2)**.5
-    sx_zmin, sy_zmin = normal_stresses(-zmax)
-    sx_zmax, sy_zmax = normal_stresses(zmax)
-    txy_min = shear_stress(-zmax)
-    txy_max = shear_stress(zmax)
-    return max(mohr_R(sx_zmin, sy_zmin, txy_min),
-               mohr_R(sx_zmax, sy_zmax, txy_max),
-               mohr_R(sx_zmin, 0, tau_yz),
-               mohr_R(sx_zmax, 0, tau_yz),
-               mohr_R(sy_zmin, 0, tau_xz),
-               mohr_R(sy_zmax, 0, tau_xz))
-
-
-def sandwich_recovery(probe:pf3.Quad4Probe, zmaxs:ty.List[float], Es:ty.List[float], nus:ty.List[float], sc:float) -> ty.List[float]:
-    '''
-    Computes the mohr radii for each of the isotropic layers of a symmetric sandwich
-    '''
-    strains = strains_quad(probe)
-    Rs = list()
-    
-    for zmax, E, nu in zip(zmaxs, Es, nus):
-        normal_core, shear_core, tyz_core, txz_core = recover_stresses(strains, E, nu, sc)
-        Rs.append(tripple_mohr(normal_core, shear_core, tyz_core, txz_core, zmax))
-
-    return Rs
-#=====================================
     
 def von_mises(s_11, s_22, s_33, s_12, s_23, s_13):
+    '''Von Mises failure criterion for a general stress tensor'''
     return np.sqrt(((s_11-s_22)**2+(s_22-s_33)**2+(s_33-s_11)**2)/2+3*(s_12**2+s_23**2+s_13**2))
 
+
 def foam_crit(s_11, s_22, s_33, s_12, s_23, s_13, nu):
+    '''Foam failure criterion as in Gioux et al. 2000. doi: https://doi.org/10.1016/S0020-7403(99)00043-0.
+    With the change that regular poisson ratio, instead of the plastic one is used'''
     alpha2 = 9*(.5-nu)/(1+nu)
     s_princ = sl.eigh(np.array([(s_11, s_12, s_13), (s_12, s_22, s_23), (s_13, s_23, s_33)]), eigvals_only=True)
     s_v2 = ((s_princ[0]-s_princ[1])**2+(s_princ[1]-s_princ[2])**2+(s_princ[2]-s_princ[0])**2)/2
     s_m2 = np.average(s_princ)**2
     return np.sqrt((s_v2+alpha2*s_m2)/(1+alpha2/9))
+
 
 def beam_strains(probe:pf3.Quad4Probe)->ty.Tuple[ty.Callable[[float, float], float]]:
     '''

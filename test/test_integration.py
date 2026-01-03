@@ -29,6 +29,9 @@ def test_self_weight():
     # plt.show()
 
     desvars = {
+        "(H'/H)_sq":0.8,
+        "(H'/H)_pq":0.7,
+        "(H'/H)_aq":0.6,
         '(2t/H)_sq':0.2,
         '(2t/H)_pq':0.1,
         '(2t/H)_aq':0.05,
