@@ -242,32 +242,3 @@ class Pyfe3DModel():
         #9) re-aplying the boundary conditions
         self.KC0uu = self.uu_matrix(self.KC0)
         self.Muu = self.uu_matrix(self.M)
-
-
-    def structural_mass(self, rho:float, thickness:float):
-        '''
-        The mass of beams and quads, NOT including inertias
-        '''
-        structmass = 0
-        structmass += sum(self._beam_mass(beam, beamprop) for beam, beamprop in zip(self.beams, self.beamprops))
-        structmass += sum(self._quad_mass(quad, rho, thickness) for quad in self.quads)
-        return structmass
-
-
-    def _beam_mass(self, beamEle:pf3.BeamC, beamProp:pbp.BeamProp):
-        return beamEle.length*beamProp.intrho
-
-
-    def _quad_mass(self, quadEle:pf3.Quad4, rho:float, thickness:float):
-        coords = lambda nx:self.ncoords[self.nid_pos[nx], :]
-        coords1 = coords(quadEle.n1)
-        coords2 = coords(quadEle.n2)
-        coords3 = coords(quadEle.n3)
-        coords4 = coords(quadEle.n4)
-
-        #area of the skin
-        area = .5*(np.linalg.norm(np.cross(coords4-coords1, coords2-coords1))+ 
-                np.linalg.norm(np.cross(coords2-coords3, coords4-coords3)))
-        #NOTE: it is assumed the quad is a uniform plate - to use with sandwiches one has to use equivalent density
-
-        return rho*thickness*area

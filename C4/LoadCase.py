@@ -41,8 +41,8 @@ class LoadCase():
         vlm_, dFv_dp, ratio = self._calc_dFv_dp(ncoords_affected[:,1].min())
         W, self.A = self._aero2fem(vlm_, ncoords_affected, nid_pos_affected, ratio)
         W_u_to_p = self._fem2aero(np.zeros(len(self.airfs)*2), ncoords_affected, nid_pos_affected)
-        self.KA = W @ dFv_dp @ W_u_to_p 
-        print(self.KA.diagonal().mean(), W.diagonal().mean(), dFv_dp.diagonal().mean(), W_u_to_p.diagonal().mean())
+        self.KA = W @ dFv_dp @ W_u_to_p
+
 
     def apply_aero(self, nid_pos_affected:nt.NDArray[np.int32], coords_affected:nt.NDArray[np.float64]):
         '''
@@ -208,7 +208,7 @@ class LoadCase():
             return airplane, vlm, forces, moments
 
 
-    def _calc_dFv_dp(self, ymin:float, bres:int=20, cres:int=10, displs:ty.List[float]=None, return_sol=False, epsilon=.01):
+    def _calc_dFv_dp(self, ymin:float, displs:ty.List[float]=None, return_sol=False, epsilon=.01):
         
         if displs is None:
             displs = np.zeros(len(self.airfs)*2)

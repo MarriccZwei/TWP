@@ -73,16 +73,18 @@ def process_load_case(model:Pyfe3DModel, lc:LoadCase, materials:ty.Dict[str, flo
     if lc.aeroelastic:
         KAuu = model.uu_matrix(lc.KA)
         k=7
-        eigvals, peigvecs = ssl.eigs(A=model.KC0uu - KAuu, M=model.Muu, k=k, which='LM', sigma=-1.)
-        omegan = np.sqrt(eigvals)
+        peigvecs = np.zeros((model.N, k))
+        eigvalsFlutter, peigvecsu = ssl.eigs(A=model.KC0uu - KAuu, M=model.Muu, k=k, which='LM', sigma=-1.)
+        omegan = np.sqrt(eigvalsFlutter)
+        peigvecs[model.bu, :] = peigvecsu
         score = np.count_nonzero(np.imag(omegan))
         print(omegan)
     else:
         score = 0.
 
+    #3) Plotting
     if plot:
-        displ = u.reshape((model.N//pf3.DOF, pf3.DOF))[:,:3] #3d displacements
-        coords = model.ncoords+5*displ#for scaling
+        coords = prep_displacements(u, model, 5.)
         cells = list()
         for quad in model.quads:
             cells.append([4, model.nid_pos[quad.n1], model.nid_pos[quad.n2], model.nid_pos[quad.n3], model.nid_pos[quad.n4]])
@@ -133,7 +135,22 @@ def process_load_case(model:Pyfe3DModel, lc:LoadCase, materials:ty.Dict[str, flo
         if savePath is None:
             plotter.show()
         else:
-            raise NotImplementedError
+            print("Generating report...")
+            #giving save path will create the full plotting report
+            plotter.save_graphic(savePath+"Stresses.pdf", "Stresses")
+            plot_nodal_quantity(model.ncoords, lc.A[2::pf3.DOF], model, savePath, "AerodynamicLoadZ")
+            plot_nodal_quantity(model.ncoords, lc.L[2::pf3.DOF], model, savePath, "LandingLoadZ")
+            plot_nodal_quantity(model.ncoords, lc.L[0::pf3.DOF], model, savePath, "LandingLoadX")
+            plot_nodal_quantity(model.ncoords, lc.T[0::pf3.DOF], model, savePath, "ThrustX")
+            plot_nodal_quantity(model.ncoords, lc.W[2::pf3.DOF], model, savePath, "WeightZ")
+            eigvec_scaling = 25.
+            for i in range(eigvecs.shape[1]):
+                plot_nodal_quantity(prep_displacements(eigvecs[:,i], model, eigvec_scaling/max(eigvecs[:,i])), eigvecs[:,i][2::pf3.DOF],
+                                    model, savePath, f"BucklingMode{i}")
+            for i in range(peigvecs.shape[1]):
+                plot_nodal_quantity(prep_displacements(peigvecs[:,i], model, eigvec_scaling/max(peigvecs[:,i])), peigvecs[:,i][2::pf3.DOF],
+                                    model, savePath, f"NatfreqMode{i}")
+            print(f"Report saved at the path below.\n{savePath}")        
 
     return np.array([
         max(quad_failure_margins),
@@ -141,3 +158,101 @@ def process_load_case(model:Pyfe3DModel, lc:LoadCase, materials:ty.Dict[str, flo
         load_mult,
         score
     ])
+
+
+def prep_displacements(u:nt.NDArray[np.float64], model:Pyfe3DModel, scaling:float=1.):
+    '''
+    Interprets displacements into format consistent with ncoords
+    
+    :param u: displacements as obtained from modal or static analysis
+    :type u: nt.NDArray[np.float64]
+    :param model: the model on which the analysis yielding the displacements was conducted
+    :type model: Pyfe3DModel
+    :param scaling: scaling to apply to the displacements for visibility
+    :type scaling: float
+    :return: model ncoords updated by the displacements
+    :rtype: NDArray[float64]
+    '''
+    displ = u.reshape((model.N//pf3.DOF, pf3.DOF))[:,:3] #3d displacements
+    return model.ncoords+scaling*displ#for scaling
+
+
+def plot_nodal_quantity(ncoords:nt.NDArray[np.float64], qty:nt.NDArray[np.float64], 
+                        model:Pyfe3DModel, savePath:str, plotName:str, extension:str='.pdf', show=False):
+    '''
+    Docstring for plot_nodal_quantity
+    
+    :param ncoords: nodal coordinates on which the plot is based, shape (N/DOF, 3)
+    :type ncoords: nt.NDArray[np.float64]
+    :param qty: quantity evaluated @ each node, shape (N/DOF)
+    :type qty: nt.NDArray[np.float64]
+    :param model: the model object to take elements from
+    :type model: Pyfe3DModel
+    :param savePath: the folder in which the plot is to be saved
+    :type savePath: str
+    :param plotName: the file name of the plot in that folder
+    :type plotName: str
+    :param extension: file extensions to save the plot as
+    :type extension: str
+    '''
+    quad_qty = list()
+    beam_qty = list()
+
+    cells = list()
+    for quad in model.quads:
+        np1 = model.nid_pos[quad.n1]
+        np2 = model.nid_pos[quad.n2]
+        np3 = model.nid_pos[quad.n3]
+        np4 = model.nid_pos[quad.n4]
+        cells.append([4, np1, np2, np3, np4])
+        quad_qty.append((qty[np1]+qty[np2]+qty[np3]+qty[np4])/4)
+    cells = np.array(cells).flatten()
+
+    cell_types = np.full(len(model.quads), pv.CellType.QUAD)
+    mesh = pv.UnstructuredGrid(cells, cell_types, ncoords)
+
+    pts = list()
+    for ine in model.inertia_poses:
+        pts.append(ncoords[ine,:])
+    pts = np.array(pts)
+    cloud = pv.PolyData(pts)
+
+    bcells = list()
+    for beam in model.beams:
+        np1 = model.nid_pos[beam.n1]
+        np2 = model.nid_pos[beam.n2]
+        bcells.append([2, np1, np2])
+        beam_qty.append((qty[np1]+qty[np2])/2)
+    bcells = np.array(bcells)
+    bcell_types = np.full(len(model.beams), pv.CellType.LINE)
+    bmesh = pv.UnstructuredGrid(bcells, bcell_types, ncoords)
+
+    plotter = pv.Plotter()
+    
+    mesh.cell_data[plotName] = np.array(quad_qty)
+    plotter.add_mesh(
+        mesh,
+        show_edges=True,
+        cmap="coolwarm",
+        scalars=plotName,
+        edge_color="black"
+    )
+
+    bmesh.cell_data[plotName] = np.array(beam_qty)
+    plotter.add_mesh(
+        bmesh,
+        cmap="coolwarm",
+        scalars=plotName,
+        line_width=8
+    )
+
+    plotter.add_mesh(
+        cloud,
+        point_size=6,
+        render_points_as_spheres=True,
+        cmap="viridis"
+    )
+
+    plotter.save_graphic(savePath+plotName+extension, plotName)
+    if show:
+        plotter.show()

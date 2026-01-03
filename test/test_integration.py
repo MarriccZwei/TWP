@@ -69,7 +69,8 @@ def test_self_weight():
     u[model.bu] = uu
     
     #post processing
-    margins = process_load_case(model, lc, materials, desvars, ep["beamtypes"], ep["quadtypes"], plot=True)
+    savePath = r"C:\marek\studia\hpb\Results\C4\ForwardTests\\"
+    margins = process_load_case(model, lc, materials, desvars, ep["beamtypes"], ep["quadtypes"], plot=True, savePath=savePath)
     print(margins)
     print(model.ncoords.shape) #so that it can be compared with the shape from CATIA
 
