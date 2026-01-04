@@ -155,15 +155,13 @@ class Pyfe3DModel():
         self.sizeKG = kg_size #as stated in the constructor
 
         #3) checking if the sparse matrix sizes have changed and re-initializing them if necessary
-        if kc0_size != len(self.KC0v):
-            self.KC0r = np.zeros(kc0_size, dtype=pf3.INT)
-            self.KC0c = np.zeros(kc0_size, dtype=pf3.INT)
-            self.KC0v = np.zeros(kc0_size, dtype=pf3.DOUBLE)
+        self.KC0r = np.zeros(kc0_size, dtype=pf3.INT)
+        self.KC0c = np.zeros(kc0_size, dtype=pf3.INT)
+        self.KC0v = np.zeros(kc0_size, dtype=pf3.DOUBLE)
 
-        if mass_size != len(self.Mv):
-            self.Mr = np.zeros(mass_size, dtype=pf3.INT)
-            self.Mc = np.zeros(mass_size, dtype=pf3.INT)
-            self.Mv = np.zeros(mass_size, dtype=pf3.DOUBLE)
+        self.Mr = np.zeros(mass_size, dtype=pf3.INT)
+        self.Mc = np.zeros(mass_size, dtype=pf3.INT)
+        self.Mv = np.zeros(mass_size, dtype=pf3.DOUBLE)
 
         # KG is a function of both the model and the deformation applied to it, specific per Solution
         # Thus, not initiated here

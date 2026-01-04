@@ -12,7 +12,7 @@ import scipy.optimize as opt
 class Optimiser():
     def __init__(self, desvarsInitial:ty.Dict[str,float], loadCasesInfo:ty.List[ty.Dict[str, object]], cadstrs:ty.Dict[str, str], 
                  materials:ty.Dict[str, float], resConfig:ty.Dict[str, object], g0:float, MTOM:float, airfs:ty.List[asb.Airfoil],
-                 LINBUCKLSF:float, meshMergeDigits:int=3):
+                 LINBUCKLSF:float, WMAX:float, meshMergeDigits:int=3, logEveryNIters:int=None):
         '''
         The constructor performs the initialisation flow as well
         
@@ -34,10 +34,18 @@ class Optimiser():
         :type LINBUCKLSF: float
         :param meshMergeDigits: the number of digits Mesher will check to determine whether a certain pair of nodes is coincident
         :type meshMergeDigits: int
+        :param logEveryNIters: once in how many iterations one has to log, None mans no logging
+        :type logEveryNIters: int
         '''
         self.materials = materials
         self.resConfig = resConfig
         self.LINBUCKLSF = LINBUCKLSF
+        self.WMAX = WMAX
+
+        #0) handle logging or lack of thereof
+        self.logEveryNIters = logEveryNIters
+        if not (logEveryNIters is None):
+            self.iteration_number = 0
 
         #1) geometry initialization
         self.model, self.mesher = geometry_init(cadstrs["mesh"], meshMergeDigits)
@@ -57,7 +65,7 @@ class Optimiser():
                 lc.aerodynamic_matrix(*self.mesher.get_submesh('sq'))
             else:
                 lc.apply_aero(*self.mesher.get_submesh('sq'))
-            lc.apply_landing(*self.mesher.get_submesh('li'))
+            lc.apply_landing(self.mesher.get_submesh('li')[0])
             lc.apply_thrust(self.mesher.get_submesh('mi')[0])
             self.lcs.append(lc)
 
@@ -79,6 +87,7 @@ class Optimiser():
             desvarsInitial['W_lb'],
         ]))
 
+
     def simulate_constraints(self, desvarvec:nt.NDArray[np.float64], plot=False, savePath=None)->nt.NDArray[np.float64]:
         '''
         Updates the FEM model if necessary and calculates the failure margins based on the provided load cases
@@ -95,7 +104,7 @@ class Optimiser():
         for i, lc in enumerate(self.lcs):
             #1) handling savePath for multiple load case results
             if savePath is None:
-                savePath = None
+                savePathLC = None
             else:
                 savePathLC = f"{savePath}LC{i}\\"
 
@@ -113,6 +122,11 @@ class Optimiser():
             if failure_margins[3]<lcmargins[3]:#complex eigenfrequencies count, the more, the worse
                 failure_margins[3]=lcmargins[3]
 
+        #4) logging if enabled
+        if not (self.logEveryNIters is None):
+            if self.iteration_number%self.logEveryNIters==0:
+                print(f"Step {self.iteration_number} failure margins: {failure_margins}")
+        
         return failure_margins
             
 
@@ -128,33 +142,38 @@ class Optimiser():
         self._update_model(desvarvec)
         #W=M@g, with this vector the magnitude of the weight vector will be that of total system mass
         unit_gvect = np.array([0.,0.,1.,0.,0.,0.]*self.model.ncoords.shape[0])
-        return np.sum(self.model.M@unit_gvect)
-    
-    def constraint(self)->opt.NonlinearConstraint:
-        '''
-        the constraint for the optimiser to be evaluated taking the vector of design variables, such as the one from
-        self.desvarvec, as input
+        totmass = np.sum(self.model.M@unit_gvect)
+
+        #logging if enabled
+        if not (self.logEveryNIters is None):
+            if self.iteration_number%self.logEveryNIters==0:
+                print(f"Step {self.iteration_number} objective: {totmass}")
         
-        :return: the constraint to pass to the scipy optimizer
-        :rtype: NonlinearConstraint
+        return totmass
+    
+
+    def constraint(self)->ty.List[ty.Union[opt.NonlinearConstraint, opt.LinearConstraint]]:
         '''
-        zeroFlutterEpsilon = 1e-2
+        the constraints for the optimiser to be evaluated taking the vector of design variables, such as the one from
+        self.desvarvec, as input.
+        
+        :return: the constraint list to pass to the scipy optimizer
+        :rtype: List[Union[opt.NonlinearConstraint, opt.LinearConstraint]]
+        '''
+        epsilon = 1e-3
         comparisonFlutter = .5
-        return opt.NonlinearConstraint(self.simulate_constraints, np.array([0.,0., self.LINBUCKLSF, -zeroFlutterEpsilon]),
-                                       np.array([1., 1., np.inf, comparisonFlutter]))
+        ndesvars = len(self.desvars)
+        return [opt.NonlinearConstraint(self.simulate_constraints, np.array([0.,0., self.LINBUCKLSF, -epsilon]),
+                                       np.array([1., 1., np.inf, comparisonFlutter])),
+                opt.LinearConstraint(np.eye(ndesvars), np.ones(ndesvars)*epsilon, 
+                                     np.array([1., 1., 1., self.WMAX, self.WMAX, self.WMAX]))]
+
 
     def _update_model(self, desvarvec:nt.NDArray[np.float64]):
         #NOTE: update happens only if there is a change to the design variables!!!
         if not np.allclose(desvarvec, self.desvarvec()):
             #1) design variables update
-            self.desvars = {
-            '(2t/H)_sq':desvarvec[0],
-            '(2t/H)_pq':desvarvec[1],
-            '(2t/H)_aq':desvarvec[2],
-            'W_bb':desvarvec[3],
-            'W_mb':desvarvec[4],
-            'W_lb':desvarvec[5]
-            }
+            self.desvars = Optimiser.desvars_from_vec(desvarvec)
 
             #2) model properties update
             ep = load_ele_props(self.desvars, self.materials, self.mesher.eleTypes, self.mesher.eleArgs)
@@ -166,8 +185,16 @@ class Optimiser():
             self.model.KC0_M_update(beamprops, beamorients, shellprops, matdirs, inertia_vals)
             self.ep = ep
 
+            #3) updating logging step if logging enabled
+            if not (self.logEveryNIters is None):
+                self.iteration_number+=1
+                print(f"\nStep {self.iteration_number} desvars: {self.desvars}")
+
     
     def desvarvec(self):
+        '''
+        Returns the current design variables as a vector to be plugged into scipy optimiser
+        '''
         return np.array([
             self.desvars['(2t/H)_sq'],
             self.desvars['(2t/H)_pq'],
@@ -176,3 +203,21 @@ class Optimiser():
             self.desvars['W_mb'],
             self.desvars['W_lb'],
         ])
+    
+
+    @staticmethod
+    def desvars_from_vec(desvarvec:nt.NDArray[np.float64]):
+        '''
+        Converts the design variables returned by the optimiser to the dictionary format used elsewhere in the code
+        
+        :param desvarvec: the design variables returned by the optimiser
+        :type desvarvec: nt.NDArray[np.float64]
+        '''
+        return {
+            '(2t/H)_sq':desvarvec[0],
+            '(2t/H)_pq':desvarvec[1],
+            '(2t/H)_aq':desvarvec[2],
+            'W_bb':desvarvec[3],
+            'W_mb':desvarvec[4],
+            'W_lb':desvarvec[5]
+            }

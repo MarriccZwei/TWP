@@ -75,7 +75,7 @@ class LoadCase():
         self.W = M@gvect
 
 
-    def apply_landing(self, nid_pos_affected:nt.NDArray[np.int32], coords_affected:nt.NDArray[np.float64]):
+    def apply_landing(self, nid_pos_affected:nt.NDArray[np.int32]):
         '''Applying the landing load to every node affected, assume uniformly distributed, against the direction of weight'''
         nnodes = len(nid_pos_affected)
         fl = np.zeros(nnodes*pf3.DOF)
@@ -84,32 +84,10 @@ class LoadCase():
         NLz = NL*np.cos(np.deg2rad(self.op.alpha))
         fl[0::pf3.DOF] = NLx
         fl[2::pf3.DOF] = NLz
-        
-        #moment correction -split the nodes into top and bottom ones and apply loads in opposing directions to those parts
-        zavg = np.average(coords_affected[:,2])
-        up_criterion = coords_affected[:,2]>=zavg
-        down_criterion = ~up_criterion
-        nu = np.count_nonzero(up_criterion)
-        nd = np.count_nonzero(down_criterion)
-        z = coords_affected[:,2]
-        zs_up_sum = z[up_criterion].sum()
-        zs_down_sum = z[down_criterion].sum()
-        x = coords_affected[:,0]
-        x_LG = max(x) #assumption, roughly corresponds to the drawings
-        F = NLz*(x_LG-x).sum()/(zs_up_sum/nu-zs_down_sum/nd)
-        fl[0::pf3.DOF][up_criterion] -= F/nu
-        fl[0::pf3.DOF][down_criterion] += F/nd
 
         self.L = np.zeros(self.N)
         self.L[0::pf3.DOF][nid_pos_affected] = fl[0::pf3.DOF]
         self.L[2::pf3.DOF][nid_pos_affected] = fl[2::pf3.DOF]
-
-        assert np.isclose(self.L[0::pf3.DOF].sum(), NLx*nnodes, rtol=1e-2), f"{self.L[0::pf3.DOF].sum()} {NLx*nnodes}"
-        assert np.isclose(self.L[2::pf3.DOF].sum(), NLz*nnodes)
-        moment_sum = np.sum(fl[0::pf3.DOF]*z+fl[2::pf3.DOF]*(x_LG-x)) #about the landing gear point
-        #the only moment left should be the one resulting from the NLx contributions.
-        #this moment is left uncorrected as we do not know the actual landing gear attachment point z
-        assert np.isclose(np.sum(moment_sum), np.sum(NLx*z), atol=1e-2), moment_sum
     
 
     def loadstack(self):
