@@ -1,5 +1,5 @@
 import aerosandbox as asb
-import numpy as np
+import aerosandbox.numpy as np
 import numpy.typing as nt
 import scipy.sparse as ss
 import typing as ty

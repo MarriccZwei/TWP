@@ -1,5 +1,5 @@
 import pyfe3d as pf3
-import numpy as np
+import aerosandbox.numpy as np
 import numpy.typing as nt
 import typing as ty
 import pyfe3d.shellprop as psp

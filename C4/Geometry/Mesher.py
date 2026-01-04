@@ -1,5 +1,5 @@
 import typing as ty
-import numpy as np
+import aerosandbox.numpy as np
 import numpy.typing as nt
 
 class Mesher:

@@ -60,13 +60,6 @@ def test_self_weight():
     lc.aerodynamic_matrix(*mesher.get_submesh('sq'))
     lc.apply_thrust(mesher.get_submesh('mi')[0])
     lc.apply_landing(*mesher.get_submesh('li'))
-    lc.update_weight(model.M)
-    f = lc.loadstack()
-
-    fu = f[model.bu]
-    uu = spsolve(model.KC0uu, fu, atol=1e-4)
-    u = np.zeros(model.N)
-    u[model.bu] = uu
     
     #post processing
     savePath = r"C:\marek\studia\hpb\Results\C4\ForwardTests\\"

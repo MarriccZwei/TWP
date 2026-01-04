@@ -1,9 +1,8 @@
 import pyfe3d as pf3
-import numpy as np 
+import aerosandbox.numpy as np 
 import numpy.typing as nt
 import typing as ty
 import scipy.linalg as sl
-import pyfe3d.shellprop as psp
 
 def strains_quad(probe:pf3.Quad4Probe):
     '''

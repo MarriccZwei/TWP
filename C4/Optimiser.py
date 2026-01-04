@@ -1,19 +1,25 @@
-import LoadCase as lc
-import Pyfe3DModel as p3m
-import Solution as sol
-import scipy.optimize as opt
+from .Geometry.geometryInit import geometry_init
+from .LoadCase import LoadCase
+from .Solution.processLoadCase import process_load_case
+from .Solution.eleProps import load_ele_props
+
 import typing as ty
+import aerosandbox as asb
+import aerosandbox.numpy as np
+import numpy.typing as nt
+import scipy.optimize as opt
 
 class Optimiser():
-    def __init__(self, desvars:ty.Dict[str,float], loadCases:ty.List[ty.Dict[str, object]], cadstrs:ty.Dict[str, str], 
-                 materials:ty.Dict[str, float], resConfig:ty.Dict[str, object], g0:float, MTOM:float):
+    def __init__(self, desvarsInitial:ty.Dict[str,float], loadCasesInfo:ty.List[ty.Dict[str, object]], cadstrs:ty.Dict[str, str], 
+                 materials:ty.Dict[str, float], resConfig:ty.Dict[str, object], g0:float, MTOM:float, airfs:ty.List[asb.Airfoil],
+                 LINBUCKLSF:float, meshMergeDigits:int=3):
         '''
         The constructor performs the initialisation flow as well
         
-        :param desvars: design variables dictionary - keys of 'W_<eleType>' and '(2t/H)_<eleType>'
-        :type desvars: ty.Dict[str, float]
-        :param loadCases: a dictionary with init data of the load cases
-        :type loadCases: ty.List[ty.Dict[str, object]]
+        :param desvarsInitial: design variables dictionary - keys of 'W_<eleType>' and '(2t/H)_<eleType>' with initial values
+        :type desvarsInitial: ty.Dict[str, float]
+        :param loadCasesInfo: a dictionary with init data of the load cases
+        :type loadCasesInfo: ty.List[ty.Dict[str, object]]
         :param cadstrs: a dictionary of CAD export strings required to initialise the model
         :type cadstrs: ty.Dict[str, str]
         :param materials: a dictionary of material properties in format 'E_ALU':72e9 #[Pa]
@@ -24,21 +30,149 @@ class Optimiser():
         :type g0: float
         :param MTOM: aircraft MTOM
         :type MTOM: float
+        :param LINBUCKLSF: safety factor for linear buckling
+        :type LINBUCKLSF: float
+        :param meshMergeDigits: the number of digits Mesher will check to determine whether a certain pair of nodes is coincident
+        :type meshMergeDigits: int
         '''
-        self.desvars = desvars
-        self.loadCases = loadCases
-        self.cadstrs = cadstrs
         self.materials = materials
         self.resConfig = resConfig
-        self.g0 = g0
-        self.MTOM = MTOM
+        self.LINBUCKLSF = LINBUCKLSF
 
+        #1) geometry initialization
+        self.model, self.mesher = geometry_init(cadstrs["mesh"], meshMergeDigits)
+        les_flat = np.fromstring(cadstrs["les"], sep=",")
+        tes_flat = np.fromstring(cadstrs["tes"], sep=",")
+        les = les_flat.reshape((len(les_flat)//3, 3))
+        tes = tes_flat.reshape((len(les_flat)//3, 3)) #should have same length
+        self.ep:ty.Dict[str, ty.List[object]] #element property dict, updated during self._update_model
 
-    def constraints(self):
-        '''Updates the FEM model and weight, and conducts the simulations'''
+        #2) load cases initialisation
+        self.lcs:ty.List[LoadCase] = list()
+        for lcinfo in loadCasesInfo:
+            lc = LoadCase(lcinfo["n"], lcinfo["nlg"], MTOM, self.model.N, g0, lcinfo["Ttot"], lcinfo["op"], 
+                                     les, tes, airfs, resConfig["bres"], resConfig["cres"], resConfig["nneighs"],
+                                     lcinfo["aeroelastic"])
+            if lcinfo["aeroelastic"]:
+                lc.aerodynamic_matrix(*self.mesher.get_submesh('sq'))
+            else:
+                lc.apply_aero(*self.mesher.get_submesh('sq'))
+            lc.apply_landing(*self.mesher.get_submesh('li'))
+            lc.apply_thrust(self.mesher.get_submesh('mi')[0])
+            self.lcs.append(lc)
 
-    def objective(self):
-        '''updates the FEM model and obtains the weight'''
+        #3) design variables initialisation and first model updatate
+        self.desvars = {
+            '(2t/H)_sq':0.,
+            '(2t/H)_pq':0.,
+            '(2t/H)_aq':0.,
+            'W_bb':0.,
+            'W_mb':0.,
+            'W_lb':0.
+        }
+        self._update_model(np.array([
+            desvarsInitial['(2t/H)_sq'],
+            desvarsInitial['(2t/H)_pq'],
+            desvarsInitial['(2t/H)_aq'],
+            desvarsInitial['W_bb'],
+            desvarsInitial['W_mb'],
+            desvarsInitial['W_lb'],
+        ]))
 
-    def constraints_for_optim(self):
-        ''''''
+    def simulate_constraints(self, desvarvec:nt.NDArray[np.float64], plot=False, savePath=None)->nt.NDArray[np.float64]:
+        '''
+        Updates the FEM model if necessary and calculates the failure margins based on the provided load cases
+        
+        :param desvarvec: vector of design variables, in the format required by the optimiser
+        :type desvarvec: nt.NDArray[np.float64]
+        :param plot: vector of design variables
+        :param savePath: the path to which the plots of load case processing results are to be saved
+        :return: the array of failure margins: [quad stress, beam stress, load multiplier, complex eigenfrequencies count]
+        :rtype: NDArray[float64]
+        '''
+        self._update_model(desvarvec)
+        failure_margins = np.array([0., 0., np.inf, 0.])
+        for i, lc in enumerate(self.lcs):
+            #1) handling savePath for multiple load case results
+            if savePath is None:
+                savePath = None
+            else:
+                savePathLC = f"{savePath}LC{i}\\"
+
+            #2) load case (post) processing
+            lcmargins = process_load_case(self.model, lc, self.materials, self.desvars, self.ep["beamtypes"], self.ep["quadtypes"],
+                                          plot, savePathLC, self.resConfig["kfl"], self.resConfig["klb"])
+            
+            #3) assesing whether the load case is constraining and updating failure_margins if so
+            if failure_margins[0]<lcmargins[0]:#quad stresses, the more, the worse
+                failure_margins[0]=lcmargins[0]
+            if failure_margins[1]<lcmargins[1]:#beam stresses, the more, the worse
+                failure_margins[1]=lcmargins[1]
+            if failure_margins[2]>lcmargins[2]:#linear buckling load multiplier, the less, the worse
+                failure_margins[2]=lcmargins[2]
+            if failure_margins[3]<lcmargins[3]:#complex eigenfrequencies count, the more, the worse
+                failure_margins[3]=lcmargins[3]
+
+        return failure_margins
+            
+
+    def objective(self, desvarvec:nt.NDArray[np.float64])->float:
+        '''
+        Computes the total mass of the system to be used as an objective to minimise
+        
+        :param desvarvec: vector of design variables, in the format required by the optimiser
+        :type desvarvec: nt.NDArray[np.float64]
+        :return: the total mass
+        :rtype: float
+        '''
+        self._update_model(desvarvec)
+        #W=M@g, with this vector the magnitude of the weight vector will be that of total system mass
+        unit_gvect = np.array([0.,0.,1.,0.,0.,0.]*self.model.ncoords.shape[0])
+        return np.sum(self.model.M@unit_gvect)
+    
+    def constraint(self)->opt.NonlinearConstraint:
+        '''
+        the constraint for the optimiser to be evaluated taking the vector of design variables, such as the one from
+        self.desvarvec, as input
+        
+        :return: the constraint to pass to the scipy optimizer
+        :rtype: NonlinearConstraint
+        '''
+        zeroFlutterEpsilon = 1e-2
+        comparisonFlutter = .5
+        return opt.NonlinearConstraint(self.simulate_constraints, np.array([0.,0., self.LINBUCKLSF, -zeroFlutterEpsilon]),
+                                       np.array([1., 1., np.inf, comparisonFlutter]))
+
+    def _update_model(self, desvarvec:nt.NDArray[np.float64]):
+        #NOTE: update happens only if there is a change to the design variables!!!
+        if not np.allclose(desvarvec, self.desvarvec()):
+            #1) design variables update
+            self.desvars = {
+            '(2t/H)_sq':desvarvec[0],
+            '(2t/H)_pq':desvarvec[1],
+            '(2t/H)_aq':desvarvec[2],
+            'W_bb':desvarvec[3],
+            'W_mb':desvarvec[4],
+            'W_lb':desvarvec[5]
+            }
+
+            #2) model properties update
+            ep = load_ele_props(self.desvars, self.materials, self.mesher.eleTypes, self.mesher.eleArgs)
+            beamprops = ep["beamprops"]
+            beamorients = ep["beamorients"]
+            shellprops = ep["shellprops"]
+            matdirs = ep["matdirs"]
+            inertia_vals = ep["inertia_vals"]
+            self.model.KC0_M_update(beamprops, beamorients, shellprops, matdirs, inertia_vals)
+            self.ep = ep
+
+    
+    def desvarvec(self):
+        return np.array([
+            self.desvars['(2t/H)_sq'],
+            self.desvars['(2t/H)_pq'],
+            self.desvars['(2t/H)_aq'],
+            self.desvars['W_bb'],
+            self.desvars['W_mb'],
+            self.desvars['W_lb'],
+        ])

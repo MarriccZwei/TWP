@@ -5,7 +5,7 @@ import pyfe3d.beamprop as pbp
 import pyfe3d.shellprop as psp
 import pyfe3d.shellprop_utils as psu
 import pyfe3d as pf3
-import numpy as np
+import aerosandbox.numpy as np
 
 def load_ele_props(desvars:ty.Dict[str,float], materials:ty.Dict[str,float], eleTypes:ty.List[str], eleArgs:ty.List[float])->ty.Dict[
     str,ty.List[object]]:

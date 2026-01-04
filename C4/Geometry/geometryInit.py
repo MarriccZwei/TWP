@@ -3,7 +3,7 @@ from .Mesher import Mesher
 from ..Pyfe3DModel import Pyfe3DModel
 
 import typing as ty
-import numpy as np
+import aerosandbox.numpy as np
 import pyfe3d as pf3
 
 def geometry_init(catiaout:str, collisionDecimalPlaces:int=5) -> ty.Tuple[Pyfe3DModel, Mesher]:
