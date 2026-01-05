@@ -144,13 +144,16 @@ class LoadCase():
         weights2 = (1/d**power)/((1/d**power).sum(axis=1)[:, None])
         assert np.allclose(weights2.sum(axis=1), 1)
 
-        W_u_to_p = np.zeros((len(p)*3, self.N))
+        W_u_to_p = np.zeros((len(p), self.N))
 
         for j in range(number_of_neighbors):
             for i, node_index in enumerate(node_indices): #we have 3 forces for 2 p vars per node, so 6
-                W_u_to_p[i*3 + 0, pf3.DOF*ids_s[node_index] + 0] = weights2[i, j]
-                W_u_to_p[i*3 + 1, pf3.DOF*ids_s[node_index] + 1] = weights2[i, j]
-                W_u_to_p[i*3 + 2, pf3.DOF*ids_s[node_index] + 2] = weights2[i, j]
+                W_u_to_p[i*6 + 0, pf3.DOF*ids_s[node_index] + 0] += weights2[i, j]
+                W_u_to_p[i*6 + 1, pf3.DOF*ids_s[node_index] + 1] += weights2[i, j]
+                W_u_to_p[i*6 + 2, pf3.DOF*ids_s[node_index] + 2] += weights2[i, j]
+                W_u_to_p[i*6 + 3, pf3.DOF*ids_s[node_index] + 0] += weights2[i, j]
+                W_u_to_p[i*6 + 4, pf3.DOF*ids_s[node_index] + 1] += weights2[i, j]
+                W_u_to_p[i*6 + 5, pf3.DOF*ids_s[node_index] + 2] += weights2[i, j]
             
         return ss.csc_matrix(W_u_to_p)
 
@@ -197,10 +200,10 @@ class LoadCase():
         v = vortex_valid.sum()*3
         Fv = vlm_.forces_geometry[vortex_valid].flatten()*ratio #re-scaling for load factor
 
-        dFv_dp = np.zeros((v, len(displs)*3)) # NOTE remember to pass both heave and twist displacements
+        dFv_dp = np.zeros((v, len(displs))) # NOTE remember to pass both heave and twist displacements
         for i in range(len(displs)-1):
             if i != len(self.les): #we skip the twist of the first foil, just as we skip its displacement
-                p_DOF = 3*(i + 1) + 2 # heave DOF starting at second airfoil
+                p_DOF = i+1 # heave DOF starting at second airfoil
                 p2 = displs.copy()
                 p2[i+1] += epsilon
 
