@@ -65,12 +65,29 @@ RES = {
     'cres':10,
     'nneighs':100,
     'kfl':7,
-    'klb':4
+    'klb':4,
 }
 
 G0 = 9.81 # [N/kg]
 MTOM = 76000. # [kg]
 LBUCKLSF = 1.5
-WMAX = .025 # [m]
+BOUNDS = (
+    {
+        '(2t/H)_sq':0.01,
+        '(2t/H)_pq':0.01,
+        '(2t/H)_aq':0.01,
+        'W_bb':0.003,
+        'W_mb':0.003,
+        'W_lb':0.003
+    },
+    {
+        '(2t/H)_sq':0.2,
+        '(2t/H)_pq':0.2,
+        '(2t/H)_aq':0.2,
+        'W_bb':0.02,
+        'W_mb':0.02,
+        'W_lb':0.02
+    }
+)
 
 AIRFS = [asb.Airfoil(f"naca241{i}") for i in reversed(range(9))] #from naca 2418 to naca 2410

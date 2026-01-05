@@ -16,15 +16,12 @@ def test_self_weight():
     model, mesher = geometry_init(catiaout, 3)
 
     desvars = {
-        # "(H'/H)_sq":1., NOTE: still disputed, probs 2 remove
-        # "(H'/H)_pq":0.7,
-        # "(H'/H)_aq":0.7,
-        '(2t/H)_sq':0.1,
-        '(2t/H)_pq':0.06,
-        '(2t/H)_aq':0.04,
-        'W_bb':0.01,
-        'W_mb':0.011,
-        'W_lb':0.015
+        '(2t/H)_sq':0.01,
+        '(2t/H)_pq':0.01,
+        '(2t/H)_aq':0.01,
+        'W_bb':0.003,
+        'W_mb':0.003,
+        'W_lb':0.003
     }
 
     materials = {

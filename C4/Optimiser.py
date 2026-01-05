@@ -12,7 +12,7 @@ import scipy.optimize as opt
 class Optimiser():
     def __init__(self, desvarsInitial:ty.Dict[str,float], loadCasesInfo:ty.List[ty.Dict[str, object]], cadstrs:ty.Dict[str, str], 
                  materials:ty.Dict[str, float], resConfig:ty.Dict[str, object], g0:float, MTOM:float, airfs:ty.List[asb.Airfoil],
-                 LINBUCKLSF:float, WMAX:float, meshMergeDigits:int=3, logEveryNIters:int=None):
+                 LINBUCKLSF:float, bounds:ty.Tuple[ty.Dict[str, float]], meshMergeDigits:int=3, logEveryNIters:int=None):
         '''
         The constructor performs the initialisation flow as well
         
@@ -40,7 +40,8 @@ class Optimiser():
         self.materials = materials
         self.resConfig = resConfig
         self.LINBUCKLSF = LINBUCKLSF
-        self.WMAX = WMAX
+        self.lb = bounds[0]
+        self.ub = bounds[1]
 
         #0) handle logging or lack of thereof
         self.logEveryNIters = logEveryNIters
@@ -78,14 +79,12 @@ class Optimiser():
             'W_mb':0.,
             'W_lb':0.
         }
-        self._update_model(np.array([
-            desvarsInitial['(2t/H)_sq'],
-            desvarsInitial['(2t/H)_pq'],
-            desvarsInitial['(2t/H)_aq'],
-            desvarsInitial['W_bb'],
-            desvarsInitial['W_mb'],
-            desvarsInitial['W_lb'],
-        ]))
+        self._update_model(self.desvarvec(desvarsInitial))
+
+        #4) saving the masses of all constant inertia st. one can get structural mass in the objective
+        self._mn_sum = 0.
+        for iv in self.model.inertia_vals:
+            self._mn_sum += iv[0]
 
 
     def simulate_constraints(self, desvarvec:nt.NDArray[np.float64], plot=False, savePath=None)->nt.NDArray[np.float64]:
@@ -149,7 +148,7 @@ class Optimiser():
             if self.iteration_number%self.logEveryNIters==0:
                 print(f"Step {self.iteration_number} objective: {totmass}")
         
-        return totmass
+        return totmass-self._mn_sum #isolating structural mass from other inertia
     
 
     def constraint(self)->ty.List[ty.Union[opt.NonlinearConstraint, opt.LinearConstraint]]:
@@ -165,15 +164,15 @@ class Optimiser():
         ndesvars = len(self.desvars)
         return [opt.NonlinearConstraint(self.simulate_constraints, np.array([0.,0., self.LINBUCKLSF, -epsilon]),
                                        np.array([1., 1., np.inf, comparisonFlutter])),
-                opt.LinearConstraint(np.eye(ndesvars), np.ones(ndesvars)*epsilon, 
-                                     np.array([1., 1., 1., self.WMAX, self.WMAX, self.WMAX]))]
+                opt.LinearConstraint(np.eye(ndesvars), np.ones(ndesvars)*epsilon, #for some margin from divergence
+                                     np.ones(ndesvars))] #making use of the fact that the desvarvec is normalised
 
 
     def _update_model(self, desvarvec:nt.NDArray[np.float64]):
         #NOTE: update happens only if there is a change to the design variables!!!
         if not np.allclose(desvarvec, self.desvarvec()):
             #1) design variables update
-            self.desvars = Optimiser.desvars_from_vec(desvarvec)
+            self.desvars = self.desvars_from_vec(desvarvec)
 
             #2) model properties update
             ep = load_ele_props(self.desvars, self.materials, self.mesher.eleTypes, self.mesher.eleArgs)
@@ -191,22 +190,18 @@ class Optimiser():
                 print(f"\nStep {self.iteration_number} desvars: {self.desvars}")
 
     
-    def desvarvec(self):
+    def desvarvec(self, vardict:ty.Dict[str, float]=None):
         '''
         Returns the current design variables as a vector to be plugged into scipy optimiser
         '''
-        return np.array([
-            self.desvars['(2t/H)_sq'],
-            self.desvars['(2t/H)_pq'],
-            self.desvars['(2t/H)_aq'],
-            self.desvars['W_bb'],
-            self.desvars['W_mb'],
-            self.desvars['W_lb'],
-        ])
+        if vardict is None:
+            normalise = lambda key:(self.desvars[key]-self.lb[key])/(self.ub[key]-self.lb[key])
+        else:
+            normalise = lambda key:(vardict[key]-self.lb[key])/(self.ub[key]-self.lb[key])
+        return np.array([normalise(key) for key in ['(2t/H)_sq', '(2t/H)_pq', '(2t/H)_aq', 'W_bb', 'W_mb', 'W_lb']])
     
 
-    @staticmethod
-    def desvars_from_vec(desvarvec:nt.NDArray[np.float64]):
+    def desvars_from_vec(self, desvarvec:nt.NDArray[np.float64]):
         '''
         Converts the design variables returned by the optimiser to the dictionary format used elsewhere in the code
         
@@ -214,10 +209,10 @@ class Optimiser():
         :type desvarvec: nt.NDArray[np.float64]
         '''
         return {
-            '(2t/H)_sq':desvarvec[0],
-            '(2t/H)_pq':desvarvec[1],
-            '(2t/H)_aq':desvarvec[2],
-            'W_bb':desvarvec[3],
-            'W_mb':desvarvec[4],
-            'W_lb':desvarvec[5]
-            }
+            '(2t/H)_sq':desvarvec[0]*self.ub['(2t/H)_sq']+(1-desvarvec[0])*self.lb['(2t/H)_sq'],
+            '(2t/H)_pq':desvarvec[1]*self.ub['(2t/H)_pq']+(1-desvarvec[1])*self.lb['(2t/H)_pq'],
+            '(2t/H)_aq':desvarvec[2]*self.ub['(2t/H)_aq']+(1-desvarvec[2])*self.lb['(2t/H)_aq'],
+            'W_bb':desvarvec[3]*self.ub['W_bb']+(1-desvarvec[3])*self.lb['W_bb'],
+            'W_mb':desvarvec[4]*self.ub['W_mb']+(1-desvarvec[4])*self.lb['W_mb'],
+            'W_lb':desvarvec[5]*self.ub['W_lb']+(1-desvarvec[5])*self.lb['W_lb']
+        }

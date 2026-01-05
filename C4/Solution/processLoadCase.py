@@ -60,6 +60,7 @@ def process_load_case(model:Pyfe3DModel, lc:LoadCase, materials:ty.Dict[str, flo
         beam_failure_margins.append(beam_stress_recovery(desvars, materials, beam, beamprop, beamorient, beamType, model.beamprobe))
 
     #2.3) buckling
+    print("Buckling starts")
     KG = ss.coo_matrix((KGv, (KGr, KGc)), shape=(model.N, model.N)).tocsc()
     KGuu = model.uu_matrix(KG)
     eigvecs = np.zeros((model.N, num_eig_lb))
@@ -71,6 +72,7 @@ def process_load_case(model:Pyfe3DModel, lc:LoadCase, materials:ty.Dict[str, flo
 
     #2.4) flutter
     if lc.aeroelastic:
+        print("Natfreq starts")
         KAuu = model.uu_matrix(lc.KA)
         peigvecs = np.zeros((model.N, k))
         eigvalsFlutter, peigvecsu = ssl.eigs(A=model.KC0uu - KAuu, M=model.Muu, k=k, which='LM', sigma=-1.)
@@ -79,6 +81,13 @@ def process_load_case(model:Pyfe3DModel, lc:LoadCase, materials:ty.Dict[str, flo
         score = np.count_nonzero(np.imag(omegan))
     else:
         score = 0.
+
+    failure_margins = np.array([
+        max(quad_failure_margins),
+        max(beam_failure_margins),
+        load_mult,
+        score
+    ])
 
     #3) Plotting
     if plot:
@@ -149,14 +158,11 @@ def process_load_case(model:Pyfe3DModel, lc:LoadCase, materials:ty.Dict[str, flo
                 for i in range(peigvecs.shape[1]):
                     plot_nodal_quantity(prep_displacements(peigvecs[:,i], model, eigvec_scaling/max(peigvecs[:,i])), peigvecs[:,i][2::pf3.DOF],
                                         model, savePath, f"NatfreqMode{i}")
+            with open(savePath+"failure_margins.txt", "w") as file:
+                file.write(f"fail_margs: {failure_margins}")
             print(f"Report saved at the path below.\n{savePath}")        
 
-    return np.array([
-        max(quad_failure_margins),
-        max(beam_failure_margins),
-        load_mult,
-        score
-    ])
+    return failure_margins
 
 
 def prep_displacements(u:nt.NDArray[np.float64], model:Pyfe3DModel, scaling:float=1.):
