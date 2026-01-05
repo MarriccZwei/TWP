@@ -142,13 +142,14 @@ class Optimiser():
         #W=M@g, with this vector the magnitude of the weight vector will be that of total system mass
         unit_gvect = np.array([0.,0.,1.,0.,0.,0.]*self.model.ncoords.shape[0])
         totmass = np.sum(self.model.M@unit_gvect)
+        obj = totmass-self._mn_sum #isolating structural mass from other inertia
 
         #logging if enabled
         if not (self.logEveryNIters is None):
             if self.iteration_number%self.logEveryNIters==0:
-                print(f"Step {self.iteration_number} objective: {totmass}")
+                print(f"Step {self.iteration_number} objective: {obj}")
         
-        return totmass-self._mn_sum #isolating structural mass from other inertia
+        return obj
     
 
     def constraint(self)->ty.List[ty.Union[opt.NonlinearConstraint, opt.LinearConstraint]]:
