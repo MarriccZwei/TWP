@@ -14,7 +14,7 @@ import pyvista as pv
 def process_load_case(model:Pyfe3DModel, lc:LoadCase, materials:ty.Dict[str, float], desvars:ty.Dict[str, float],
                       beamTypes:ty.List[str], quadTypes:ty.List[str],
                       plot:bool=False, savePath:str=None, 
-                      k:float=7, num_eig_lb:float=4)->nt.NDArray[np.float64]:
+                      num_eig_lb:float=4)->nt.NDArray[np.float64]:
     '''
     Docstring for process_load_case
     
@@ -70,23 +70,10 @@ def process_load_case(model:Pyfe3DModel, lc:LoadCase, materials:ty.Dict[str, flo
     eigvecs[model.bu] = eigvecsu
     load_mult = eigvals[0]
 
-    #2.4) flutter
-    if lc.aeroelastic:
-        print("Natfreq starts")
-        KAuu = model.uu_matrix(lc.KA)
-        peigvecs = np.zeros((model.N, k))
-        eigvalsFlutter, peigvecsu = ssl.eigs(A=model.KC0uu - KAuu, M=model.Muu, k=k, which='LM', sigma=-1.)
-        omegan = np.sqrt(eigvalsFlutter)
-        peigvecs[model.bu, :] = peigvecsu
-        score = np.count_nonzero(np.imag(omegan))
-    else:
-        score = 0.
-
     failure_margins = np.array([
         max(quad_failure_margins),
         max(beam_failure_margins),
-        load_mult,
-        score
+        load_mult, 
     ])
 
     #3) Plotting
@@ -154,15 +141,31 @@ def process_load_case(model:Pyfe3DModel, lc:LoadCase, materials:ty.Dict[str, flo
             for i in range(eigvecs.shape[1]):
                 plot_nodal_quantity(prep_displacements(eigvecs[:,i], model, eigvec_scaling/max(eigvecs[:,i])), eigvecs[:,i][2::pf3.DOF],
                                     model, savePath, f"BucklingMode{i}")
-            if lc.aeroelastic:
-                for i in range(peigvecs.shape[1]):
-                    plot_nodal_quantity(prep_displacements(peigvecs[:,i], model, eigvec_scaling/max(peigvecs[:,i])), peigvecs[:,i][2::pf3.DOF],
-                                        model, savePath, f"NatfreqMode{i}")
             with open(savePath+"failure_margins.txt", "w") as file:
                 file.write(f"fail_margs: {failure_margins}")
             print(f"Report saved at the path below.\n{savePath}")        
 
     return failure_margins
+
+def process_aeroelastic_load_case(model:Pyfe3DModel, lc:LoadCase, plot:bool=False, savePath:str=None, k:float=7):
+    """
+    
+    """
+    print("Natfreq starts")
+    KAuu = model.uu_matrix(lc.KA)
+    peigvecs = np.zeros((model.N, k))
+    eigvalsFlutter, peigvecsu = ssl.eigs(A=model.KC0uu - KAuu, M=model.Muu, k=k, which='LM', sigma=-1.)
+    omegan = np.sqrt(eigvalsFlutter)
+    peigvecs[model.bu, :] = peigvecsu
+
+    if plot:
+        eigvec_scaling = 25.
+        for i in range(peigvecs.shape[1]):
+                plot_nodal_quantity(prep_displacements(peigvecs[:,i], model, eigvec_scaling/max(abs(peigvecs[:,i]))), peigvecs[:,i][2::pf3.DOF],
+                                    model, savePath, f"NatfreqMode{i}")
+
+    print(omegan)
+    return np.count_nonzero(np.imag(omegan))
 
 
 def prep_displacements(u:nt.NDArray[np.float64], model:Pyfe3DModel, scaling:float=1.):

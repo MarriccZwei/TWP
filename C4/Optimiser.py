@@ -1,6 +1,6 @@
 from .Geometry.geometryInit import geometry_init
 from .LoadCase import LoadCase
-from .Solution.processLoadCase import process_load_case
+from .Solution.processLoadCase import process_load_case, process_aeroelastic_load_case
 from .Solution.eleProps import load_ele_props
 
 import typing as ty
@@ -107,19 +107,24 @@ class Optimiser():
             else:
                 savePathLC = f"{savePath}LC{i}\\"
 
+            #2.0) separate processing for the 'aeroelastic load cases'
+            if lc.aeroelastic:
+                flutterCount = process_aeroelastic_load_case(self.model, lc, plot, savePathLC, self.resConfig["klb"])
+                if flutterCount>lcmargins[3]:
+                    lcmargins[3] = flutterCount
+                    
             #2) load case (post) processing
-            lcmargins = process_load_case(self.model, lc, self.materials, self.desvars, self.ep["beamtypes"], self.ep["quadtypes"],
-                                          plot, savePathLC, self.resConfig["kfl"], self.resConfig["klb"])
-            
-            #3) assesing whether the load case is constraining and updating failure_margins if so
-            if failure_margins[0]<lcmargins[0]:#quad stresses, the more, the worse
-                failure_margins[0]=lcmargins[0]
-            if failure_margins[1]<lcmargins[1]:#beam stresses, the more, the worse
-                failure_margins[1]=lcmargins[1]
-            if failure_margins[2]>lcmargins[2]:#linear buckling load multiplier, the less, the worse
-                failure_margins[2]=lcmargins[2]
-            if failure_margins[3]<lcmargins[3]:#complex eigenfrequencies count, the more, the worse
-                failure_margins[3]=lcmargins[3]
+            else:
+                lcmargins = process_load_case(self.model, lc, self.materials, self.desvars, self.ep["beamtypes"], self.ep["quadtypes"],
+                                            plot, savePathLC, self.resConfig["klb"])
+                
+                #3) assesing whether the load case is constraining and updating failure_margins if so
+                if failure_margins[0]<lcmargins[0]:#quad stresses, the more, the worse
+                    failure_margins[0]=lcmargins[0]
+                if failure_margins[1]<lcmargins[1]:#beam stresses, the more, the worse
+                    failure_margins[1]=lcmargins[1]
+                if failure_margins[2]>lcmargins[2]:#linear buckling load multiplier, the less, the worse
+                    failure_margins[2]=lcmargins[2]
 
         #4) logging if enabled
         if not (self.logEveryNIters is None):
