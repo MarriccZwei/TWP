@@ -236,6 +236,8 @@ class Pyfe3DModel():
         #8) re-creating the csc matrices
         self.KC0 = ss.coo_matrix((self.KC0v, (self.KC0r, self.KC0c)), shape=(self.N, self.N)).tocsc()
         self.M = ss.coo_matrix((self.Mv, (self.Mr, self.Mc)), shape=(self.N, self.N)).tocsc()
+        self.KC0 = (self.KC0.T+self.KC0)/2 #forced symmetry to counter numerical artifacts
+        self.M = (self.M.T+self.M)/2
         
         #9) re-aplying the boundary conditions
         self.KC0uu = self.uu_matrix(self.KC0)

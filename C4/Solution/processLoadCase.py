@@ -147,7 +147,7 @@ def process_load_case(model:Pyfe3DModel, lc:LoadCase, materials:ty.Dict[str, flo
 
     return failure_margins
 
-def process_aeroelastic_load_case(model:Pyfe3DModel, lc:LoadCase, plot:bool=False, savePath:str=None, k:float=7):
+def process_aeroelastic_load_case(model:Pyfe3DModel, lc:LoadCase, plot:bool=False, savePath:str=None, k:int=7):
     """
     
     """
@@ -159,9 +159,9 @@ def process_aeroelastic_load_case(model:Pyfe3DModel, lc:LoadCase, plot:bool=Fals
     peigvecs[model.bu, :] = peigvecsu
 
     if plot:
-        eigvec_scaling = 25.
+        eigvec_scaling = 1.
         for i in range(peigvecs.shape[1]):
-                plot_nodal_quantity(prep_displacements(peigvecs[:,i], model, eigvec_scaling/max(abs(peigvecs[:,i]))), peigvecs[:,i][2::pf3.DOF],
+                plot_nodal_quantity(prep_displacements(peigvecs[:,i], model, eigvec_scaling/max(abs(peigvecs[:,i][2::pf3.DOF]))), peigvecs[:,i][2::pf3.DOF],
                                     model, savePath, f"NatfreqMode{i}")
 
     print(omegan)

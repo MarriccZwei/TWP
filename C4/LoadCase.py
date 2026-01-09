@@ -56,6 +56,7 @@ class LoadCase():
         '''
         _, vlm, forces, _ = self._vlm()
         ratio = self.MTOM*self.g0*self.n*np.cos(np.deg2rad(self.op.alpha))/forces[2]
+        print(ratio)
         _, self.A = self._aero2fem(vlm, coords_affected, nid_pos_affected, ratio)
 
 
@@ -112,7 +113,6 @@ class LoadCase():
         v = vortex_valid.sum()*3
         W = np.zeros((self.N, v))
 
-        W *= 0
         for j in range(self.nneighs):
             for i, node_index in enumerate(node_indices[:, j]):
                 #Here we cannot use the node_index directly, as we need to match the node indexing in the global mesh
@@ -135,29 +135,28 @@ class LoadCase():
 
     def _fem2aero(self, p:nt.NDArray[np.float32], ncoords_s:nt.NDArray[np.float32], ids_s:nt.NDArray[np.int32],
                 number_of_neighbors=2):
-        number_of_neighbors = self.nneighs//5
+        number_of_neighbors = self.nneighs#NOTE: remove when testing done
         heave_displs =  p[:len(self.les)]
         leds = [self.les[i, :]+np.array([0.,0.,heave_displs[i]]) for i in range(self.les.shape[0])]
-        ledts = leds+[np.array([0., 0., 0.])]*(len(self.les)-1) #adding non-displaced points 4 twist
+        #ledts = leds+[np.array([0., 0., 0.])]*(len(self.les)-1) #adding non-displaced points 4 twist
 
         tree = ssp.cKDTree(ncoords_s)
-        d, node_indices = tree.query(ledts, k=number_of_neighbors)
+        d, node_indices = tree.query(leds, k=number_of_neighbors)
         print(node_indices.shape, p.shape, d.shape)
         power = 2
         weights2 = (1/d**power)/((1/d**power).sum(axis=1)[:, None])
-        print(weights2.shape)
         assert np.allclose(weights2.sum(axis=1), 1)
 
-        W_u_to_p = np.zeros((len(p), self.N))
+        W_u_to_p = np.zeros((len(p)*3, self.N))
 
         for j in range(number_of_neighbors):
             for i, node_index in enumerate(node_indices): #we have 3 forces for 2 p vars per node, so 6
-                W_u_to_p[i, pf3.DOF*ids_s[node_index] + 0] += weights2[i, j]
-                W_u_to_p[i, pf3.DOF*ids_s[node_index] + 1] += weights2[i, j]
-                W_u_to_p[i, pf3.DOF*ids_s[node_index] + 2] += weights2[i, j]
-                W_u_to_p[i, pf3.DOF*ids_s[node_index] + 3] += weights2[i, j]
-                W_u_to_p[i, pf3.DOF*ids_s[node_index] + 4] += weights2[i, j]
-                W_u_to_p[i, pf3.DOF*ids_s[node_index] + 6] += weights2[i, j]
+                W_u_to_p[i*3+0, pf3.DOF*ids_s[node_index] + 0] += weights2[i, j]
+                W_u_to_p[i*3+1, pf3.DOF*ids_s[node_index] + 1] += weights2[i, j]
+                W_u_to_p[i*3+2, pf3.DOF*ids_s[node_index] + 2] += weights2[i, j]
+                W_u_to_p[i*3+0+len(heave_displs), pf3.DOF*ids_s[node_index] + 3] += weights2[i, j]
+                W_u_to_p[i*3+1+len(heave_displs), pf3.DOF*ids_s[node_index] + 4] += weights2[i, j]
+                W_u_to_p[i*3+2+len(heave_displs), pf3.DOF*ids_s[node_index] + 5] += weights2[i, j]
             
         return ss.csc_matrix(W_u_to_p)
 
@@ -194,7 +193,7 @@ class LoadCase():
 
 
     def _calc_dFv_dp(self, ymin:float, displs:ty.List[float]=None, return_sol=False, epsilon=.01):
-        
+        print("CalcdFvdP")
         if displs is None:
             displs = np.zeros(len(self.airfs)*2)
         airplane, vlm_, forces, moments = self._vlm(displs, return_sol)
@@ -202,19 +201,20 @@ class LoadCase():
 
         vortex_valid = vlm_.vortex_centers[:, 1] > ymin
         v = vortex_valid.sum()*3
-        Fv = vlm_.forces_geometry[vortex_valid].flatten()#*ratio #re-scaling for load factor
+        Fv = vlm_.forces_geometry[vortex_valid].flatten()
 
-        dFv_dp = np.zeros((v, len(displs))) # NOTE remember to pass both heave and twist displacements
+        dFv_dp = np.zeros((v, len(displs)*3)) # NOTE remember to pass both heave and twist displacements
         for i in range(len(displs)-1):
             if i != len(self.les)-1: #we skip the twist of the first foil, just as we skip its displacement
-                p_DOF = i+1 # heave DOF starting at second airfoil
+                p_DOF = (3*i+2) if (i<len(self.les)-1) else (3*i+1) # heave DOF starting at second airfoil
                 p2 = displs.copy()
                 p2[i+1] += epsilon
 
                 plane2, vlm2, f2, M2 = self._vlm(p2, return_sol)
-                Fv2 = vlm2.forces_geometry[vortex_valid].flatten()#*ratio
+                Fv2 = vlm2.forces_geometry[vortex_valid].flatten()
                 deriv = (Fv2 - Fv)/epsilon
                 dFv_dp[:, p_DOF] += deriv
+                print(np.max(deriv))
 
         dFv_dp = ss.csc_matrix(dFv_dp)
         return vlm_, dFv_dp

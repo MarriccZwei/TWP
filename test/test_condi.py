@@ -16,12 +16,12 @@ def test_self_weight():
     model, mesher = geometry_init(catiaout, 3)
 
     desvars = {
-        '(2t/H)_sq':0.1,
-        '(2t/H)_pq':0.05,
-        '(2t/H)_aq':0.05,
-        'W_bb':0.03,
-        'W_mb':0.03,
-        'W_lb':0.03
+        '(2t/H)_sq':0.01,
+        '(2t/H)_pq':0.01,
+        '(2t/H)_aq':0.01,
+        'W_bb':0.003,
+        'W_mb':0.003,
+        'W_lb':0.003
     }
 
     materials = {
@@ -45,28 +45,44 @@ def test_self_weight():
 
     model.KC0_M_update(beamprops, beamorients, shellprops, matdirs, inertia_vals)
 
-    les_str = "0.0, 0.0, 0.0,0.24796410315737183, 2.6250000000000013, 0.21803733205038336,0.49592820631474366, 5.250000000000003, 0.43607466410076673,0.7438923094721154, 7.875000000000002, 0.6541119961511499,0.9918564126294873, 10.500000000000005, 0.8721493282015335,1.2398205157868587, 13.125000000000002, 1.0901866602519166,1.4877846189442308, 15.750000000000004, 1.3082239923022998,1.7357487221016028, 18.37500000000001, 1.5262613243526835,1.9837128252589746, 21.00000000000001, 1.744298656403067"
-    tes_str = "4.950622318602955, 0.0, 0.009334779044329352,4.827275918562817, 2.6250000000000013, 0.22646456313206953,4.7039295185226795, 5.250000000000003, 0.4435943472198098,4.580583118482542, 7.875000000000004, 0.66072413130755,4.457236718442404, 10.500000000000005, 0.8778539153952902,4.333890318402267, 13.125000000000005, 1.09498369948303,4.210543918362128, 15.750000000000009, 1.3121134835707706,4.087197518321991, 18.37500000000001, 1.5292432676585108,3.963851118281853, 21.00000000000001, 1.7463730517462508"
-    les_flat = np.fromstring(les_str, sep=",")
-    tes_flat = np.fromstring(tes_str, sep=",")
-    les = les_flat.reshape((len(les_flat)//3, 3))
-    tes = tes_flat.reshape((len(les_flat)//3, 3)) #should have same length
-    airfs = [asb.Airfoil(f"naca241{i}") for i in reversed(range(9))] #from naca 2418 to naca 2410
+    print(f"Muu isSym: {(abs(model.Muu-model.Muu.T)>1e-10).nnz == 0}")
+    print(f"Kuu isSym: {(abs(model.KC0uu-model.KC0uu.T)>1e-10).nnz == 0}")
 
-    lc = LoadCase(1., 0., 76000, model.N, 9.81, 112800, asb.OperatingPoint(alpha=-.5, velocity=269.), les, tes, airfs, bres=30, cres=5, aeroelastic=True, nneighs=100)
-    lc.aerodynamic_matrix(*mesher.get_submesh('sq'))
-    lc.apply_aero(*mesher.get_submesh('sq'))
-    print(model.KC0[model.KC0>0.].mean(), np.abs(lc.KA[np.abs(lc.KA)>0.]).mean())
+    # '''Visualise the KA and KC matrices'''
+    # import matplotlib.pyplot as plt
+    # from scipy.sparse import coo_matrix
 
-    #post processing
-    savePath = r"C:\marek\studia\hpb\Results\C4\ForwardTests\\"
-    count = process_aeroelastic_load_case(model, lc, plot=True, savePath=savePath, k=30)
-    print(count)
-    print(model.ncoords.shape) #so that it can be compared with the shape from CATIA
+    # fig = plt.figure()
+    # def plot_coo_matrix(m, fig, subplot:int):
+    #     if not isinstance(m, coo_matrix):
+    #         m = coo_matrix(m)
+    #     ax = fig.add_subplot(subplot, facecolor='black')
+    #     ax.plot(m.col[m.data>1e-5], m.row[m.data>1e-5], 's', color='green', ms=1)
+    #     ax.set_xlim(0, m.shape[1])
+    #     ax.set_ylim(0, m.shape[0])
+    #     ax.set_aspect('equal')
+    #     for spine in ax.spines.values():
+    #         spine.set_visible(False)
+    #     ax.invert_yaxis()
+    #     ax.set_aspect('equal')
+    #     ax.set_xticks([])
+    #     ax.set_yticks([])
+    #     return ax
 
-    peigvecs = np.zeros((model.N, 7))
-    eigvalsFlutter, peigvecsu = ssl.eigs(A=model.KC0uu, M=model.Muu, k=30, which='SR')
-    print(np.sqrt(eigvalsFlutter))
+    # plot_coo_matrix(abs(model.KC0uu-model.KC0uu.T), fig, 111)
+    # plt.show()
+
+    print("Muu")
+    eigminMuu, _ = ssl.eigsh(model.Muu, which="LM", sigma=1e-4)
+    print("Muu")
+    eigmaxMuu, _ = ssl.eigsh(model.Muu, which="LM")
+    print("Kuu")
+    eigminKuu, _ = ssl.eigsh(model.KC0uu, which="LM", sigma=100)
+    print("Kuu")
+    eigmaxKuu, _ = ssl.eigsh(model.KC0uu, which="LM")
+
+    print(f"eigminMuu: {eigminMuu}, eigminKuu: {eigminKuu}")
+    print(f"cond M: {abs(max(eigmaxMuu)/min(eigminMuu))}, cond K: {abs(max(eigmaxKuu)/min(eigminKuu))}")
 
 
 if __name__ == "__main__":

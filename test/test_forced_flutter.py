@@ -9,6 +9,7 @@ import pyfe3d as pf3
 from pypardiso import spsolve
 import numpy as np
 import scipy.sparse.linalg as ssl
+import scipy.sparse as ss
 import aerosandbox as asb
 
 def test_self_weight():
@@ -53,10 +54,34 @@ def test_self_weight():
     tes = tes_flat.reshape((len(les_flat)//3, 3)) #should have same length
     airfs = [asb.Airfoil(f"naca241{i}") for i in reversed(range(9))] #from naca 2418 to naca 2410
 
-    lc = LoadCase(1., 0., 76000, model.N, 9.81, 112800, asb.OperatingPoint(alpha=-.5, velocity=269.), les, tes, airfs, bres=30, cres=5, aeroelastic=True, nneighs=100)
+    lc = LoadCase(1.5, 1., 76000, model.N, 9.81, 112800, asb.OperatingPoint(alpha=2., velocity=400.), les, tes, airfs, bres=30, cres=5, aeroelastic=True)
+    
+    #adding huge Jyy to hinge points to force flutter
+    skids, skcoords = mesher.get_submesh('sq')
+    x = skcoords[:,0]
+    y = skcoords[:,1]
+    chosen_ids = skids[y>=17.99]
+    node_id = np.argmin(chosen_ids[np.argmin(x[y>=17.99])])
+    print(model.ncoords[node_id])
+    deltaMc = np.array([pf3.DOF*node_id+4])
+    deltaMr = np.array([pf3.DOF*node_id+4])
+    deltaMv = np.array([1e20])
+    deltaM = ss.coo_matrix((deltaMv, (deltaMr, deltaMc)), (model.N, model.N)).tocsc()
+    model.Muu = model.uu_matrix(model.M+deltaM)
+
     lc.aerodynamic_matrix(*mesher.get_submesh('sq'))
-    lc.apply_aero(*mesher.get_submesh('sq'))
     print(model.KC0[model.KC0>0.].mean(), np.abs(lc.KA[np.abs(lc.KA)>0.]).mean())
+
+    #figuring out which displacements matter
+    import matplotlib.pyplot as plt
+    plt.scatter(model.x[node_id], model.y[node_id])
+    ids2scatt = list()
+    for col in range(lc.KA.shape[1]):
+        nonzero = lc.KA[:, col].count_nonzero()
+        if nonzero>0.:
+            ids2scatt.append(col//6)
+    plt.scatter(model.x[ids2scatt], model.y[ids2scatt])
+    plt.show()
 
     #post processing
     savePath = r"C:\marek\studia\hpb\Results\C4\ForwardTests\\"
@@ -65,7 +90,7 @@ def test_self_weight():
     print(model.ncoords.shape) #so that it can be compared with the shape from CATIA
 
     peigvecs = np.zeros((model.N, 7))
-    eigvalsFlutter, peigvecsu = ssl.eigs(A=model.KC0uu, M=model.Muu, k=30, which='SR')
+    eigvalsFlutter, peigvecsu = ssl.eigs(A=model.KC0uu, M=model.Muu, k=30, which='LM', sigma=-1.)
     print(np.sqrt(eigvalsFlutter))
 
 
