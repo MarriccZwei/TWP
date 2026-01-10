@@ -158,7 +158,7 @@ def process_aeroelastic_load_case(model:Pyfe3DModel, lc:LoadCase, plot:bool=Fals
     omegan = np.sqrt(eigvalsFlutter)
     peigvecs[model.bu, :] = peigvecsu
 
-    if plot:
+    if plot: #TODO: Add savePath handling
         eigvec_scaling = 1.
         for i in range(peigvecs.shape[1]):
                 plot_nodal_quantity(prep_displacements(peigvecs[:,i], model, eigvec_scaling/max(abs(peigvecs[:,i][2::pf3.DOF]))), peigvecs[:,i][2::pf3.DOF],

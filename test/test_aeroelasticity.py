@@ -66,7 +66,7 @@ def test_self_weight():
 
     peigvecs = np.zeros((model.N, 7))
     eigvalsFlutter, peigvecsu = ssl.eigs(A=model.KC0uu, M=model.Muu, k=30, which='SR')
-    print(np.sqrt(eigvalsFlutter))
+    print(eigvalsFlutter)
 
 
 if __name__ == "__main__":

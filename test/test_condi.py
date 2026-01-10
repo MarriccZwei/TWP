@@ -48,8 +48,8 @@ def test_self_weight():
     print(f"Muu isSym: {(abs(model.Muu-model.Muu.T)>1e-10).nnz == 0}")
     print(f"Kuu isSym: {(abs(model.KC0uu-model.KC0uu.T)>1e-10).nnz == 0}")
 
-    # '''Visualise the KA and KC matrices'''
-    # import matplotlib.pyplot as plt
+    '''Visualise the KA and KC matrices'''
+    import matplotlib.pyplot as plt
     # from scipy.sparse import coo_matrix
 
     # fig = plt.figure()
@@ -71,6 +71,10 @@ def test_self_weight():
 
     # plot_coo_matrix(abs(model.KC0uu-model.KC0uu.T), fig, 111)
     # plt.show()
+
+    bcoords = model.ncoords[model.bk[0::pf3.DOF]]
+    plt.scatter(bcoords[:,0], bcoords[:,2])
+    plt.show()
 
     print("Muu")
     eigminMuu, _ = ssl.eigsh(model.Muu, which="LM", sigma=1e-4)
