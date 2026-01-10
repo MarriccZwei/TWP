@@ -85,8 +85,8 @@ def test_self_weight():
 
     #post processing
     savePath = r"C:\marek\studia\hpb\Results\C4\ForwardTests\\"
-    count = process_aeroelastic_load_case(model, lc, plot=True, savePath=savePath, k=30)
-    print(count)
+    omegan = process_aeroelastic_load_case(model, lc, plot=True, savePath=savePath, k=30, returnOmegan=True)
+    print(omegan)
     print(model.ncoords.shape) #so that it can be compared with the shape from CATIA
 
     peigvecs = np.zeros((model.N, 7))

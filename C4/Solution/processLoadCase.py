@@ -60,7 +60,6 @@ def process_load_case(model:Pyfe3DModel, lc:LoadCase, materials:ty.Dict[str, flo
         beam_failure_margins.append(beam_stress_recovery(desvars, materials, beam, beamprop, beamorient, beamType, model.beamprobe))
 
     #2.3) buckling
-    print("Buckling starts")
     KG = ss.coo_matrix((KGv, (KGr, KGc)), shape=(model.N, model.N)).tocsc()
     KGuu = model.uu_matrix(KG)
     eigvecs = np.zeros((model.N, num_eig_lb))
@@ -147,11 +146,10 @@ def process_load_case(model:Pyfe3DModel, lc:LoadCase, materials:ty.Dict[str, flo
 
     return failure_margins
 
-def process_aeroelastic_load_case(model:Pyfe3DModel, lc:LoadCase, plot:bool=False, savePath:str=None, k:int=7):
+def process_aeroelastic_load_case(model:Pyfe3DModel, lc:LoadCase, plot:bool=False, savePath:str=None, k:int=7, returnOmegan=False):
     """
     
     """
-    print("Natfreq starts")
     KAuu = model.uu_matrix(lc.KA)
     peigvecs = np.zeros((model.N, k))
     eigvalsFlutter, peigvecsu = ssl.eigs(A=model.KC0uu - KAuu, M=model.Muu, k=k, which='LM', sigma=-1.)
@@ -164,8 +162,10 @@ def process_aeroelastic_load_case(model:Pyfe3DModel, lc:LoadCase, plot:bool=Fals
                 plot_nodal_quantity(prep_displacements(peigvecs[:,i], model, eigvec_scaling/max(abs(peigvecs[:,i][2::pf3.DOF]))), peigvecs[:,i][2::pf3.DOF],
                                     model, savePath, f"NatfreqMode{i}")
 
-    print(omegan)
-    return np.count_nonzero(np.imag(omegan))
+    if returnOmegan:
+        return omegan
+    else:            
+        return np.count_nonzero(np.imag(omegan))
 
 
 def prep_displacements(u:nt.NDArray[np.float64], model:Pyfe3DModel, scaling:float=1.):
@@ -196,7 +196,7 @@ def plot_nodal_quantity(ncoords:nt.NDArray[np.float64], qty:nt.NDArray[np.float6
     :type qty: nt.NDArray[np.float64]
     :param model: the model object to take elements from
     :type model: Pyfe3DModel
-    :param savePath: the folder in which the plot is to be saved
+    :param savePath: the folder in which the plot is to be saved, if None, plots will not be saved
     :type savePath: str
     :param plotName: the file name of the plot in that folder
     :type plotName: str
@@ -261,6 +261,7 @@ def plot_nodal_quantity(ncoords:nt.NDArray[np.float64], qty:nt.NDArray[np.float6
         cmap="viridis"
     )
 
-    plotter.save_graphic(savePath+plotName+extension, plotName)
+    if not(savePath is None):
+        plotter.save_graphic(savePath+plotName+extension, plotName)
     if show:
         plotter.show()
