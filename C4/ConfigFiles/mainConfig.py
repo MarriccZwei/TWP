@@ -47,7 +47,7 @@ LC_INFO = [
         'n':1.,
         'nlg':0.,
         'Ttot':37800., # [N]
-        'op':asb.OperatingPoint(asb.Atmosphere(0.), velocity=269., alpha=.87), #[h]=m, [v]=m/s, [alpha]=deg
+        'op':asb.OperatingPoint(asb.Atmosphere(7000.), velocity=269., alpha=.87), #[h]=m, [v]=m/s, [alpha]=deg
         'aeroelastic':True
     },
 ]
