@@ -6,9 +6,9 @@ from ..Solution.processLoadCase import process_aeroelastic_load_case
 import aerosandbox.numpy as np
 import matplotlib.pyplot as plt
 
-res = 20
+res = 10
 k = 20
-omegan = np.zeros((res, k), dtype=np.complex64)
+omegan = np.zeros((res, k))
 
 velocities = np.linspace(10, mc.LC_INFO[3]['op'].velocity, res)
 for i, velocity in enumerate(velocities):
@@ -22,6 +22,7 @@ for i, velocity in enumerate(velocities):
     omegan[i, :] = process_aeroelastic_load_case(optimiser.model, optimiser.lcs[0], k=k, returnOmegan=True)
 
 print("Preparing plots...")
+omegan.sort(1)
 for j in range(omegan.shape[1]):
     plt.plot(velocities, omegan[:, j])
 

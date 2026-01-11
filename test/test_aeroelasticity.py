@@ -65,7 +65,7 @@ def test_self_weight():
     print(model.ncoords.shape) #so that it can be compared with the shape from CATIA
 
     peigvecs = np.zeros((model.N, 7))
-    eigvalsFlutter, peigvecsu = ssl.eigs(A=model.KC0uu, M=model.Muu, k=30, which='SR')
+    eigvalsFlutter, peigvecsu = ssl.eigs(A=model.KC0uu, M=model.Muu, k=30, which='LM')
     print(eigvalsFlutter)
 
 
