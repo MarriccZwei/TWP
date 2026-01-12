@@ -161,6 +161,8 @@ def process_aeroelastic_load_case(model:Pyfe3DModel, lc:LoadCase, plot:bool=Fals
         for i in range(peigvecs.shape[1]):
                 plot_nodal_quantity(prep_displacements(peigvecs[:,i], model, eigvec_scaling/max(abs(peigvecs[:,i][2::pf3.DOF]))), peigvecs[:,i][2::pf3.DOF],
                                     model, savePath, f"NatfreqMode{i}")
+        with open(savePath+"flutter_omegans.txt", "w") as file:
+            file.write(f"omegans: {omegan}")
 
     if returnOmegan:
         return omegan

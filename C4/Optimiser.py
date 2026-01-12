@@ -109,7 +109,7 @@ class Optimiser():
 
             #2.0) separate processing for the 'aeroelastic load cases'
             if lc.aeroelastic:
-                flutterCount = process_aeroelastic_load_case(self.model, lc, plot, savePathLC, self.resConfig["klb"])
+                flutterCount = process_aeroelastic_load_case(self.model, lc, plot, savePathLC, self.resConfig["kfl"])
                 if flutterCount>failure_margins[3]:
                     failure_margins[3] = flutterCount
                     
