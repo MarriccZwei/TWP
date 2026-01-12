@@ -16,12 +16,12 @@ def test_self_weight():
     model, mesher = geometry_init(catiaout, 3)
 
     desvars = {
-        '(2t/H)_sq':0.04,
-        '(2t/H)_pq':0.01,
-        '(2t/H)_aq':0.01,
-        'W_bb':0.004,
-        'W_mb':0.004,
-        'W_lb':0.008
+        '(2t/H)_sq':0.5,
+        '(2t/H)_pq':0.5,
+        '(2t/H)_aq':0.2,
+        'W_bb':0.01,
+        'W_mb':0.1,
+        'W_lb':0.01
     }
 
     materials = {
@@ -64,9 +64,9 @@ def test_self_weight():
     print(omegan)
     print(model.ncoords.shape) #so that it can be compared with the shape from CATIA
 
-    peigvecs = np.zeros((model.N, 7))
-    eigvalsFlutter, peigvecsu = ssl.eigs(A=model.KC0uu, M=model.Muu, k=30, which='LM', sigma=-1)
-    print(eigvalsFlutter)
+    # peigvecs = np.zeros((model.N, 7))
+    # eigvalsFlutter, peigvecsu = ssl.eigs(A=model.KC0uu, M=model.Muu, k=30, which='LM', sigma=-1)
+    # print(eigvalsFlutter)
 
 
 if __name__ == "__main__":
