@@ -6,8 +6,8 @@ from ..Solution.processLoadCase import process_aeroelastic_load_case
 import aerosandbox.numpy as np
 import matplotlib.pyplot as plt
 
-res = 10
-k = 20
+res = 100
+k = 30
 omegan = np.zeros((res, k))
 
 velocities = np.linspace(10, mc.LC_INFO[3]['op'].velocity, res)
@@ -25,6 +25,8 @@ print("Preparing plots...")
 omegan.sort(1)
 for j in range(omegan.shape[1]):
     plt.plot(velocities, omegan[:, j])
+plt.ylabel("Natural Frequency [Hz]")
+plt.xlabel("Airspeed [m/s]")
 
 plt.savefig(uc.FW_SAVE_PATH+"OmegaVsVelocity.pdf")
 plt.show()
