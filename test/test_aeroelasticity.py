@@ -16,12 +16,12 @@ def test_self_weight():
     model, mesher = geometry_init(catiaout, 3)
 
     desvars = {
-        '(2t/H)_sq':0.1,
-        '(2t/H)_pq':0.05,
-        '(2t/H)_aq':0.05,
-        'W_bb':0.03,
-        'W_mb':0.03,
-        'W_lb':0.03
+        '(2t/H)_sq':0.04,
+        '(2t/H)_pq':0.01,
+        '(2t/H)_aq':0.01,
+        'W_bb':0.004,
+        'W_mb':0.004,
+        'W_lb':0.008
     }
 
     materials = {
@@ -53,7 +53,7 @@ def test_self_weight():
     tes = tes_flat.reshape((len(les_flat)//3, 3)) #should have same length
     airfs = [asb.Airfoil(f"naca241{i}") for i in reversed(range(9))] #from naca 2418 to naca 2410
 
-    lc = LoadCase(1., 0., 76000, model.N, 9.81, 112800, asb.OperatingPoint(atmosphere=asb.Atmosphere(7000), alpha=-4.5, velocity=269.), les, tes, airfs, bres=30, cres=5, aeroelastic=True, nneighs=100)
+    lc = LoadCase(1., 0., 76000, model.N, 9.81, 112800, asb.OperatingPoint(atmosphere=asb.Atmosphere(7000), alpha=.87, velocity=269.), les, tes, airfs, bres=30, cres=5, aeroelastic=True, nneighs=100)
     #lc.apply_aero(*mesher.get_submesh('sq'))
     lc.aerodynamic_matrix(*mesher.get_submesh('sq'))
     print(model.KC0[model.KC0>0.].mean(), np.abs(lc.KA[np.abs(lc.KA)>0.]).mean())
@@ -65,7 +65,7 @@ def test_self_weight():
     print(model.ncoords.shape) #so that it can be compared with the shape from CATIA
 
     peigvecs = np.zeros((model.N, 7))
-    eigvalsFlutter, peigvecsu = ssl.eigs(A=model.KC0uu, M=model.Muu, k=30, which='LM')
+    eigvalsFlutter, peigvecsu = ssl.eigs(A=model.KC0uu, M=model.Muu, k=30, which='LM', sigma=-1)
     print(eigvalsFlutter)
 
 
