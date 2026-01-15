@@ -29,8 +29,10 @@ class Pyfe3DModel():
         #2) pyfe3d elements and their properties
         self.beamprobe = pf3.BeamCProbe()
         self.quadprobe = pf3.Quad4Probe()
+        self.springprobe = pf3.SpringProbe()
         self.beamdata = pf3.BeamCData()
         self.quaddata = pf3.Quad4Data()
+        self.springdata = pf3.SpringData()
 
         self.beams:ty.List[pf3.BeamC] = list()
         self.beamprops:ty.List[pbp.BeamProp] = list()
@@ -39,6 +41,8 @@ class Pyfe3DModel():
         self.quads:ty.List[pf3.Quad4] = list()
         self.shellprops:ty.List[psp.ShellProp] = list()
         self.matdirs:ty.List[ty.Tuple[float]] = list()
+
+        self.springs:ty.List[pf3.Spring] = list()
 
         self.inertia_poses:ty.List[int]=list() #list of poses for inertia to be added at
         self.inertia_vals:ty.List[float] = list() #(m, Jxx, Jyy, Jzz) the inertia additions
@@ -105,13 +109,36 @@ class Pyfe3DModel():
         self.beams.append(beam)
 
 
+    def load_spring(self, pos1:int, pos2:int, kxe:float, kye:float, kze:float, krxe:float, krye:float, krze:float,
+                    vxyi:float, vxyj:float, vxyk:float):
+        '''
+        loads a spring into the model, whose external node ids (so starting from zero) are specified by pos1 and pos2.
+        Following the pyfe3d doc convention for the order of nodes. Spring orientation and stiffnesses also need to be given,
+        as springs are assumed to be explicit ad hoc additions of constant stiffness to the stiffness matrix.
+        '''
+        spring = pf3.Spring(self.springprobe)
+        spring.n1 = self.pos_nid[pos1]
+        spring.n2 = self.pos_nid[pos2]
+        spring.c1 = pf3.DOF*pos1
+        spring.c2 = pf3.DOF*pos2
+        xijk = self.ncoords[self.nid_pos[spring.n2],:]-self.ncoords[self.nid_pos[spring.n1],:]
+        spring.update_rotation_matrix(xijk[0], xijk[1], xijk[2], vxyi, vxyj, vxyk)
+        spring.kxe = kxe
+        spring.kye = kye
+        spring.kze = kze
+        spring.krxe = krxe
+        spring.krye = krye
+        spring.krze = krze
+        self.springs.append(spring)
+
+
     def load_inertia(self, pos:int):
         '''loads a holder for additional per node inertia, initialised form the node pos'''
         self.inertia_poses.append(pos)
 
 
     def KC0_M_update(self, beamprops:ty.List[pbp.BeamProp], beamorients:ty.List[ty.Tuple[float]], 
-                   shellprops:ty.List[psp.ShellProp], matdirs:ty.List[ty.Tuple[float]], 
+                   shellprops:ty.List[psp.ShellProp], matdirs:ty.List[ty.Tuple[float]],
                    inertia_vals:ty.List[float]):
         '''
         Assigns prop and orientation to the elements and updates the KC0 and M matrices, with re-scaling where necessary.
@@ -128,6 +155,7 @@ class Pyfe3DModel():
         nquads = len(self.quads)
         nbeams = len(self.beams)
         ninert = len(self.inertia_poses)
+        nsprings = len(self.springs)
 
         #1) storing the element properties
         self.beamprops = beamprops
@@ -143,13 +171,16 @@ class Pyfe3DModel():
 
         kc0_size += self.beamdata.KC0_SPARSE_SIZE*nbeams
         kc0_size += self.quaddata.KC0_SPARSE_SIZE*nquads
+        kc0_size += self.springdata.KC0_SPARSE_SIZE*nsprings
 
         mass_size += self.beamdata.M_SPARSE_SIZE*nbeams
         mass_size += self.quaddata.M_SPARSE_SIZE*nquads
+        mass_size += self.springdata.M_SPARSE_SIZE*nsprings
         mass_size += self.INERTIA_SPARSE_SIZE*ninert
 
         kg_size += self.beamdata.KG_SPARSE_SIZE*nbeams
         kg_size += self.quaddata.KG_SPARSE_SIZE*nquads
+        kg_size += self.springdata.KG_SPARSE_SIZE*nsprings
         self.sizeKG = kg_size #as stated in the constructor
 
         #3) checking if the sparse matrix sizes have changed and re-initializing them if necessary
@@ -196,6 +227,16 @@ class Pyfe3DModel():
             init_k_KC0 += self.beamdata.KC0_SPARSE_SIZE
             init_k_M += self.beamdata.M_SPARSE_SIZE
             init_k_KG += self.beamdata.KG_SPARSE_SIZE
+
+        #7) spring contributions
+        for spring in self.springs:
+            spring.init_k_KC0 = init_k_KC0
+            spring.init_k_M = init_k_M
+            spring.init_k_KG = init_k_KG
+            spring.update_KC0(self.KC0r, self.KC0c, self.KC0v)
+            init_k_KC0 += self.springdata.KC0_SPARSE_SIZE
+            init_k_M += self.springdata.M_SPARSE_SIZE
+            init_k_KG += self.springdata.KG_SPARSE_SIZE
 
         #7) inertia contributions
         for inertia_pos, inertia_val in zip(self.inertia_poses, inertia_vals):

@@ -1,5 +1,6 @@
 import pyfe3d.shellprop_utils as psu
 import scipy.sparse.linalg as ssl
+import scipy.sparse as ss
 import pyfe3d as pf3
 import pyfe3d.beamprop as pbp
 import numpy as np
@@ -265,10 +266,81 @@ def test_inertia():
     model.KC0_M_update([], [], [], [], [2., 6.])
     assert np.allclose([2,2,2,0,0,0,0,0,0,0,0,0,6,6,6,0,0,0], model.M.diagonal())
     assert np.allclose([0,0,0,6,6,6], model.Muu.diagonal())
-    
+
+
+def test_spring():
+    E = 203.e9 # Pa
+    rho = 7.83e3 # kg/m3
+
+    b = 0.05 # m
+    h = 0.05 # m
+    A = h*b
+    Izz = b*h**3/12
+    Iyy = b**3*h/12
+    prop = pbp.BeamProp()
+    prop.A = A
+    prop.E = E
+    scf = 5/6.
+    prop.G = scf*E/2/(1+0.3)
+    prop.Izz = Izz
+    prop.Iyy = Iyy
+    prop.intrho = rho*A
+    prop.intrhoy2 = rho*Izz
+    prop.intrhoz2 = rho*Iyy
+    prop.J = Izz + Iyy
+    beamorient = (1., 1., 0)
+
+    fval = 10. # N
+    tq = 5. # Nm
+    arm = .1 # m
+    L = 1. # m
+
+    #ground truth
+    ncoords = np.array([[0,0,0], [0,0,L]])
+    ncoords_flatten = ncoords.flatten()
+    f = np.zeros(pf3.DOF*ncoords.shape[0])
+    f[1*pf3.DOF+1] = fval
+    f[1*pf3.DOF+4] = tq
+    probe = pf3.BeamCProbe()
+    data = pf3.BeamCData()
+    KC0r = np.zeros(data.KC0_SPARSE_SIZE, dtype=np.int32)
+    KC0c = np.zeros(data.KC0_SPARSE_SIZE, dtype=np.int32)
+    KC0v = np.zeros(data.KC0_SPARSE_SIZE, dtype=np.float64)
+
+    beam = pf3.BeamC(probe)
+    beam.init_k_KC0 = 0.
+    beam.n1 = 1
+    beam.n2 = 2
+    beam.c1 = pf3.DOF*0
+    beam.c2 = pf3.DOF*1
+    beam.update_rotation_matrix(beamorient[0], beamorient[1], beamorient[2], ncoords_flatten)
+    beam.update_probe_xe(ncoords_flatten)
+    beam.update_KC0(KC0r, KC0c, KC0v, prop)
+    KC0 = ss.coo_matrix((KC0v, (KC0r, KC0c)), shape=(2*pf3.DOF, 2*pf3.DOF)).tocsc()
+    bk = np.array([True]*pf3.DOF+[False]*pf3.DOF)
+    bu = ~bk
+    fu = f[bu]
+    KC0uu = KC0[bu, :][:, bu]
+    uu_gt = ssl.spsolve(KC0uu, fu)
+
+    #testing the model class
+    ncoords = np.array([[0,0,0], [0,0,L], [0,arm,L]])
+    f = np.zeros(pf3.DOF*ncoords.shape[0])
+    f[2*pf3.DOF+1] = fval
+    f[2*pf3.DOF+4] = tq #decoupled translation-rotation
+    model = Pyfe3DModel(ncoords, lambda x,y,z:tuple([np.isclose(z,0)]*6))
+    model.load_beam(0, 1)
+    model.load_spring(1, 2, 1e10, 1e10, 1e10, 1e10, 1e10, 1e10, 1., 0., 0.)
+    #model.load_beam(1,2)
+    model.KC0_M_update([prop], [beamorient], [], [], [])
+    fu = f[model.bu]
+    uu_test = ssl.spsolve(model.KC0uu, fu)
+    assert np.allclose(uu_test[:pf3.DOF], uu_gt), f"test:\n {uu_test[:pf3.DOF]},\n gt: {uu_gt}"
+        
 
 if __name__ == "__main__":
     PLOT=True
     test_beams()
     test_inertia()
+    test_spring()
     test_quads()
