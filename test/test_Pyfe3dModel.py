@@ -262,8 +262,8 @@ def test_inertia():
     model = Pyfe3DModel(ncoords, lambda x,y,z:(np.isclose(x,1),np.isclose(x,1),np.isclose(x,1),True,True,True))
     model.load_inertia(0)
     model.load_inertia(2)
-    model.KC0_M_update([], [], [], [], [(2.,1.,3.,7.), (6.,9.,9.,7.)])
-    assert np.allclose([2,2,2,1,3,7,0,0,0,0,0,0,6,6,6,9,9,7], model.M.diagonal())
+    model.KC0_M_update([], [], [], [], [2., 6.])
+    assert np.allclose([2,2,2,0,0,0,0,0,0,0,0,0,6,6,6,0,0,0], model.M.diagonal())
     assert np.allclose([0,0,0,6,6,6], model.Muu.diagonal())
     
 
