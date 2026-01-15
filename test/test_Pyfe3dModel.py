@@ -4,7 +4,7 @@ import pyfe3d as pf3
 import pyfe3d.beamprop as pbp
 import numpy as np
 
-from ..C4.Pyfe3DModel import Pyfe3DModel
+from ..C4.Pyfe3dExtension.Pyfe3DModel import Pyfe3DModel
 
 PLOT=True
     

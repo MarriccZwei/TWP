@@ -1,6 +1,6 @@
 from .CatiaParser import CatiaParser
 from .Mesher import Mesher
-from ..Pyfe3DModel import Pyfe3DModel
+from ..Pyfe3dExtension.Pyfe3DModel import Pyfe3DModel
 
 import typing as ty
 import aerosandbox.numpy as np
