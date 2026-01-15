@@ -29,6 +29,8 @@ class LoadCase():
         self.cres = cres
         self.nneighs = nneighs #numer of neighbours
 
+        self._cs = [self.tes[i,0]-self.les[i,0] for i in range(self.les.shape[0])] #obtaining the chord list
+
         self.A = np.zeros(N) #here be the aerodynamic loads (basically lift)
         self.W = np.zeros(N) #the current value of the model's weight
         self.T = np.zeros(N) #here be the thrust
@@ -40,7 +42,7 @@ class LoadCase():
 
         vlm_, dFv_dp = self._calc_dFv_dp(ncoords_affected[:,1].min())
         W, self.A = self._aero2fem(vlm_, ncoords_affected, nid_pos_affected, 1.)
-        W_u_to_p = self._fem2aero(np.zeros(len(self.airfs)*2), ncoords_affected, nid_pos_affected)
+        W_u_to_p = self._fem2aero(ncoords_affected, nid_pos_affected)
         self.KA = W @ dFv_dp @ W_u_to_p
 
 
@@ -131,27 +133,23 @@ class LoadCase():
         return ss.csc_matrix(W), Fext
 
 
-    def _fem2aero(self, p:nt.NDArray[np.float32], ncoords_s:nt.NDArray[np.float32], ids_s:nt.NDArray[np.int32]):
-        heave_displs =  p[:len(self.les)]
-        leds = [self.les[i, :]+np.array([0.,0.,heave_displs[i]]) for i in range(self.les.shape[0])]
-        #ledts = leds+[np.array([0., 0., 0.])]*(len(self.les)-1) #adding non-displaced points 4 twist
+    def _fem2aero(self, ncoords_s:nt.NDArray[np.float32], ids_s:nt.NDArray[np.int32]):
+        displs = np.vstack((self.les, self.tes))
+        assert displs.shape == (len(self.les)*2, 3)
 
         tree = ssp.cKDTree(ncoords_s)
-        d, node_indices = tree.query(leds, k=self.nneighs)
+        d, node_indices = tree.query(displs, k=self.nneighs)
         power = 2
         weights2 = (1/d**power)/((1/d**power).sum(axis=1)[:, None])
         assert np.allclose(weights2.sum(axis=1), 1)
 
-        W_u_to_p = np.zeros((len(p)*3, self.N))
+        W_u_to_p = np.zeros((len(displs)*3, self.N))
 
         for j in range(self.nneighs):
             for i, node_index in enumerate(node_indices): #we have 3 forces for 2 p vars per node, so 6
                 W_u_to_p[i*3+0, pf3.DOF*ids_s[node_index] + 0] += weights2[i, j]
                 W_u_to_p[i*3+1, pf3.DOF*ids_s[node_index] + 1] += weights2[i, j]
                 W_u_to_p[i*3+2, pf3.DOF*ids_s[node_index] + 2] += weights2[i, j]
-                W_u_to_p[i*3+0+len(heave_displs), pf3.DOF*ids_s[node_index] + 3] += weights2[i, j]
-                W_u_to_p[i*3+1+len(heave_displs), pf3.DOF*ids_s[node_index] + 4] += weights2[i, j]
-                W_u_to_p[i*3+2+len(heave_displs), pf3.DOF*ids_s[node_index] + 5] += weights2[i, j]
             
         return ss.csc_matrix(W_u_to_p)
 
@@ -160,9 +158,12 @@ class LoadCase():
         #allowing for initial displacements for flutter. Yet, for static analysis we dont's need displacements
         if displs is None:
             displs = np.zeros(len(self.airfs)*2)
-        cs = [self.tes[i,0]-self.les[i,0] for i in range(self.les.shape[0])] #obtaining the chord list
-        ptles = [self.les[i,:]+np.array([0,0,displs[i]]) for i in range(self.les.shape[0])]
 
+        #converting LE-TE displs into LE displs and twists
+        ledispls = displs[:self.les.shape[0]]
+        tedispls = displs[self.les.shape[0]:len(displs)]
+        ptles = [self.les[i,:]+np.array([0,0,displs[i]]) for i, led in enumerate(ledispls)]
+        twists = [np.arctan((led-ted)/c) for led, ted, c in zip(ledispls, tedispls, self._cs)]
 
         airplane = asb.Airplane("E9X", xyz_ref=[0,0,0], wings = [
                                     asb.Wing(
@@ -171,9 +172,9 @@ class LoadCase():
                                         xsecs=[asb.WingXSec(
                                             xyz_le=[ptle[0], ptle[1], ptle[2]],
                                             chord=c,
-                                            twist=np.rad2deg(twist), 
+                                            twist=np.rad2deg(twist), #asb has aoas and twists in degrees 
                                             airfoil=airf
-                                        )for ptle, c, airf, twist in zip(ptles, cs, self.airfs, displs[len(self.airfs):])],
+                                        )for ptle, c, airf, twist in zip(ptles, self._cs, self.airfs, twists)],
                                     )
                                 ])
         vlm = asb.VortexLatticeMethod(airplane, self.op, spanwise_resolution=self.bres, chordwise_resolution=self.cres)
@@ -187,21 +188,20 @@ class LoadCase():
             return airplane, vlm, forces, moments
 
 
-    def _calc_dFv_dp(self, ymin:float, displs:ty.List[float]=None, epsilon=.01):
-        if displs is None:
-            displs = np.zeros(len(self.airfs)*2)
-        airplane, vlm_, forces, moments = self._vlm(displs)
+    def _calc_dFv_dp(self, ymin:float, epsilon=.01):
+        p = np.zeros(len(self.airfs)*2)
+        airplane, vlm_, forces, moments = self._vlm(p)
         #ratio = self.MTOM*self.g0*self.n*np.cos(np.deg2rad(self.op.alpha))/forces[2]
 
         vortex_valid = vlm_.vortex_centers[:, 1] > ymin
         v = vortex_valid.sum()*3
         Fv = vlm_.forces_geometry[vortex_valid].flatten()
 
-        dFv_dp = np.zeros((v, len(displs)*3)) # NOTE remember to pass both heave and twist displacements
-        for i in range(len(displs)-1):
-            if i != len(self.les)-1: #we skip the twist of the first foil, just as we skip its displacement
-                p_DOF = (3*i+2) if (i<len(self.les)-1) else (3*i+1) # heave DOF starting at second airfoil
-                p2 = displs.copy()
+        dFv_dp = np.zeros((v, len(p)*3)) # NOTE remember to pass both heave and twist displacements
+        for i in range(len(p)-1):
+            if i != len(self.les)-1: #we skip the te displ of the first foil, just as we skip its le displ
+                p_DOF = 3*i+2 # heave DOF starting at second airfoil
+                p2 = p.copy()
                 p2[i+1] += epsilon
 
                 plane2, vlm2, f2, M2 = self._vlm(p2)

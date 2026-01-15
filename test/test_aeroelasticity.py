@@ -5,10 +5,7 @@ from ..C4.LoadCase import LoadCase
 
 import aerosandbox as asb 
 import pyfe3d as pf3
-#import scipy.sparse.linalg as ssl
-from pypardiso import spsolve
 import numpy as np
-import scipy.sparse.linalg as ssl
 import aerosandbox as asb
 
 def test_self_weight():
@@ -16,13 +13,22 @@ def test_self_weight():
     model, mesher = geometry_init(catiaout, 3)
 
     desvars = {
-        '(2t/H)_sq':0.2,
-        '(2t/H)_pq':0.5,
-        '(2t/H)_aq':0.025,
-        'W_bb':0.005,
+        '(2t/H)_sq':0.3,
+        '(2t/H)_pq':0.08,
+        '(2t/H)_aq':0.08,
+        'W_bb':0.003,
         'W_mb':0.03,
-        'W_lb':0.01
+        'W_lb':0.007
     }
+
+    # desvars = {
+    #     '(2t/H)_sq':0.25,
+    #     '(2t/H)_pq':0.1,
+    #     '(2t/H)_aq':0.1,
+    #     'W_bb':0.005,
+    #     'W_mb':0.03,
+    #     'W_lb':0.007
+    # }
 
     materials = {
         'E_ALU':72.4e9,
@@ -57,6 +63,14 @@ def test_self_weight():
     #lc.apply_aero(*mesher.get_submesh('sq'))
     lc.aerodynamic_matrix(*mesher.get_submesh('sq'))
     print(model.KC0[model.KC0>0.].mean(), np.abs(lc.KA[np.abs(lc.KA)>0.]).mean())
+
+    # import matplotlib.pyplot as plt
+    # ka_u_nodes = list()
+    # for j in range(lc.KA.shape[1]):
+    #     if np.count_nonzero(lc.KA[:,j].todense())>=1:
+    #         ka_u_nodes.append(j//pf3.DOF)
+    # plt.scatter(model.x[ka_u_nodes], model.y[ka_u_nodes])
+    # plt.show()
 
     #post processing
     savePath = r"C:\marek\studia\hpb\Results\C4\ForwardTests\\"
