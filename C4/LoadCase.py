@@ -80,16 +80,13 @@ class LoadCase():
     def apply_landing(self, nid_pos_affected:nt.NDArray[np.int32]):
         '''Applying the landing load to every node affected, assume uniformly distributed, against the direction of weight'''
         nnodes = len(nid_pos_affected)
-        fl = np.zeros(nnodes*pf3.DOF)
         NL = self.MTOM*self.g0*self.nlg/2/nnodes #overall landing load per node in the earth upwards direction
         NLx = -NL*np.sin(np.deg2rad(self.op.alpha))
         NLz = NL*np.cos(np.deg2rad(self.op.alpha))
-        fl[0::pf3.DOF] = NLx
-        fl[2::pf3.DOF] = NLz
 
         self.L = np.zeros(self.N)
-        self.L[0::pf3.DOF][nid_pos_affected] = fl[0::pf3.DOF]
-        self.L[2::pf3.DOF][nid_pos_affected] = fl[2::pf3.DOF]
+        self.L[0::pf3.DOF][nid_pos_affected] = NLx
+        self.L[2::pf3.DOF][nid_pos_affected] = NLz
     
 
     def loadstack(self):

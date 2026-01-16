@@ -99,6 +99,14 @@ def process_load_case(model:Pyfe3DModel, lc:LoadCase, materials:ty.Dict[str, flo
         bcell_types = np.full(len(model.beams), pv.CellType.LINE)
         bmesh = pv.UnstructuredGrid(bcells, bcell_types, coords)
 
+        #springs
+        cellss = list()
+        for spring in model.springs:
+            cellss.append([2, model.nid_pos[spring.n1], model.nid_pos[spring.n2]])
+        cellss = np.array(cellss)
+        cells_types = np.full(len(model.springs), pv.CellType.LINE)
+        meshs = pv.UnstructuredGrid(cellss, cells_types, coords)
+
         plotter = pv.Plotter()
         
         mesh.cell_data["stress"] = np.array(quad_failure_margins)
@@ -116,6 +124,13 @@ def process_load_case(model:Pyfe3DModel, lc:LoadCase, materials:ty.Dict[str, flo
             cmap="coolwarm",
             scalars="stress",
             line_width=8
+        )
+
+        plotter.add_mesh(
+        meshs,
+        show_edges=True,
+        color="yellow",
+        edge_color="black"
         )
 
         plotter.add_mesh(
@@ -237,6 +252,13 @@ def plot_nodal_quantity(ncoords:nt.NDArray[np.float64], qty:nt.NDArray[np.float6
     bcell_types = np.full(len(model.beams), pv.CellType.LINE)
     bmesh = pv.UnstructuredGrid(bcells, bcell_types, ncoords)
 
+    cellss = list()
+    for spring in model.springs:
+        cellss.append([2, model.nid_pos[spring.n1], model.nid_pos[spring.n2]])
+    cellss = np.array(cellss)
+    cells_types = np.full(len(model.springs), pv.CellType.LINE)
+    meshs = pv.UnstructuredGrid(cellss, cells_types, ncoords)
+
     plotter = pv.Plotter()
     
     mesh.cell_data[plotName] = np.array(quad_qty)
@@ -254,6 +276,13 @@ def plot_nodal_quantity(ncoords:nt.NDArray[np.float64], qty:nt.NDArray[np.float6
         cmap="coolwarm",
         scalars=plotName,
         line_width=8
+    )
+
+    plotter.add_mesh(
+        meshs,
+        show_edges=True,
+        color="yellow",
+        edge_color="black"
     )
 
     plotter.add_mesh(

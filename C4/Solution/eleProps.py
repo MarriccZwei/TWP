@@ -56,10 +56,25 @@ def load_ele_props(desvars:ty.Dict[str,float], materials:ty.Dict[str,float], ele
             matdirs.append((0., 1., 0.))
 
         elif eleType[1] == 'i': #inertia elements
-            inertia_vals.append(tuple(eleArg))
+            inertia_vals.append(eleArg[0])
 
         elif eleType == 'rb': #rails -special case of a beam
             D = eleArg[0]
+            prop_rail = pbp.BeamProp()
+            prop_rail.E = Ea
+            prop_rail.A = np.pi/4*D**2
+            prop_rail.Iyy = np.pi/64*D**4
+            prop_rail.Izz = prop_rail.Iyy
+            prop_rail.J = prop_rail.Iyy+prop_rail.Izz
+            prop_rail.G = Gc
+            prop_rail.intrho = rhoa*prop_rail.A
+            prop_rail.intrhoy2 = rhoa*prop_rail.Izz
+            prop_rail.intrhoz2 = rhoa*prop_rail.Iyy
+            beamprops.append(prop_rail)
+            beamorients.append((1.,0.,0.))
+
+        elif eleType == 'sb': #scaffolding beams diameter proportional to chord
+            D = eleArg[0]*desvars["Ds/c"]
             prop_rail = pbp.BeamProp()
             prop_rail.E = Ea
             prop_rail.A = np.pi/4*D**2
@@ -89,8 +104,10 @@ def load_ele_props(desvars:ty.Dict[str,float], materials:ty.Dict[str,float], ele
             beamprops.append(prop_truss_)
             beamorients.append((0.,1.,0.))
 
+        elif eleType[1] == 's':
+            pass #springs have their properties inside them
         else:
-            raise ValueError(f"Invalid element code for a quad {eleType}!!!")
+            raise ValueError(f"Invalid element code for a element {eleType}!!!")
         
         #extracting beam and quad types into separate lists for postprocessing
         if eleType[1] == 'q':
@@ -194,7 +211,7 @@ def beam_stress_recovery(desvars:ty.Dict[str,float], materials:ty.Dict[str,float
     yes = list()
     zes = list()
 
-    if beamType=='rb': #rail evaluation
+    if beamType in ['rb', 'sb']: #rail or scaffold evaluation
         R = np.sqrt(beamprop.A/np.pi)
         EVAL_PTS = 16 #how many points to evaluate around cross-section
         theta = np.linspace(0, np.pi*2, EVAL_PTS+1)[:-1]
