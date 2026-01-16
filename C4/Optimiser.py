@@ -49,7 +49,7 @@ class Optimiser():
             self.iteration_number = 0
 
         #1) geometry initialization
-        self.model, self.mesher = geometry_init(cadstrs["mesh"], meshMergeDigits)
+        self.model, self.mesher = geometry_init(cadstrs["mesh"], meshMergeDigits, resConfig["sks"])
         les_flat = np.fromstring(cadstrs["les"], sep=",")
         tes_flat = np.fromstring(cadstrs["tes"], sep=",")
         les = les_flat.reshape((len(les_flat)//3, 3))
@@ -77,14 +77,15 @@ class Optimiser():
             '(2t/H)_aq':0.,
             'W_bb':0.,
             'W_mb':0.,
-            'W_lb':0.
+            'W_lb':0.,
+            'Ds':0.,
         }
         self._update_model(self.desvarvec(desvarsInitial))
 
         #4) saving the masses of all constant inertia st. one can get structural mass in the objective
         self._mn_sum = 0.
         for iv in self.model.inertia_vals:
-            self._mn_sum += iv[0]
+            self._mn_sum += iv
 
 
     def simulate_constraints(self, desvarvec:nt.NDArray[np.float64], plot=False, savePath=None)->nt.NDArray[np.float64]:
@@ -204,7 +205,7 @@ class Optimiser():
             normalise = lambda key:(self.desvars[key]-self.lb[key])/(self.ub[key]-self.lb[key])
         else:
             normalise = lambda key:(vardict[key]-self.lb[key])/(self.ub[key]-self.lb[key])
-        return np.array([normalise(key) for key in ['(2t/H)_sq', '(2t/H)_pq', '(2t/H)_aq', 'W_bb', 'W_mb', 'W_lb']])
+        return np.array([normalise(key) for key in ['(2t/H)_sq', '(2t/H)_pq', '(2t/H)_aq', 'W_bb', 'W_mb', 'W_lb', 'Ds']])
     
 
     def desvars_from_vec(self, desvarvec:nt.NDArray[np.float64]):
@@ -220,5 +221,6 @@ class Optimiser():
             '(2t/H)_aq':desvarvec[2]*self.ub['(2t/H)_aq']+(1-desvarvec[2])*self.lb['(2t/H)_aq'],
             'W_bb':desvarvec[3]*self.ub['W_bb']+(1-desvarvec[3])*self.lb['W_bb'],
             'W_mb':desvarvec[4]*self.ub['W_mb']+(1-desvarvec[4])*self.lb['W_mb'],
-            'W_lb':desvarvec[5]*self.ub['W_lb']+(1-desvarvec[5])*self.lb['W_lb']
+            'W_lb':desvarvec[5]*self.ub['W_lb']+(1-desvarvec[5])*self.lb['W_lb'],
+            'Ds':desvarvec[6]*self.ub['Ds']+(1-desvarvec[6])*self.lb['Ds']
         }

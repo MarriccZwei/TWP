@@ -58,23 +58,8 @@ def load_ele_props(desvars:ty.Dict[str,float], materials:ty.Dict[str,float], ele
         elif eleType[1] == 'i': #inertia elements
             inertia_vals.append(eleArg[0])
 
-        elif eleType == 'rb': #rails -special case of a beam
-            D = eleArg[0]
-            prop_rail = pbp.BeamProp()
-            prop_rail.E = Ea
-            prop_rail.A = np.pi/4*D**2
-            prop_rail.Iyy = np.pi/64*D**4
-            prop_rail.Izz = prop_rail.Iyy
-            prop_rail.J = prop_rail.Iyy+prop_rail.Izz
-            prop_rail.G = Gc
-            prop_rail.intrho = rhoa*prop_rail.A
-            prop_rail.intrhoy2 = rhoa*prop_rail.Izz
-            prop_rail.intrhoz2 = rhoa*prop_rail.Iyy
-            beamprops.append(prop_rail)
-            beamorients.append((1.,0.,0.))
-
-        elif eleType == 'sb': #scaffolding beams diameter proportional to chord
-            D = eleArg[0]*desvars["Ds/c"]
+        elif eleType in ['rb', 'sb']: #rails & scaffolding - circular beams
+            D = eleArg[0] if eleType=='rb' else desvars["Ds"]
             prop_rail = pbp.BeamProp()
             prop_rail.E = Ea
             prop_rail.A = np.pi/4*D**2
