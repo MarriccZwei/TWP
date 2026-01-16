@@ -6,8 +6,8 @@ def test_ine_beam_quad_mesh():
 
     #1) adding the basis quad elements with one node seen as clashing one node seen as not
     mesher.load_ele([(0.,0.,0.), (0., 1., 0.), (-1., 1., 0.), (-1.,0.,0.)], 'q', [])
-    mesher.load_ele([(0.01,0.,0.), (0.009, 1., 0.), (1., 1., 0.), (1.,0.,0.)], 'q', [])
-    assert len(mesher.nodes)==7
+    mesher.load_ele([(0.01,0.,0.), (0.004, 1., 0.), (1., 1., 0.), (1.,0.,0.)], 'q', [])
+    assert len(mesher.nodes)==7, mesher.nodes
     assert mesher.eleNodePoses[0]==[0,1,2,3]
     assert mesher.eleNodePoses[1]==[4,1,5,6]
     

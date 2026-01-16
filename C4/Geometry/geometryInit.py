@@ -6,7 +6,8 @@ import typing as ty
 import aerosandbox.numpy as np
 import pyfe3d as pf3
 
-def geometry_init(catiaout:str, collisionDecimalPlaces:int=5) -> ty.Tuple[Pyfe3DModel, Mesher]:
+def geometry_init(catiaout:str, collisionDecimalPlaces:int=5, 
+                  springargs:ty.Tuple[float]=(1e10, 0., 0., 1e10, 0., 0., 0., 1., 0.)) -> ty.Tuple[Pyfe3DModel, Mesher]:
     """
     converts the elements imported from CAD into a pyfe3d model
     
@@ -14,6 +15,8 @@ def geometry_init(catiaout:str, collisionDecimalPlaces:int=5) -> ty.Tuple[Pyfe3D
     :type catiaout: str
     :param collisionDecimalPlaces: number of decimal places for which node coordinates in meters have to be matching to be considered a separate node
     :type collisionDecimalPlaces: int
+    :param springargs: parameters for initialising spring elements (in this model used as stiff massless axial connectors)
+    :type springargs: Tuple[float]
     """
     #1) resolving the mesh from catia outputs
     parsed = CatiaParser(catiaout)
@@ -33,10 +36,12 @@ def geometry_init(catiaout:str, collisionDecimalPlaces:int=5) -> ty.Tuple[Pyfe3D
             model.load_quad(*eleNodePoses)
         elif eleType[1]=='b':
             model.load_beam(*eleNodePoses)
+        elif eleType[1]=='s':
+            model.load_spring(*eleNodePoses, *springargs)
         elif eleType[1]=='i':
             model.load_inertia(eleNodePoses[0])
         else:
-            raise ValueError("Invalid element type. Only 'q'->Quad4, 'b'->BeamC, 'i'->Inertia elements are supported!!!")
+            raise ValueError("Invalid element type. Only 'q'->Quad4, 'b'->BeamC, 's'->spring, 'i'->Inertia elements are supported!!!")
 
     return model, mesher
 

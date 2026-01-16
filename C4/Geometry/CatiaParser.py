@@ -20,8 +20,9 @@ class CatiaParser:
                 
                 #2.2) element args
                 eleArgs = [] #might be this list stays empty should no args be needed
-                for eleArgStr in eleArgsStr.split(","):
-                    eleArgs.append(float(eleArgStr))
+                if len(eleArgsStr)>0:
+                    for eleArgStr in eleArgsStr.split(","):
+                        eleArgs.append(float(eleArgStr))
                 self._eleArgs.append(eleArgs)
 
                 #2.3) element node coordinates
