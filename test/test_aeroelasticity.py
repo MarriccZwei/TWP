@@ -13,12 +13,12 @@ def test_self_weight():
     model, mesher = geometry_init(catiaout, 3)
 
     desvars = {
-        '(2t/H)_sq':0.3,
-        '(2t/H)_pq':0.15,
+        '(2t/H)_sq':0.1,
+        '(2t/H)_pq':0.1,
         '(2t/H)_aq':0.08,
         'W_bb':0.003,
-        'W_mb':0.03,
-        'W_lb':0.01,
+        'W_mb':0.003,
+        'W_lb':0.003,
         'Ds':.008
     }
 

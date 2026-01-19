@@ -10,7 +10,7 @@ import scipy.sparse.linalg as ssl
 class LoadCase():
     def __init__(self, n:float, nlg:float, MTOM:float, N:float, g0:float, 
                  thrust_total:float, op_point:asb.OperatingPoint, les:nt.NDArray, tes:nt.NDArray,
-                 airfs:ty.List[asb.Airfoil], bres:int=20, cres:int=10, nneighs:int=100,
+                 airfs:ty.List[asb.Airfoil], bres:int=20, cres:int=10, nneighs:int=100, nneighs_p:int=10,
                  aeroelastic:bool=False):
         self.n = n #load factor
         self.nlg = nlg #landing gear normal force load factor
@@ -27,7 +27,8 @@ class LoadCase():
         self.airfs = airfs
         self.bres = bres
         self.cres = cres
-        self.nneighs = nneighs #numer of neighbours
+        self.nneighs = nneighs
+        self.nneighs_p = nneighs_p
 
         self._cs = [self.tes[i,0]-self.les[i,0] for i in range(self.les.shape[0])] #obtaining the chord list
 
@@ -135,14 +136,14 @@ class LoadCase():
         assert displs.shape == (len(self.les)*2, 3)
 
         tree = ssp.cKDTree(ncoords_s)
-        d, node_indices = tree.query(displs, k=self.nneighs)
+        d, node_indices = tree.query(displs, k=self.nneighs_p)
         power = 2
         weights2 = (1/d**power)/((1/d**power).sum(axis=1)[:, None])
         assert np.allclose(weights2.sum(axis=1), 1)
 
         W_u_to_p = np.zeros((len(displs)*3, self.N))
 
-        for j in range(self.nneighs):
+        for j in range(self.nneighs_p):
             for i, node_index in enumerate(node_indices): #we have 3 forces for 2 p vars per node, so 6
                 W_u_to_p[i*3+0, pf3.DOF*ids_s[node_index] + 0] += weights2[i, j]
                 W_u_to_p[i*3+1, pf3.DOF*ids_s[node_index] + 1] += weights2[i, j]
@@ -160,7 +161,8 @@ class LoadCase():
         ledispls = displs[:self.les.shape[0]]
         tedispls = displs[self.les.shape[0]:len(displs)]
         ptles = [self.les[i,:]+np.array([0,0,displs[i]]) for i, led in enumerate(ledispls)]
-        twists = [np.arctan((led-ted)/c) for led, ted, c in zip(ledispls, tedispls, self._cs)]
+        crange = .55 #from .15 to .7 of chord
+        twists = [np.arctan((led-ted)/c/crange) for led, ted, c in zip(ledispls, tedispls, self._cs)]
 
         airplane = asb.Airplane("E9X", xyz_ref=[0,0,0], wings = [
                                     asb.Wing(
