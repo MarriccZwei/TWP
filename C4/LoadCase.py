@@ -199,7 +199,7 @@ class LoadCase():
         dFv_dp = np.zeros((v, len(p)*3)) # NOTE remember to pass both heave and twist displacements
         for i in range(len(p)-1):
             if i != len(self.les)-1: #we skip the te displ of the first foil, just as we skip its le displ
-                p_DOF = 3*i+2 # heave DOF starting at second airfoil
+                p_DOF = 3*(i+1)+2 # heave DOF starting at second airfoil
                 p2 = p.copy()
                 p2[i+1] += epsilon
 
