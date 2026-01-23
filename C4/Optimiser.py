@@ -60,8 +60,8 @@ class Optimiser():
         self.lcs:ty.List[LoadCase] = list()
         for lcinfo in loadCasesInfo:
             lc = LoadCase(lcinfo["n"], lcinfo["nlg"], MTOM, self.model.N, g0, lcinfo["Ttot"], lcinfo["op"], 
-                                     les, tes, airfs, resConfig["bres"], resConfig["cres"], resConfig["nneighs"],
-                                     lcinfo["aeroelastic"])
+                                     les, tes, airfs, resConfig["bres"], resConfig["cres"], resConfig["nneighs"], 
+                                     resConfig["nneighs_p"], lcinfo["aeroelastic"])
             if lcinfo["aeroelastic"]:
                 lc.aerodynamic_matrix(*self.mesher.get_submesh('sq'))
             else:

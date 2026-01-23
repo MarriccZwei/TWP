@@ -107,7 +107,7 @@ def process_load_case(model:Pyfe3DModel, lc:LoadCase, materials:ty.Dict[str, flo
         cells_types = np.full(len(model.springs), pv.CellType.LINE)
         meshs = pv.UnstructuredGrid(cellss, cells_types, coords)
 
-        plotter = pv.Plotter()
+        plotter = pv.Plotter(off_screen=savePath is None)
         
         mesh.cell_data["stress"] = np.array(quad_failure_margins)
         plotter.add_mesh(
@@ -145,7 +145,8 @@ def process_load_case(model:Pyfe3DModel, lc:LoadCase, materials:ty.Dict[str, flo
         else:
             print("Generating report...")
             #giving save path will create the full plotting report
-            plotter.save_graphic(savePath+"Stresses.pdf", "Stresses")
+            plotter.export_html(savePath+"Stresses.html")
+            plotter.close()
             plot_nodal_quantity(model.ncoords, lc.A[2::pf3.DOF], model, savePath, "AerodynamicLoadZ")
             plot_nodal_quantity(model.ncoords, lc.L[2::pf3.DOF], model, savePath, "LandingLoadZ")
             plot_nodal_quantity(model.ncoords, lc.L[0::pf3.DOF], model, savePath, "LandingLoadX")
@@ -203,7 +204,7 @@ def prep_displacements(u:nt.NDArray[np.float64], model:Pyfe3DModel, scaling:floa
 
 
 def plot_nodal_quantity(ncoords:nt.NDArray[np.float64], qty:nt.NDArray[np.float64], 
-                        model:Pyfe3DModel, savePath:str, plotName:str, extension:str='.pdf', show=False):
+                        model:Pyfe3DModel, savePath:str, plotName:str, show=False):
     '''
     Docstring for plot_nodal_quantity
     
@@ -259,7 +260,7 @@ def plot_nodal_quantity(ncoords:nt.NDArray[np.float64], qty:nt.NDArray[np.float6
     cells_types = np.full(len(model.springs), pv.CellType.LINE)
     meshs = pv.UnstructuredGrid(cellss, cells_types, ncoords)
 
-    plotter = pv.Plotter()
+    plotter = pv.Plotter(off_screen=not show)
     
     mesh.cell_data[plotName] = np.array(quad_qty)
     plotter.add_mesh(
@@ -293,6 +294,7 @@ def plot_nodal_quantity(ncoords:nt.NDArray[np.float64], qty:nt.NDArray[np.float6
     )
 
     if not(savePath is None):
-        plotter.save_graphic(savePath+plotName+extension, plotName)
+        plotter.export_html(savePath+plotName+'.html')
+        plotter.close()
     if show:
         plotter.show()

@@ -65,6 +65,7 @@ RES = {
     'bres':30,
     'cres':5,
     'nneighs':100,
+    'nneighs_p':5,
     'kfl':30,
     'klb':4,
     'sks':(1e10, 0., 0., 1e10, 0., 0., 0., 1., 0.)

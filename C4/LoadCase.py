@@ -144,7 +144,7 @@ class LoadCase():
         W_u_to_p = np.zeros((len(displs)*3, self.N))
 
         for j in range(self.nneighs_p):
-            for i, node_index in enumerate(node_indices): #we have 3 forces for 2 p vars per node, so 6
+            for i, node_index in enumerate(node_indices[:, j]): #we have 3 forces for 2 p vars per node, so 6
                 W_u_to_p[i*3+0, pf3.DOF*ids_s[node_index] + 0] += weights2[i, j]
                 W_u_to_p[i*3+1, pf3.DOF*ids_s[node_index] + 1] += weights2[i, j]
                 W_u_to_p[i*3+2, pf3.DOF*ids_s[node_index] + 2] += weights2[i, j]
