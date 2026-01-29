@@ -158,6 +158,7 @@ def process_load_case(model:Pyfe3DModel, lc:LoadCase, materials:ty.Dict[str, flo
                                     model, savePath, f"BucklingMode{i}")
             with open(savePath+"failure_margins.txt", "w") as file:
                 file.write(f"fail_margs: {failure_margins}")
+                file.write(f"Maximum heave displacement: {np.max(u[2::pf3.DOF])} m")
             print(f"Report saved at the path below.\n{savePath}")        
 
     return failure_margins
