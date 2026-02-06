@@ -59,15 +59,14 @@ class Optimiser():
         #2) load cases initialisation
         self.lcs:ty.List[LoadCase] = list()
         for lcinfo in loadCasesInfo:
-            lc = LoadCase(lcinfo["n"], lcinfo["nlg"], MTOM, self.model.N, g0, lcinfo["Ttot"], lcinfo["op"], 
+            lc = LoadCase(lcinfo["n"], MTOM, self.model.N, g0, lcinfo["Ttot"], lcinfo["op"], 
                                      les, tes, airfs, resConfig["bres"], resConfig["cres"], resConfig["nneighs"], 
                                      resConfig["nneighs_p"], lcinfo["aeroelastic"])
             if lcinfo["aeroelastic"]:
                 lc.aerodynamic_matrix(*self.mesher.get_submesh('sq'))
             else:
                 lc.apply_aero(*self.mesher.get_submesh('sq'))
-            lc.apply_landing(self.mesher.get_submesh('li')[0])
-            lc.apply_thrust(self.mesher.get_submesh('mi')[0])
+                lc.apply_thrust(self.mesher.get_submesh('mi')[0])
             self.lcs.append(lc)
 
         #3) design variables initialisation and first model updatate

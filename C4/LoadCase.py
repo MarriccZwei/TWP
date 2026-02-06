@@ -8,12 +8,11 @@ import pyfe3d as pf3
 import scipy.sparse.linalg as ssl
 
 class LoadCase():
-    def __init__(self, n:float, nlg:float, MTOM:float, N:float, g0:float, 
+    def __init__(self, n:float, MTOM:float, N:float, g0:float, 
                  thrust_total:float, op_point:asb.OperatingPoint, les:nt.NDArray, tes:nt.NDArray,
                  airfs:ty.List[asb.Airfoil], bres:int=20, cres:int=10, nneighs:int=100, nneighs_p:int=10,
                  aeroelastic:bool=False):
         self.n = n #load factor
-        self.nlg = nlg #landing gear normal force load factor
         self.N = N #total number of degrees of freedom in the model
         assert N%pf3.DOF==0
         self.g0 = g0 #gravitational acceleration
@@ -35,7 +34,6 @@ class LoadCase():
         self.A = np.zeros(N) #here be the aerodynamic loads (basically lift)
         self.W = np.zeros(N) #the current value of the model's weight
         self.T = np.zeros(N) #here be the thrust
-        self.L = np.zeros(N) #here be the landing loads
 
 
     def aerodynamic_matrix(self, nid_pos_affected:nt.NDArray[np.int32], ncoords_affected:nt.NDArray[np.float32]):
@@ -70,28 +68,15 @@ class LoadCase():
         '''Applying weight to every node using a passed mass matrix, inclues weight rotation wrt aoa'''
         aoa = np.deg2rad(self.op.alpha)
         nNodes = self.N//pf3.DOF
-        ntot = self.n+self.nlg
         gvect = [0]*pf3.DOF
-        gvect[0] = ntot*self.g0*np.sin(aoa)
-        gvect[2] = -ntot*self.g0*np.cos(aoa) 
+        gvect[0] = self.n*self.g0*np.sin(aoa)
+        gvect[2] = -self.n*self.g0*np.cos(aoa) 
         gvect = np.array(gvect*nNodes)  
         self.W = M@gvect
 
 
-    def apply_landing(self, nid_pos_affected:nt.NDArray[np.int32]):
-        '''Applying the landing load to every node affected, assume uniformly distributed, against the direction of weight'''
-        nnodes = len(nid_pos_affected)
-        NL = self.MTOM*self.g0*self.nlg/2/nnodes #overall landing load per node in the earth upwards direction
-        NLx = -NL*np.sin(np.deg2rad(self.op.alpha))
-        NLz = NL*np.cos(np.deg2rad(self.op.alpha))
-
-        self.L = np.zeros(self.N)
-        self.L[0::pf3.DOF][nid_pos_affected] = NLx
-        self.L[2::pf3.DOF][nid_pos_affected] = NLz
-    
-
     def loadstack(self):
-        return self.A+self.T+self.W+self.L
+        return self.A+self.T+self.W
     
 
     #=====IMPLEMENTATION AERODYNAMIC LOAD==================================

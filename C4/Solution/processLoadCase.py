@@ -148,8 +148,6 @@ def process_load_case(model:Pyfe3DModel, lc:LoadCase, materials:ty.Dict[str, flo
             plotter.export_html(savePath+"Stresses.html")
             plotter.close()
             plot_nodal_quantity(model.ncoords, lc.A[2::pf3.DOF], model, savePath, "AerodynamicLoadZ")
-            plot_nodal_quantity(model.ncoords, lc.L[2::pf3.DOF], model, savePath, "LandingLoadZ")
-            plot_nodal_quantity(model.ncoords, lc.L[0::pf3.DOF], model, savePath, "LandingLoadX")
             plot_nodal_quantity(model.ncoords, lc.T[0::pf3.DOF], model, savePath, "ThrustX")
             plot_nodal_quantity(model.ncoords, lc.W[2::pf3.DOF], model, savePath, "WeightZ")
             eigvec_scaling = 25.

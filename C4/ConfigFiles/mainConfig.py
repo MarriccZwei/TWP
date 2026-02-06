@@ -25,28 +25,18 @@ MATERIALS = {
 LC_INFO = [
     {
         'n':2.5,
-        'nlg':0.,
         'Ttot':112800., # [N]
         'op':asb.OperatingPoint(asb.Atmosphere(0.), velocity=90., alpha=10.), #[h]=m, [v]=m/s, [alpha]=deg
         'aeroelastic':False
     },
     {
-        'n':1.,
-        'nlg':1.5,
-        'Ttot':0., # [N]
-        'op':asb.OperatingPoint(asb.Atmosphere(0.), velocity=74., alpha=15.), #[h]=m, [v]=m/s, [alpha]=deg
-        'aeroelastic':False
-    },
-    {
         'n':-1.,
-        'nlg':0.,
         'Ttot':32400., # [N]
         'op':asb.OperatingPoint(asb.Atmosphere(7000.), velocity=187., alpha=-4.5), #[h]=m, [v]=m/s, [alpha]=deg
         'aeroelastic':False
     },
     {
         'n':1.,
-        'nlg':0.,
         'Ttot':37800., # [N]
         'op':asb.OperatingPoint(asb.Atmosphere(7000.), velocity=269., alpha=.87), #[h]=m, [v]=m/s, [alpha]=deg
         'aeroelastic':True
