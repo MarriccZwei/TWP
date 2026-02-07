@@ -86,11 +86,11 @@ def process_load_case(model:Pyfe3DModel, lc:LoadCase, materials:ty.Dict[str, flo
         cell_types = np.full(len(model.quads), pv.CellType.QUAD)
         mesh = pv.UnstructuredGrid(cells, cell_types, coords)
 
-        pts = list()
-        for ine in model.inertia_poses:
-            pts.append(coords[ine,:])
-        pts = np.array(pts)
-        cloud = pv.PolyData(pts)
+        # pts = list()
+        # for ine in model.inertia_poses:
+        #     pts.append(coords[ine,:])
+        # pts = np.array(pts)
+        # cloud = pv.PolyData(pts)
 
         bcells = list()
         for beam in model.beams:
@@ -99,13 +99,13 @@ def process_load_case(model:Pyfe3DModel, lc:LoadCase, materials:ty.Dict[str, flo
         bcell_types = np.full(len(model.beams), pv.CellType.LINE)
         bmesh = pv.UnstructuredGrid(bcells, bcell_types, coords)
 
-        #springs
-        cellss = list()
-        for spring in model.springs:
-            cellss.append([2, model.nid_pos[spring.n1], model.nid_pos[spring.n2]])
-        cellss = np.array(cellss)
-        cells_types = np.full(len(model.springs), pv.CellType.LINE)
-        meshs = pv.UnstructuredGrid(cellss, cells_types, coords)
+        # #springs
+        # cellss = list()
+        # for spring in model.springs:
+        #     cellss.append([2, model.nid_pos[spring.n1], model.nid_pos[spring.n2]])
+        # cellss = np.array(cellss)
+        # cells_types = np.full(len(model.springs), pv.CellType.LINE)
+        # meshs = pv.UnstructuredGrid(cellss, cells_types, coords)
 
         plotter = pv.Plotter(off_screen=savePath is None)
         
@@ -126,19 +126,19 @@ def process_load_case(model:Pyfe3DModel, lc:LoadCase, materials:ty.Dict[str, flo
             line_width=8
         )
 
-        plotter.add_mesh(
-        meshs,
-        show_edges=True,
-        color="yellow",
-        edge_color="black"
-        )
+        # plotter.add_mesh(
+        # meshs,
+        # show_edges=True,
+        # color="yellow",
+        # edge_color="black"
+        # )
 
-        plotter.add_mesh(
-            cloud,
-            point_size=6,
-            render_points_as_spheres=True,
-            cmap="viridis"
-        )
+        # plotter.add_mesh(
+        #     cloud,
+        #     point_size=6,
+        #     render_points_as_spheres=True,
+        #     cmap="viridis"
+        # )
 
         if savePath is None:
             plotter.show()
@@ -236,11 +236,11 @@ def plot_nodal_quantity(ncoords:nt.NDArray[np.float64], qty:nt.NDArray[np.float6
     cell_types = np.full(len(model.quads), pv.CellType.QUAD)
     mesh = pv.UnstructuredGrid(cells, cell_types, ncoords)
 
-    pts = list()
-    for ine in model.inertia_poses:
-        pts.append(ncoords[ine,:])
-    pts = np.array(pts)
-    cloud = pv.PolyData(pts)
+    # pts = list()
+    # for ine in model.inertia_poses:
+    #     pts.append(ncoords[ine,:])
+    # pts = np.array(pts)
+    # cloud = pv.PolyData(pts)
 
     bcells = list()
     for beam in model.beams:
@@ -252,12 +252,12 @@ def plot_nodal_quantity(ncoords:nt.NDArray[np.float64], qty:nt.NDArray[np.float6
     bcell_types = np.full(len(model.beams), pv.CellType.LINE)
     bmesh = pv.UnstructuredGrid(bcells, bcell_types, ncoords)
 
-    cellss = list()
-    for spring in model.springs:
-        cellss.append([2, model.nid_pos[spring.n1], model.nid_pos[spring.n2]])
-    cellss = np.array(cellss)
-    cells_types = np.full(len(model.springs), pv.CellType.LINE)
-    meshs = pv.UnstructuredGrid(cellss, cells_types, ncoords)
+    # cellss = list()
+    # for spring in model.springs:
+    #     cellss.append([2, model.nid_pos[spring.n1], model.nid_pos[spring.n2]])
+    # cellss = np.array(cellss)
+    # cells_types = np.full(len(model.springs), pv.CellType.LINE)
+    # meshs = pv.UnstructuredGrid(cellss, cells_types, ncoords)
 
     plotter = pv.Plotter(off_screen=not show)
     
@@ -278,19 +278,19 @@ def plot_nodal_quantity(ncoords:nt.NDArray[np.float64], qty:nt.NDArray[np.float6
         line_width=8
     )
 
-    plotter.add_mesh(
-        meshs,
-        show_edges=True,
-        color="yellow",
-        edge_color="black"
-    )
+    # plotter.add_mesh(
+    #     meshs,
+    #     show_edges=True,
+    #     color="yellow",
+    #     edge_color="black"
+    # )
 
-    plotter.add_mesh(
-        cloud,
-        point_size=6,
-        render_points_as_spheres=True,
-        cmap="viridis"
-    )
+    # plotter.add_mesh(
+    #     cloud,
+    #     point_size=6,
+    #     render_points_as_spheres=True,
+    #     cmap="viridis"
+    # )
 
     if not(savePath is None):
         plotter.export_html(savePath+plotName+'.html')

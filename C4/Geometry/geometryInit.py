@@ -22,7 +22,8 @@ def geometry_init(catiaout:str, collisionDecimalPlaces:int=5,
     parsed = CatiaParser(catiaout)
     mesher = Mesher(collisionDecimalPlaces)
     for eleType, eleArgs, eleNodes in parsed.get_mesh_data():
-        mesher.load_ele(eleNodes, eleType, eleArgs)
+        if not eleType[1] in ['s', 'i']:
+            mesher.load_ele(eleNodes, eleType, eleArgs)
 
     #2) initialising the model
     ncoords = np.array(mesher.nodes)
@@ -37,9 +38,9 @@ def geometry_init(catiaout:str, collisionDecimalPlaces:int=5,
         elif eleType[1]=='b':
             model.load_beam(*eleNodePoses)
         elif eleType[1]=='s':
-            model.load_spring(*eleNodePoses, *springargs)
+            pass#model.load_spring(*eleNodePoses, *springargs)
         elif eleType[1]=='i':
-            model.load_inertia(eleNodePoses[0])
+            pass#model.load_inertia(eleNodePoses[0])
         else:
             raise ValueError("Invalid element type. Only 'q'->Quad4, 'b'->BeamC, 's'->spring, 'i'->Inertia elements are supported!!!")
 
