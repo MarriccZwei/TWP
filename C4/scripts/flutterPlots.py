@@ -24,6 +24,7 @@ for i, velocity in enumerate(velocities):
 
     print(f"Processing velocity: {velocity}...")
     omegan[i, :], _ = ssl.eigs(A=optimiser.model.KC0uu-KAuu, M=optimiser.model.Muu, k=k, sigma=-1., which='LM')
+    omegan[i, :] = np.sqrt(omegan[i, :])
 
 print("Preparing plots...")
 omegan.sort(1)
