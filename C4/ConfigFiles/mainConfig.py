@@ -16,10 +16,10 @@ MATERIALS = {
     'NU_ALU':.33,
     'RHO_ALU':2780.,
     'SF_ALU':323.33e6,
-    'E_FOAM':6.68e9,
-    'NU_FOAM':.275,
-    'RHO_FOAM':688.,
-    'SF_FOAM':45e6 
+    'E_FOAM':4.93e9,
+    'NU_FOAM':.214,
+    'RHO_FOAM':433.,
+    'SF_FOAM':31.5e6
 }
 
 LC_INFO = [
@@ -53,8 +53,8 @@ CAD_STRS = {
 
 RES = {
     'bres':30,
-    'cres':5,
-    'nneighs':100,
+    'cres':8,
+    'nneighs':20,
     'kfl':30,
     'klb':4,
     'sks':(1e10, 0., 0., 1e10, 0., 0., 0., 1., 0.)
