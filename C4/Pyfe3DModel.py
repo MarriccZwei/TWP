@@ -45,7 +45,7 @@ class Pyfe3DModel():
         self.springs:ty.List[pf3.Spring] = list()
 
         self.inertia_poses:ty.List[int]=list() #list of poses for inertia to be added at
-        self.inertia_vals:ty.List[float] = list() #(m, Jxx, Jyy, Jzz) the inertia additions
+        self.inertia_vals:ty.List[ty.Tuple[float]] = list() #(m, Jxx, Jyy, Jzz) the inertia additions
 
         #3) sparse matrices - these will be initialised only after the elements are loaded
         self.KC0r = np.zeros(1)
@@ -54,7 +54,7 @@ class Pyfe3DModel():
         self.Mr = np.zeros(1)
         self.Mc = np.zeros(1)
         self.Mv = np.zeros(1)
-        self.INERTIA_SPARSE_SIZE = 3 #for loading additional node inertia to the mass matrix
+        self.INERTIA_SPARSE_SIZE = 6 #for loading additional node inertia to the mass matrix
         self.sizeKG = 0 #parameter updated during M and KC0 update, used to notify the Solution of how big the KG coo has to be
 
         self.KC0 = ss.coo_matrix((self.KC0v, (self.KC0r, self.KC0c)), shape=(self.N, self.N)).tocsc()
@@ -139,7 +139,7 @@ class Pyfe3DModel():
 
     def KC0_M_update(self, beamprops:ty.List[pbp.BeamProp], beamorients:ty.List[ty.Tuple[float]], 
                    shellprops:ty.List[psp.ShellProp], matdirs:ty.List[ty.Tuple[float]],
-                   inertia_vals:ty.List[float]):
+                   inertia_vals:ty.List[ty.Tuple[float]]):
         '''
         Assigns prop and orientation to the elements and updates the KC0 and M matrices, with re-scaling where necessary.
         For security reasons, has to be called AFTER all elements and inertia have been loaded
@@ -244,17 +244,32 @@ class Pyfe3DModel():
             pos = pf3.DOF*inertia_pos
             self.Mr[k] = 0+pos
             self.Mc[k] = 0+pos
-            self.Mv[k] += inertia_val
+            self.Mv[k] += inertia_val[0]
             k+=1
             pos = pf3.DOF*inertia_pos
             self.Mr[k] = 1+pos
             self.Mc[k] = 1+pos
-            self.Mv[k] += inertia_val
+            self.Mv[k] += inertia_val[0]
             k+=1
             pos = pf3.DOF*inertia_pos
             self.Mr[k] = 2+pos
             self.Mc[k] = 2+pos
-            self.Mv[k] += inertia_val
+            self.Mv[k] += inertia_val[0]
+            k+=1
+            pos = pf3.DOF*inertia_pos
+            self.Mr[k] = 3+pos
+            self.Mc[k] = 3+pos
+            self.Mv[k] += inertia_val[1]
+            k+=1
+            pos = pf3.DOF*inertia_pos
+            self.Mr[k] = 4+pos
+            self.Mc[k] = 4+pos
+            self.Mv[k] += inertia_val[2]
+            k+=1
+            pos = pf3.DOF*inertia_pos
+            self.Mr[k] = 5+pos
+            self.Mc[k] = 5+pos
+            self.Mv[k] += inertia_val[3]
             init_k_M += self.INERTIA_SPARSE_SIZE
 
         #8) re-creating the csc matrices

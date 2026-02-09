@@ -55,8 +55,29 @@ def load_ele_props(desvars:ty.Dict[str,float], materials:ty.Dict[str,float], ele
                                                   plyts=[t, h, t], rhos=[rhoa, rhof, rhoa]))
             matdirs.append((0., 1., 0.))
 
-        elif eleType[1] == 'i': #inertia elements
-            inertia_vals.append(eleArg[0])
+        elif eleType[1] == 'i': #inertia elements #NOTE 4 now all ass hard-coded cylinders
+            mi = eleArg[0]
+            Jxx = 0.
+            Jyy = 0.
+            Jzz = 0.
+            if eleType[0] == 'b':
+                rhob = 3000
+                lb = 18/15
+                rb = np.sqrt(mi/rhob/lb/np.pi)
+                Jxx = mi*(lb**2/12+rb**2/4)
+                Jyy = mi*rb**2/2
+                Jzz = Jxx
+            elif eleType[0] == 'l':
+                llg = 2.77732
+                rlg = .801187
+                Jxx = mi*rlg**2/2
+                Jyy = mi*(rlg**2/4+llg**2/12)
+                Jzz = Jyy
+            elif eleType[0] == 'm':
+                lm = 2.61709
+                Jyy = mi*lm**2/12
+                Jzz = mi*lm**2/12
+            inertia_vals.append((eleArg[0], Jxx, Jyy, Jzz))
 
         elif eleType in ['rb', 'sb']: #rails & scaffolding - circular beams
             D = eleArg[0] if eleType=='rb' else desvars["Ds"]
