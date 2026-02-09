@@ -147,14 +147,18 @@ class LoadCase():
     def _vlm(self, displs:ty.List[float]=None, return_sol=False):
         #allowing for initial displacements for flutter. Yet, for static analysis we dont's need displacements
         if displs is None:
-            displs = np.zeros(len(self.airfs)*2)
+            displs = np.zeros(len(self.airfs)*4)
 
         #converting LE-TE displs into LE displs and twists
-        ledispls = displs[:self.les.shape[0]]
-        tedispls = displs[self.les.shape[0]:len(displs)]
+        rowlen = self.les.shape[0]
+        ledispls = displs[:rowlen]
+        leshifts = displs[2*rowlen:3*rowlen]
+        tedispls = displs[rowlen:2*rowlen]
+        teshifts = displs[3*rowlen:4*rowlen]
         ptles = [self.les[i,:]+np.array([0,0,displs[i]]) for i in range(len(ledispls))]
+        cs = [c+tes-les for c, les, tes in zip(self._cs, leshifts, teshifts)]
         crange = .55 #from .15 to .7 of chord
-        twists = [np.arctan((led-ted)/c/crange) for led, ted, c in zip(ledispls, tedispls, self._cs)]
+        twists = [np.arctan((led-ted)/c/crange) for led, ted, c in zip(ledispls, tedispls, cs)]
 
         airplane = asb.Airplane("E9X", xyz_ref=[0,0,0], wings = [
                                     asb.Wing(
@@ -180,7 +184,8 @@ class LoadCase():
 
 
     def _calc_dFv_dp(self, ymin:float, epsilon=.01):
-        p = np.zeros(len(self.airfs)*2)
+        rowlen = len(self.airfs)
+        p = np.zeros(rowlen*4)
         airplane, vlm_, forces, moments = self._vlm(p)
         #ratio = self.MTOM*self.g0*self.n*np.cos(np.deg2rad(self.op.alpha))/forces[2]
 
@@ -188,17 +193,16 @@ class LoadCase():
         v = vortex_valid.sum()*3
         Fv = vlm_.forces_geometry[vortex_valid].flatten()
 
-        dFv_dp = np.zeros((v, len(p)*3)) # NOTE remember to pass both heave and twist displacements
-        for i in range(len(p)-1):
-            if i != len(self.les)-1: #we skip the te displ of the first foil, just as we skip its le displ
-                p_DOF = 3*(i+1)+2 # heave DOF starting at second airfoil
-                p2 = p.copy()
-                p2[i+1] += epsilon
+        dFv_dp = np.zeros((v, rowlen*6)) # NOTE remember to pass both heave and twist displacements
+        for i in range(len(p)):
+            p_DOF = (3*i+2) if (i<2*rowlen) else (3*(i-2*rowlen))
+            p2 = p.copy()
+            p2[i] += epsilon
 
-                plane2, vlm2, f2, M2 = self._vlm(p2)
-                Fv2 = vlm2.forces_geometry[vortex_valid].flatten()
-                deriv = (Fv2 - Fv)/epsilon
-                dFv_dp[:, p_DOF] += deriv
+            plane2, vlm2, f2, M2 = self._vlm(p2)
+            Fv2 = vlm2.forces_geometry[vortex_valid].flatten()
+            deriv = (Fv2 - Fv)/epsilon
+            dFv_dp[:, p_DOF] += deriv
 
         dFv_dp = ss.csc_matrix(dFv_dp)
         return vlm_, dFv_dp
