@@ -165,7 +165,7 @@ def process_aeroelastic_load_case(model:Pyfe3DModel, lc:LoadCase, plot:bool=Fals
     """
     
     """
-    KAuu = model.uu_matrix(lc.KA)
+    KAuu = model.uu_matrix(lc.KA)#*1.67 prandtl-glauert M=.8
     peigvecs = np.zeros((model.N, k))
     eigvalsFlutter, peigvecsu = ssl.eigs(A=model.KC0uu - KAuu, M=model.Muu, k=k, which='LM', sigma=-1.)
     omegan = np.sqrt(eigvalsFlutter)
