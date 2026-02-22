@@ -71,12 +71,13 @@ class ElysianWing():
         x_as_hn, z_as_hn, up_tip, maxrays_hn = self._angled_spar_reflections(self.yhn, maxrays)
         assert up_tip == up
         assert maxrays_hn == maxrays
-        self.xperc_rear_result = (x_as_fus[-1]-self.xle_reduced_at_y(self.yfus))/self.c_reduced_at_y(self.yfus)
-        assert self.xperc_rear_result <= self.xperc_rear
+        self.xperc_rear_result_fus = self.xperc_reduced_from_x(x_as_fus[-1], self.yfus)
+        self.xperc_rear_result_hn = self.xperc_reduced_from_x(x_as_hn[-1], self.yhn)
+        assert self.xperc_rear_result_hn <= self.xperc_rear_result_fus <= self.xperc_rear
         x_scaff_fus = [x_as_fus[0]]+x_as_fus+[x_as_fus[-1]]
-        z_scaff_fus = [self.upper_skin_z(self.xperc_fore, self.yfus)]+z_as_fus+[self.upper_skin_z(self.xperc_rear_result, self.yfus) if up else self.lower_skin_z(self.xperc_rear_result, self.yfus)]
+        z_scaff_fus = [self.upper_skin_z(self.xperc_fore, self.yfus)]+z_as_fus+[self.upper_skin_z(self.xperc_rear_result_fus, self.yfus) if up else self.lower_skin_z(self.xperc_rear_result_fus, self.yfus)]
         x_scaff_hn = [x_as_hn[0]]+x_as_hn+[x_as_hn[-1]]
-        z_scaff_hn = [self.upper_skin_z(self.xperc_fore, self.yhn)]+z_as_hn+[self.upper_skin_z(self.xperc_rear_result, self.yhn) if up else self.lower_skin_z(self.xperc_rear_result, self.yhn)]    
+        z_scaff_hn = [self.upper_skin_z(self.xperc_fore, self.yhn)]+z_as_hn+[self.upper_skin_z(self.xperc_rear_result_hn, self.yhn) if up else self.lower_skin_z(self.xperc_rear_result_hn, self.yhn)]    
 
         if debug:
             plt.plot(x_scaff_fus, z_scaff_fus, label="fus")
