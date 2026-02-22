@@ -31,7 +31,7 @@ def test_ElysianWing():
     }
 
     H_per_c_sq = .01
-    wing = ElysianWing(GEOM_SOURCE, H_per_c_sq)
+    wing = ElysianWing(GEOM_SOURCE, H_per_c_sq, debug=True)
     plotter = pv.Plotter()
     wing.plot(plotter)
     plotter.show()
