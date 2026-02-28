@@ -14,8 +14,8 @@ class _SETUP:
         'D':.95,
         'd':.2,
         'Delta b':.1,
-        '(H/c)_sk':.1,
-        '(H/c)_as':.05,
+        '(H/c)_sq':.1,
+        '(H/c)_aq':.05,
     }
 
     c_at_y = lambda y:-3/8*y+67/8

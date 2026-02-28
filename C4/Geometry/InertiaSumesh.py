@@ -14,8 +14,8 @@ class InertiaSubmesh():
         self.batteryVertices:list[nt.NDArray[np.float64]] = list()
 
         delta = HYPERPARAMS["delta"]
-        Hpcsk = HYPERPARAMS["(H/c)_sk"]
-        Hpcas = HYPERPARAMS["(H/c)_as"]
+        Hpcsk = HYPERPARAMS["(H/c)_sq"]
+        Hpcas = HYPERPARAMS["(H/c)_aq"]
         D = HYPERPARAMS["D"]
         Delta_b = HYPERPARAMS["Delta b"]
 

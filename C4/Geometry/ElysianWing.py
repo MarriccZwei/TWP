@@ -99,14 +99,12 @@ class ElysianWing():
             print(self.yribs, self.ribcodes)
 
         #->5.3) The creation of the scaffold proper
-        self.segregated_ribs = {'bb':[], 'lb':[], 'mb':[]} #will become a n_(ribs of this type) X n_(scaffold points per y) X 3 list for each element code
         self.scaffold = list() #will become a n_ribs X n_(scaffold points per y) X 3 numpy array
-        for y, code in zip(self.yribs, self.ribcodes):
+        for y in self.yribs:
             yfrac = (y-self.yfus)/(self.yhn-self.yfus)
             ycontribs = list()
             for xsf, xsh, zsf, zsh in zip(x_scaff_fus, x_scaff_hn, z_scaff_fus, z_scaff_hn):
                 ycontribs.append([(1-yfrac)*xsf+yfrac*xsh, y, (1-yfrac)*zsf+yfrac*zsh])
-            self.segregated_ribs[code].append(ycontribs)
             self.scaffold.append(ycontribs)
         self.scaffold = np.array(self.scaffold)
     
