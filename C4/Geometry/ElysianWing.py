@@ -292,3 +292,15 @@ class ElysianWing():
             point_size=8,
             render_points_as_spheres=True
         )
+
+    
+    def large_equipment_summary(self)->dict[str, list[tuple[float]] | list[int] | tuple[float] ]:
+        return {
+            'motor_pts':[(self.xm1, self.ym1, self.zm1),
+            (self.xm2, self.ym2, self.zm2),
+            (self.xm3, self.ym3, self.zm3),
+            (self.xm4, self.ym4, self.zm4)],
+            'motor_is':[i for i, value in enumerate(self.ribcodes) if value == 'mb'],
+            'lg_pt': (self.xlg, self.ylg, self.zlg),
+            'lg_is': [i for i, value in enumerate(self.ribcodes) if value == 'lb']
+        }
