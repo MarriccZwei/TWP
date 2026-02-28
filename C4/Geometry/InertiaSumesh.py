@@ -14,8 +14,8 @@ class InertiaSubmesh():
         self.batteryVertices:list[nt.NDArray[np.float64]] = list()
 
         delta = HYPERPARAMS["delta"]
-        Hpcsk = HYPERPARAMS["(H/c)_sq"]
-        Hpcas = HYPERPARAMS["(H/c)_aq"]
+        Hpcsq = HYPERPARAMS["(H/c)_sq"]
+        Hpcaq = HYPERPARAMS["(H/c)_aq"]
         D = HYPERPARAMS["D"]
         Delta_b = HYPERPARAMS["Delta b"]
 
@@ -28,124 +28,75 @@ class InertiaSubmesh():
         mli = MASSES["li"]
 
         #1) battery packing
-        #1.1) determination of the hypotetical root coordinates
-        pre_root_x = scaffold[0, :, 0]
-        pre_root_y = scaffold[0, 0, 1]
-        pre_root_z = scaffold[0, :, 2]
-        pre2_root_x = scaffold[1, :, 0]
-        pre2_root_y = scaffold[1, 0, 1]
-        pre2_root_z = scaffold[1, :, 2]
-        delta_y = pre2_root_y-pre_root_y
+        bat_centroids:list[tuple[float]] = list()
+        bat_masses_in_range:list[float] = list()
+        s3 = np.sqrt(3)
 
-        #b = f(y)-a*y from linear function; shape to match the scaffold shape
-        a_x = (pre2_root_x-pre_root_x)/delta_y
-        a_z = (pre2_root_z-pre_root_z)/delta_y
-        b_x = (pre_root_x-a_x*pre_root_y)
-        b_z = (pre_root_z-a_z*pre_root_y)
+        #1.1) battery connection point coordinates
+        y_oub = scaffold[:, 1:-3, 1]
+        y_inb = np.zeros(y_oub.shape)
+        y_inb[1:, :] = y_oub[:-1, :]
+        x_oub_fore = scaffold[:, 1:-3, 0]
+        z_oub_fore = scaffold[:, 1:-3, 2]
+        x_oub_peak = scaffold[:, 2:-2, 0]
+        z_oub_peak = scaffold[:, 2:-2, 2]
+        x_oub_rear = scaffold[:, 3:-1, 0]
+        z_oub_rear = scaffold[:, 3:-1, 2]
+        y_fus = scaffold[:, :, 1].min()
+        dz_dy = (scaffold[0, 0, 2]-scaffold[1, 0, 2])/(scaffold[0, 0, 1]-scaffold[1, 0, 1])
         
-        #1.2) outboard and inboard battery scaffold coordinates
-        xscf_oub = scaffold[:, :, 0]
-        yscf_oub = scaffold[:, :, 1]
-        zscf_oub = scaffold[:, :, 2]
+        for yok, xof, zof, xok, zok, xor, zor, yia in zip(
+            y_oub.flatten(), x_oub_fore.flatten(), z_oub_fore.flatten(), x_oub_peak.flatten(), z_oub_peak.flatten(),
+            x_oub_rear.flatten(), z_oub_rear.flatten(), y_inb.flatten()
+        ):
+            h_fore = abs(zok-zof)
+            h_rear = abs(zok-zor)
+            h = h_fore if (h_fore<h_rear) else h_rear
+            a = 2*h/s3
 
-        #inboard attachment points for the batteries
-        yscf_inb_no_delta = np.vstack((np.zeros((1, scaffold.shape[1])), yscf_oub[:-1, :]))
-        xscf_inb_no_delta = a_x[None, :]*yscf_inb_no_delta+b_x[None, :]
-        zscf_inb_no_delta = a_z[None, :]*yscf_inb_no_delta+b_z[None, :]
-
-        #offset on inboard coordinates for Delta_b
-        yscf_inb = yscf_inb_no_delta+Delta_b
-        xscf_inb = a_x[None, :]*yscf_inb+b_x[None, :]
-        zscf_inb = a_z[None, :]*yscf_inb+b_z[None, :]
-
-        x_oub_fore = xscf_oub[:, 1:-3].flatten()
-        y_oub_fore = yscf_oub[:, 1:-3].flatten()
-        z_oub_fore = zscf_oub[:, 1:-3].flatten()
-        x_inb_fore = xscf_inb[:, 1:-3].flatten()
-        y_inb_fore = yscf_inb[:, 1:-3].flatten()
-        z_inb_fore = zscf_inb[:, 1:-3].flatten()
-
-        x_oub_peak = xscf_oub[:, 2:-2].flatten()
-        y_oub_peak = yscf_oub[:, 2:-2].flatten()
-        z_oub_peak = zscf_oub[:, 2:-2].flatten()
-        x_inb_peak = xscf_inb[:, 2:-2].flatten()
-        y_inb_peak = yscf_inb[:, 2:-2].flatten()
-        z_inb_peak = zscf_inb[:, 2:-2].flatten()
-
-        x_oub_rear = xscf_oub[:, 3:-1].flatten()
-        y_oub_rear = yscf_oub[:, 3:-1].flatten()
-        z_oub_rear = zscf_oub[:, 3:-1].flatten()
-        x_inb_rear = xscf_inb[:, 3:-1].flatten()
-        y_inb_rear = yscf_inb[:, 3:-1].flatten()
-        z_inb_rear = zscf_inb[:, 3:-1].flatten()
-
-        x_inb_peak_scaffold = xscf_inb_no_delta[:, 2:-2].flatten()
-        y_inb_peak_scaffold = yscf_inb_no_delta[:, 2:-2].flatten()
-        z_inb_peak_scaffold = zscf_inb_no_delta[:, 2:-2].flatten()
-        
-        #1.3)per-coordinate set battery geometry computation
-        for xof, yof, zof, xif, yif, zif, xok, yok, zok, xik, yik, zik, xor, yor, zor, xir, yir, zir, xia, yia, zia in zip(
-            x_oub_fore, y_oub_fore, z_oub_fore, x_inb_fore, y_inb_fore, z_inb_fore, 
-            x_oub_peak, y_oub_peak, z_oub_peak, x_inb_peak, y_inb_peak, z_inb_peak,
-            x_oub_rear, y_oub_rear, z_oub_rear, x_inb_rear, y_inb_rear, z_inb_rear,
-            x_inb_peak_scaffold, y_inb_peak_scaffold, z_inb_peak_scaffold):
-            
-            #intermediate expressions
-            batdir = np.sign(zok-zor)
             c = c_at_y(yok)
-            Hsk = Hpcsk*c
-            Has = Hpcas*c
-            delta_zok = -batdir*(delta+D+max(Hsk/2, Has))
-            abs_delta_xok = abs(delta_zok)/np.sqrt(3)-Has-2*delta
-            assert abs_delta_xok > 0, abs_delta_xok
-
-            #outboard coordinates
-            zok_n = zok+delta_zok
-            xokf_n = xok-abs_delta_xok
-            xokr_n = xok+abs_delta_xok
-            zofr_n = abs(max(batdir*zof, batdir*zor))+batdir*(Hsk/2+delta)
-            abs_delta_xorf = abs(zofr_n-zok_n)/np.sqrt(3)
-            xof_n = xokf_n-abs_delta_xorf #to correct: must be symmetric
-            xor_n = xokr_n+abs_delta_xorf #to correct: must be symmetric
-
-            #inboard coordinates
-            zik_n = zik+delta_zok
-            xikf_n = xik-abs_delta_xok
-            xikr_n = xik+abs_delta_xok
-            zifr_n = zik_n+zofr_n-zok_n
-            xif_n = xikf_n-abs_delta_xorf
-            xir_n = xikr_n+abs_delta_xorf
-
-            #1.4) battery creation
-            if (zok_n-zofr_n)*batdir > 0: #only make batteries if there is enough space
-                #battery point assembly direction 0-of, 1-okf, 2-okr, 3-or, 4-if, 5-ikf, 6-ikr, 7-ir
-                vertices = np.array([
-                    [xof_n, yof, zofr_n], [xokf_n, yok, zok_n], [xokr_n, yok, zok_n], [xor_n, yof, zofr_n],
-                    [xif_n, yif, zifr_n], [xikf_n, yik, zik_n], [xikr_n, yik, zik_n], [xir_n, yir, zifr_n]
-                ])
-                self.batteryVertices.append(vertices)
-                bat_mass = rho_bat*(xokr_n-xokf_n+xor_n-xof_n)*(yok-yik)*abs(zofr_n-zok_n)/2
+            delta_d = Hpcsq*c/2+delta+D
+            delta_a = Hpcaq*c/2+delta
+            delta_s = Hpcsq*c/2+delta
+            
+            A1 = delta_d**2/s3
+            A2 = delta_a*(a-2*delta_d/s3)
+            A3 = delta_s*(a-4*delta_a/s3-delta_s/s3)
+            assert A2 > 0
+            assert A3 > 0
+            A = h**2/s3-A1-2*A2-A3
+            if A>0:
+                bat_mass = rho_bat*A*(y_oub-y_inb-Delta_b)
                 self.battery_masses.append(bat_mass)
+                if yok > y_fus:
+                    bat_masses_in_range.append(bat_mass)
+                    #TODO: centroid, coordinate lists to be used 4 meshing (directly tuples), remove battery plotting
+        
+        #1.5) adjusting for the nominal battery mass
+        self.tot_computed_bat_mass = sum(self.battery_masses)
+        ratio_bat_mass = m_bat_nominal/self.tot_computed_bat_mass
+        self.battery_masses = [m_bat_raw*ratio_bat_mass for m_bat_raw in self.battery_masses]
+        bat_masses_in_range = [m_bat_raw*ratio_bat_mass for m_bat_raw in bat_masses_in_range]
 
-                #1.5) battery mesh
-                x_centr_bat = tuple(self._centroid_of_loft_analytical(vertices))
-                if x_centr_bat[1] > scaffold[:, :, 1].min(): #we don't add the in-fuselage batteries to the mesh
-                    #1.5.1) battery inertia
-                    self.eleTypes.append("bi")
-                    self.eleArgs.append([bat_mass])
-                    self.eleNodes.append([x_centr_bat])
-                    #1.5.2) spring mesh - connection to all outboard points and the inboard rail
-                    self.eleTypes.extend(["ms"]*4)
-                    self.eleArgs.extend([[]]*4)
-                    self.eleNodes.append([(xof, yof, zof), x_centr_bat])
-                    self.eleNodes.append([(xok, yok, zok), x_centr_bat])
-                    self.eleNodes.append([(xor, yor, zor), x_centr_bat])
-                    self.eleNodes.append([(xia, yia, zia), x_centr_bat]) 
-
-            #1.5) adjusting for the nominal battery mass
-            self.tot_computed_bat_mass = sum(self.battery_masses)
-            ratio_bat_mass = m_bat_nominal/self.tot_computed_bat_mass
-            self.battery_masses = [m_bat_raw*ratio_bat_mass for m_bat_raw in self.battery_masses]
+        #1.6) battery mesh
+        for yok, xof, zof, xok, zok, xor, zor, xia, yia, zia, centr, bat_mass in zip( #skipping the 1st row of bats that's inside the fuselage
+            y_oub[1:, :].flatten(), x_oub_fore[1:, :].flatten(), z_oub_fore[1:, :].flatten(),
+            x_oub_peak[1:, :].flatten(), z_oub_peak[1:, :].flatten(), x_oub_rear[1:, :].flatten(), z_oub_rear[1:, :].flatten(),
+            x_oub_peak[:-1, :].flatten(), y_oub[:-1, :].flatten(), z_oub_peak[:-1, :].flatten(), 
+            bat_centroids[y_oub.shape[1]:], self.battery_masses[y_oub.shape[1]:] #removing the 1st raw of batteries from the already flattened mass lists
+        ): 
+            if centr[1] > scaffold[:, :, 1].min(): #we don't add the in-fuselage batteries to the mesh
+                #1.5.1) battery inertia
+                self.eleTypes.append("bi")
+                self.eleArgs.append([bat_mass])
+                self.eleNodes.append([centr])
+                #1.5.2) spring mesh - connection to all outboard points and the inboard rail
+                self.eleTypes.extend(["ms"]*4)
+                self.eleArgs.extend([[]]*4)
+                self.eleNodes.append([(xof, yok, zof), centr])
+                self.eleNodes.append([(xok, yok, zok), centr])
+                self.eleNodes.append([(xor, yok, zor), centr])
+                self.eleNodes.append([(xia, yia, zia), centr]) 
 
         #2) hinge and equipment inertia
         #2.1) hinge
