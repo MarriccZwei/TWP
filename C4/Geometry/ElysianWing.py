@@ -100,11 +100,17 @@ class ElysianWing():
 
         #->5.3) The creation of the scaffold proper
         self.scaffold = list() #will become a n_ribs X n_(scaffold points per y) X 3 numpy array
+        side = np.zeros(len(x_scaff_fus), dtype=np.bool_)
+        side[::2] = True
+        side[1::2] = False
         for y in self.yribs:
             yfrac = (y-self.yfus)/(self.yhn-self.yfus)
             ycontribs = list()
-            for xsf, xsh, zsf, zsh in zip(x_scaff_fus, x_scaff_hn, z_scaff_fus, z_scaff_hn):
-                ycontribs.append([(1-yfrac)*xsf+yfrac*xsh, y, (1-yfrac)*zsf+yfrac*zsh])
+            for xsf, xsh, side_ in zip(x_scaff_fus, x_scaff_hn, side):
+                x_scaff_pt = (1-yfrac)*xsf+yfrac*xsh
+                xperc_scaff_pt = self.xperc_reduced_from_x(x_scaff_pt, y)
+                z_scaff_pt = self.upper_skin_z(xperc_scaff_pt, y) if side_ else self.lower_skin_z(xperc_scaff_pt, y)
+                ycontribs.append([x_scaff_pt, y, z_scaff_pt])
             self.scaffold.append(ycontribs)
         self.scaffold = np.array(self.scaffold)
     

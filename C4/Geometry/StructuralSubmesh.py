@@ -22,17 +22,55 @@ class StructuralSubmesh():
 
         x_difference_avg = (x_difference_inb + x_difference_oub) / 2
 
-        n_x_tot = n * wing.scaffold[:, ::2, 0].shape[1]
+        n_x_tot = (n-1) * (wing.scaffold[:, ::2, 0].shape[1]-1) + 1 #not to double count the nodes
 
         ys_per_bay = np.ceil(n_x_tot * y_difference / x_difference_avg).astype(np.int8)
 
-        #2)sheet creation
+        eq_dict = self.wing.large_equipment_summary()
+        furthest_motor_i = eq_dict["motor_is"][-1]
+        furthest_lg_i = eq_dict["lg_is"][-1]
+
+        #2)bay-by bay mesh creation
         for i, ny in enumerate(ys_per_bay):
             self._sheet_creation(wing.scaffold[i, 0, :], wing.scaffold[i, 1, :], wing.scaffold[i+1, 0, :], wing.scaffold[i+1, 1, :], ny, "sq") #fore spar
             self._sheet_creation(wing.scaffold[i, -1, :], wing.scaffold[i, -2, :], wing.scaffold[i+1, -1, :], wing.scaffold[i+1, -2, :], ny, "sq") #rear spar
-            self._rib_creation(i)
+
+            for inbf, inbr, oubf, oubr in zip(self.wing.scaffold[i, 1:-2, :], self.wing.scaffold[i, 2:-1, :], self.wing.scaffold[i+1, 1:-2, :], self.wing.scaffold[i+1, 2:-1, :]):
+                self._sheet_creation(inbf, inbr, oubf, oubr, ny, "aq") #angled spars
+
+            for inbf, inbr, oubf, oubr in zip(self.wing.scaffold[i, :-2:2, :], self.wing.scaffold[i, 2::2, :], self.wing.scaffold[i+1, :-2:2, :], self.wing.scaffold[i+1, 2::2, :]):
+                self._sheet_creation(inbf, inbr, oubf, oubr, ny, "aq", True) #top skin
+
+            for inbf, inbr, oubf, oubr in zip(self.wing.scaffold[i, 1:-2:2, :], self.wing.scaffold[i, 3::2, :], self.wing.scaffold[i+1, 1:-2:2, :], self.wing.scaffold[i+1, 3::2, :]):
+                self._sheet_creation(inbf, inbr, oubf, oubr, ny, "aq", False) #lower skin
+
+            self._rib_creation(i+1)
+
+            if i < furthest_motor_i: #NOTE: for i = furthest i we have our inboard at the boundary so the bay is outboard of the boundary
+                self._railing_creation(self.wing.scaffold[i, 0, :], self.wing.scaffold[i+1, 0, :], ny, [], "sb") #top motor support
+                self._railing_creation(self.wing.scaffold[i, 1, :], self.wing.scaffold[i+1, 1, :], ny, [], "sb") #bottom motor support
+
+            if i < furthest_lg_i: #same for landing gear supports
+                self._railing_creation(self.wing.scaffold[i, -1, :], self.wing.scaffold[i+1, -1, :], ny, [], "sb")
+                self._railing_creation(self.wing.scaffold[i, -2, :], self.wing.scaffold[i+1, -2, :], ny, [], "sb")
+
+            for inb, oub in zip(self.wing.scaffold[i, 2:-2, :], self.wing.scaffold[i+1, 2:-2, :]):
+                self._railing_creation(inb, oub, ny, [HYPERPARAMS['d']], "rb") #battery rails
+
+        #3) consistency check
+        assert len(self.eleTypes) == len(self.eleArgs) == len(self.eleNodes)
 
 
+    def _railing_creation(self, inb:nt.NDArray[np.float64], oub:nt.NDArray, ny:int, eleArg:list[float], eleType:str):
+        xs = np.linspace(inb[0], oub[0], ny)
+        ys = np.linspace(inb[1], oub[1], ny)
+        zs = np.linspace(inb[2], oub[2], ny)
+        for x1, y1, z1, x2, y2, z2 in zip(xs[:-1], ys[:-1], zs[:-1], xs[1:], ys[1:], zs[1:]):
+           self.eleTypes.append(eleType) 
+           self.eleArgs.append(eleArg)
+           self.eleNodes.append([(x1, y1, z1), (x2, y2, z2)])
+    
+    
     def _sheet_creation(self, inbf:nt.NDArray[np.float64], inbr:nt.NDArray[np.float64], oubf:nt.NDArray[np.float64], oubr:nt.NDArray[np.float64], ny:int, eleType:str, skin:bool=None):
         """
         zproj - None for no projection; True for upper skin, false for lower skin
@@ -72,6 +110,7 @@ class StructuralSubmesh():
             self.eleArgs.append([H])
             self.eleNodes.append([(x1, y1, z1), (x2, y2, z2), (x3, y3, z3), (x4, y4, z4)])
 
+
     def _rib_creation(self, istation:int):
         y = self.wing.yribs[istation]
         c = self.wing.c_at_y(y)
@@ -95,3 +134,32 @@ class StructuralSubmesh():
             self.eleTypes.append(code)
             self.eleArgs.append([Hpq])
             self.eleNodes.append([(xr, y, z1), (xr, y, z2)])
+
+        #3) the angled spars
+        for xb1, zb1, xb2, zb2 in zip(self.wing.scaffold[istation, 1:-2, 0], self.wing.scaffold[istation, 1:-2, 2], self.wing.scaffold[istation, 2:-1, 0], self.wing.scaffold[istation, 2:-1, 2]):
+            xs = np.linspace(xb1, xb2, self.n)
+            zs = np.linspace(zb1, zb2, self.n)
+            for x1, x2, z1, z2 in zip(xs[:-1], xs[1:], zs[:-1], zs[1:]):
+                self.eleTypes.append(code)
+                self.eleArgs.append([Haq])
+                self.eleNodes.append([(x1, y, z1), (x2, y, z2)])
+
+        #4) the upper skin
+        for xb1, xb2 in zip(self.wing.scaffold[istation, :-2:2, 0], self.wing.scaffold[istation, 2::2, 0]):
+            xs = np.linspace(xb1, xb2, self.n)
+            xperc = [self.wing.xperc_reduced_from_x(x, y) for x in xs]
+            zs = [self.wing.upper_skin_z(xpc, y) for xpc in xperc]
+            for x1, x2, z1, z2 in zip(xs[:-1], xs[1:], zs[:-1], zs[1:]):
+                self.eleTypes.append(code)
+                self.eleArgs.append([Hsq])
+                self.eleNodes.append([(x1, y, z1), (x2, y, z2)])
+
+        #5) the lower skin
+        for xb1, xb2 in zip(self.wing.scaffold[istation, 1:-2:2, 0], self.wing.scaffold[istation, 3::2, 0]):
+            xs = np.linspace(xb1, xb2, self.n)
+            xperc = [self.wing.xperc_reduced_from_x(x, y) for x in xs]
+            zs = [self.wing.lower_skin_z(xpc, y) for xpc in xperc]
+            for x1, x2, z1, z2 in zip(xs[:-1], xs[1:], zs[:-1], zs[1:]):
+                self.eleTypes.append(code)
+                self.eleArgs.append([Hsq])
+                self.eleNodes.append([(x1, y, z1), (x2, y, z2)])
