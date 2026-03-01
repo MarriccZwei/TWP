@@ -15,12 +15,12 @@ import aerosandbox as asb
 def test_self_weight():
     HYPERPARAMS ={
         'delta':.005,
-        'D':.3,
+        'D':.2,
         'd':.02,
         'Delta b':.1,
-        '(H/c)_sq':.009,
-        '(H/c)_aq':.003,
-        '(H/c)_pq':.006
+        '(H/c)_sq':.0215,
+        '(H/c)_aq':.009,
+        '(H/c)_pq':.009
     }
 
     GEOM_SOURCE ={
@@ -49,18 +49,18 @@ def test_self_weight():
         "tipfoil":asb.Airfoil("naca2410")
     }
 
-    N = 5
+    N = 10
 
     model, mesher = geometry_init(GEOM_SOURCE, HYPERPARAMS, MASSES, N, 8)
 
     desvars = {
-        '(2t/H)_sq':0.1,
-        '(2t/H)_pq':0.05,
-        '(2t/H)_aq':0.04,
-        'W_bb':0.01,
-        'W_mb':0.01,
-        'W_lb':0.01,
-        'Ds':.008
+        '(2t/H)_sq':0.4,
+        '(2t/H)_pq':0.4,
+        '(2t/H)_aq':0.4,
+        'W_bb':0.02,
+        'W_mb':0.02,
+        'W_lb':0.02,
+        'Ds':.007
     }
 
     materials = {
@@ -98,7 +98,8 @@ def test_self_weight():
     
     #post processing
     savePath = r"C:\marek\studia\hpb\Results\C4\ForwardTests\\"
-    margins = process_load_case(model, lc, materials, desvars, ep["beamtypes"], ep["quadtypes"], plot=True, savePath=savePath)
+    print("processing starts")
+    margins = process_load_case(model, lc, materials, desvars, ep["beamtypes"], ep["quadtypes"], plot=True, savePath=savePath, num_eig_lb=10)
     print(margins)
     print(model.ncoords.shape) #so that it can be compared with the shape from CATIA
 

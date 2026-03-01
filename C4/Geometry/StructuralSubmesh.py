@@ -32,17 +32,17 @@ class StructuralSubmesh():
 
         #2)bay-by bay mesh creation
         for i, ny in enumerate(ys_per_bay):
-            self._sheet_creation(wing.scaffold[i, 0, :], wing.scaffold[i, 1, :], wing.scaffold[i+1, 0, :], wing.scaffold[i+1, 1, :], ny, "sq") #fore spar
-            self._sheet_creation(wing.scaffold[i, -1, :], wing.scaffold[i, -2, :], wing.scaffold[i+1, -1, :], wing.scaffold[i+1, -2, :], ny, "sq") #rear spar
+            self._sheet_creation(wing.scaffold[i, 0, :], wing.scaffold[i, 1, :], wing.scaffold[i+1, 0, :], wing.scaffold[i+1, 1, :], ny, "pq") #fore spar
+            self._sheet_creation(wing.scaffold[i, -1, :], wing.scaffold[i, -2, :], wing.scaffold[i+1, -1, :], wing.scaffold[i+1, -2, :], ny, "pq") #rear spar
 
             for inbf, inbr, oubf, oubr in zip(self.wing.scaffold[i, 1:-2, :], self.wing.scaffold[i, 2:-1, :], self.wing.scaffold[i+1, 1:-2, :], self.wing.scaffold[i+1, 2:-1, :]):
                 self._sheet_creation(inbf, inbr, oubf, oubr, ny, "aq") #angled spars
 
             for inbf, inbr, oubf, oubr in zip(self.wing.scaffold[i, :-2:2, :], self.wing.scaffold[i, 2::2, :], self.wing.scaffold[i+1, :-2:2, :], self.wing.scaffold[i+1, 2::2, :]):
-                self._sheet_creation(inbf, inbr, oubf, oubr, ny, "aq", True) #top skin
+                self._sheet_creation(inbf, inbr, oubf, oubr, ny, "sq", True) #top skin
 
             for inbf, inbr, oubf, oubr in zip(self.wing.scaffold[i, 1:-2:2, :], self.wing.scaffold[i, 3::2, :], self.wing.scaffold[i+1, 1:-2:2, :], self.wing.scaffold[i+1, 3::2, :]):
-                self._sheet_creation(inbf, inbr, oubf, oubr, ny, "aq", False) #lower skin
+                self._sheet_creation(inbf, inbr, oubf, oubr, ny, "sq", False) #lower skin
 
             self._rib_creation(i+1)
 

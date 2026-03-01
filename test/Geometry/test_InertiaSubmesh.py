@@ -74,12 +74,12 @@ def test_plot_inertia_submesh():
 def test_full_geometry():
     HYPERPARAMS ={
         'delta':.005,
-        'D':.3,
+        'D':.2,
         'd':.02,
         'Delta b':.1,
-        '(H/c)_sq':.009,
-        '(H/c)_aq':.003,
-        '(H/c)_pq':.006
+        '(H/c)_sq':.0215,
+        '(H/c)_aq':.009,
+        '(H/c)_pq':.009
     }
 
     GEOM_SOURCE ={
@@ -118,5 +118,5 @@ def test_full_geometry():
 
 
 if __name__ == "__main__":
-    test_plot_inertia_submesh()
+    #test_plot_inertia_submesh()
     test_full_geometry()
