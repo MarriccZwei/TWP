@@ -42,11 +42,8 @@ class _SETUP:
     ism = InertiaSubmesh(scaffold, HYPERPARAMS, MASSES, c_at_y, eqpt_dict)
 
 
-def test_plot_inertia_submesh():
-    plotter = pv.Plotter()
-    ism = _SETUP.ism
-
-    for element in ism.eleNodes:
+def _plot_inertia_submesh(plotter:pv.Plotter, inesm:InertiaSubmesh):
+    for element in inesm.eleNodes:
         if len(element) == 1:
             # Single point
             point = np.array(element[0])
@@ -62,39 +59,26 @@ def test_plot_inertia_submesh():
 
         else:
             raise ValueError(f"Each element must contain either 1 or 2 nodes. Got: {element}")
-        
-    plotter.show()
 
 
-def test_battery_packing():
-    scaffold = _SETUP.scaffold
+def test_plot_inertia_submesh():
+    plotter = pv.Plotter()
     ism = _SETUP.ism
 
-    plotter = pv.Plotter()
-    scaffold_points = scaffold.reshape((scaffold.shape[0]*scaffold.shape[1], scaffold.shape[2]))
-    plotter.add_points(scaffold_points, color="red", point_size=8, render_points_as_spheres = True)
-
-    print(ism.battery_masses)
-    print(ism.tot_computed_bat_mass)
-    ism.plot_bats(plotter)
-
-    plotter.add_axes(
-    line_width=3,
-    labels_off=False
-    )
-    plotter.show_grid()
+    _plot_inertia_submesh(plotter, ism)
+        
     plotter.show()
 
 
 def test_full_geometry():
     HYPERPARAMS ={
         'delta':.005,
-        'D':.15,
+        'D':.3,
         'd':.02,
         'Delta b':.1,
-        '(H/c)_sq':.01,
-        '(H/c)_aq':.03,
-        '(H/c)_pq':.06
+        '(H/c)_sq':.009,
+        '(H/c)_aq':.003,
+        '(H/c)_pq':.006
     }
 
     GEOM_SOURCE ={
@@ -137,11 +121,11 @@ def test_full_geometry():
     plotter = pv.Plotter()
     wing.plot(plotter, 9, 20)
     ism = InertiaSubmesh(wing.scaffold, HYPERPARAMS, MASSES, wing.c_at_y, wing.large_equipment_summary())
-    ism.plot_bats(plotter)
+    print(f"{ism.tot_computed_bat_mass} vs required {MASSES["bi"]}")
+    _plot_inertia_submesh(plotter, ism)
     plotter.show()
 
 
 if __name__ == "__main__":
-    # test_plot_inertia_submesh()
-    # test_battery_packing()
+    test_plot_inertia_submesh()
     test_full_geometry()

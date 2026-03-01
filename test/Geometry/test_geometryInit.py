@@ -6,12 +6,12 @@ import aerosandbox as asb
 def test_geometry_init():
     HYPERPARAMS ={
         'delta':.005,
-        'D':.15,
-        'd':.2,
+        'D':.3,
+        'd':.02,
         'Delta b':.1,
-        '(H/c)_sq':.1,
-        '(H/c)_aq':.03,
-        '(H/c)_pq':.06
+        '(H/c)_sq':.009,
+        '(H/c)_aq':.003,
+        '(H/c)_pq':.006
     }
 
     GEOM_SOURCE ={
