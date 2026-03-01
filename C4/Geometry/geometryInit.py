@@ -9,7 +9,7 @@ import typing as ty
 import aerosandbox.numpy as np
 import pyfe3d as pf3
 
-def geometry_init(GEOM_SOURCE:dict[str, float], HYPERPARAMS:dict[str, float], MASSES:dict[str, float], N:int, collisionDecimalPlaces:int=5, 
+def geometry_init(GEOM_SOURCE:dict[str, float], HYPERPARAMS:dict[str, float], MASSES:dict[str, float], N:int, collisionDecimalPlaces:int=8, 
                   springargs:ty.Tuple[float]=(1e10, 0., 0., 1e10, 0., 0., 0., 1., 0.)) -> ty.Tuple[Pyfe3DModel, Mesher]:
     """
     converts the elements imported from CAD into a pyfe3d model

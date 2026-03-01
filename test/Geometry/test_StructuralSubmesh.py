@@ -8,12 +8,12 @@ from ...C4.Geometry.StructuralSubmesh import StructuralSubmesh
 class _SETUP:
     HYPERPARAMS ={
         'delta':.005,
-        'D':.95,
-        'd':.2,
+        'D':.3,
+        'd':.02,
         'Delta b':.1,
-        '(H/c)_sq':.1,
-        '(H/c)_aq':.05,
-        '(H/c)_pq':.06
+        '(H/c)_sq':.009,
+        '(H/c)_aq':.003,
+        '(H/c)_pq':.006
     }
 
     GEOM_SOURCE ={
@@ -42,7 +42,7 @@ class _SETUP:
         "tipfoil":asb.Airfoil("naca2410")
     }
 
-    N = 5
+    N = 15
 
     wing = ElysianWing(GEOM_SOURCE, HYPERPARAMS["(H/c)_sq"])
     ssm = StructuralSubmesh(wing, HYPERPARAMS, N)
@@ -94,7 +94,6 @@ def test_ssm():
 
     # ----- Create and add line mesh -----
     if line_points:
-        print(len(line_points))
         line_points = np.array(line_points)
         line_cells = np.array(line_cells)
         lines = pv.PolyData()
@@ -104,15 +103,11 @@ def test_ssm():
 
     # ----- Create and add quad mesh -----
     if quad_points:
-        print(len(quad_points))
         quad_points = np.array(quad_points)
         quad_cells = np.array(quad_cells)
         quads = pv.PolyData()
         quads.points = quad_points
         quads.faces = quad_cells
-        # print("quad_points shape:", quad_points.shape)
-        # print("quad_cells shape:", quad_cells.shape)
-        # print("n_cells:", quads.n_cells)
         plotter.add_mesh(
             quads,
             color="brown",

@@ -16,7 +16,7 @@ for i, k in enumerate(ks):
     desvars['sks']=(k, 0, 0., k, 0., 0., 0., 1., 0.)
     print(f"analysis for k={k} ...")
 
-    optimiser = Optimiser(desvars, mc.LC_INFO, mc.CAD_STRS, mc.MATERIALS, mc.RES, mc.G0, mc.MTOM, mc.AIRFS, mc.LBUCKLSF,
+    optimiser = Optimiser(desvars, mc.LC_INFO, mc.CAD_STRS, mc.GEOM_SOURCE, mc.HYPERPARAMS, mc.MASSES, mc.N, mc.MATERIALS, mc.RES, mc.G0, mc.MTOM, mc.AIRFS, mc.LBUCKLSF,
                       mc.BOUNDS)
     margins[:, i] = optimiser.simulate_constraints(optimiser.desvarvec())
 

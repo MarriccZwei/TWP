@@ -1,5 +1,6 @@
 from ...C4.Geometry.InertiaSumesh import InertiaSubmesh
 from ...C4.Geometry.ElysianWing import ElysianWing
+from ...C4.ConfigFiles.classified import MASSES
 
 import aerosandbox as asb
 import aerosandbox.numpy as np
@@ -22,7 +23,7 @@ class _SETUP:
 
     c_at_y = lambda y:-3/8*y+67/8
 
-    MASSES = {
+    MASSES_ = {
         'rho_bat': 3e3,
         'hi':200.,
         'LE':1e3,
@@ -39,7 +40,7 @@ class _SETUP:
         'lg_is':[2, 3]
     }
 
-    ism = InertiaSubmesh(scaffold, HYPERPARAMS, MASSES, c_at_y, eqpt_dict)
+    ism = InertiaSubmesh(scaffold, HYPERPARAMS, MASSES_, c_at_y, eqpt_dict)
 
 
 def _plot_inertia_submesh(plotter:pv.Plotter, inesm:InertiaSubmesh):
@@ -105,16 +106,6 @@ def test_full_geometry():
         "deltaxm4":.801187,
         "rootfoil":asb.Airfoil("naca2418"),
         "tipfoil":asb.Airfoil("naca2410")
-    }
-
-    MASSES = {
-        'rho_bat': 3e3,
-        'hi':200.,
-        'LE':1e3,
-        'TE':928.,
-        'bi':17480.,
-        'mi':694.625,
-        'li':1269.5,
     }
 
     wing = ElysianWing(GEOM_SOURCE, HYPERPARAMS["(H/c)_sq"])

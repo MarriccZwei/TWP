@@ -1,6 +1,8 @@
 import aerosandbox.numpy as np
 import aerosandbox as asb
 
+from .classified import MASSES
+
 DESVARS_INITIAL = {
     '(2t/H)_sq':0.1,
     '(2t/H)_pq':0.06,
@@ -64,6 +66,8 @@ G0 = 9.81 # [N/kg]
 MTOM = 76000. # [kg]
 LBUCKLSF = 1.5
 
+N = 10
+
 BOUNDS = (
     {
         '(2t/H)_sq':0.01,
@@ -86,3 +90,39 @@ BOUNDS = (
 )
 
 AIRFS = [asb.Airfoil(f"naca241{i}") for i in reversed(range(9))] #from naca 2418 to naca 2410
+
+HYPERPARAMS ={
+        'delta':.005,
+        'D':.3,
+        'd':.02,
+        'Delta b':.1,
+        '(H/c)_sq':.009,
+        '(H/c)_aq':.003,
+        '(H/c)_pq':.006
+    }
+
+GEOM_SOURCE ={
+        #NOTE: all coordinates in m
+        "yfus":1.602374,
+        "yhn":18.,
+        "ytip":21.,
+        "deltazhn":1.362017,
+        "deltaxhn":1.548961,
+        "(x/c)_fore":.15,
+        "(x/c)_rear":.7,
+        "cr":5.,
+        "ct":2.,
+        "ylg":5.768546,
+        "deltaxlg":.80115,
+        "rlg":.801187,
+        "ym1":4.005935,
+        "ym2":8.091988,
+        "ym3":12.178042,
+        "ym4":16.290801,
+        "deltaxm1":-.801187,
+        "deltaxm2":-.267062,
+        "deltaxm3":.267062,
+        "deltaxm4":.801187,
+        "rootfoil":asb.Airfoil("naca2418"),
+        "tipfoil":asb.Airfoil("naca2410")
+    }

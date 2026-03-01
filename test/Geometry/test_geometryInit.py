@@ -1,4 +1,6 @@
 from ...C4.Geometry.geometryInit import geometry_init
+from ...C4.ConfigFiles.classified import MASSES
+
 import pyvista as pv
 import numpy as np
 import aerosandbox as asb
@@ -38,16 +40,6 @@ def test_geometry_init():
         "deltaxm4":.801187,
         "rootfoil":asb.Airfoil("naca2418"),
         "tipfoil":asb.Airfoil("naca2410")
-    }
-
-    MASSES = {
-        'rho_bat': 3e3,
-        'hi':200.,
-        'LE':1e3,
-        'TE':928.,
-        'bi':17480.,
-        'mi':694.625,
-        'li':1269.5,
     }
 
     N = 15

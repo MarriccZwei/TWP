@@ -10,8 +10,8 @@ import numpy.typing as nt
 import scipy.optimize as opt
 
 class Optimiser():
-    def __init__(self, desvarsInitial:ty.Dict[str,float], loadCasesInfo:ty.List[ty.Dict[str, object]], cadstrs:ty.Dict[str, str], 
-                 materials:ty.Dict[str, float], resConfig:ty.Dict[str, object], g0:float, MTOM:float, airfs:ty.List[asb.Airfoil],
+    def __init__(self, desvarsInitial:ty.Dict[str,float], loadCasesInfo:ty.List[ty.Dict[str, object]], cadstrs:dict[str, str], GEOM_SOURCE:dict[str, float], HYPERPARAMS:dict[str, float], 
+                 MASSES:dict[str, float], N:int, materials:ty.Dict[str, float], resConfig:ty.Dict[str, object], g0:float, MTOM:float, airfs:ty.List[asb.Airfoil],
                  LINBUCKLSF:float, bounds:ty.Tuple[ty.Dict[str, float]], meshMergeDigits:int=3, logEveryNIters:int=None):
         '''
         The constructor performs the initialisation flow as well
@@ -49,7 +49,7 @@ class Optimiser():
             self.iteration_number = 0
 
         #1) geometry initialization
-        self.model, self.mesher = geometry_init(cadstrs["mesh"], meshMergeDigits, resConfig["sks"])
+        self.model, self.mesher = geometry_init(GEOM_SOURCE, HYPERPARAMS, MASSES, N)
         les_flat = np.fromstring(cadstrs["les"], sep=",")
         tes_flat = np.fromstring(cadstrs["tes"], sep=",")
         les = les_flat.reshape((len(les_flat)//3, 3))
