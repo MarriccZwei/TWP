@@ -60,6 +60,17 @@ class StructuralSubmesh():
         #3) consistency check
         assert len(self.eleTypes) == len(self.eleArgs) == len(self.eleNodes)
 
+        #3.1) getting the node count that one should obtain if this part of mesh is resolved correctly
+        n_top_skin_panels = self.wing.scaffold[0, :-2:2, 0].shape[0]
+        n_low_skin_panels = self.wing.scaffold[0, 1:-2:2, 0].shape[0]
+        n_spars = 2
+        n_angled_spars = self.wing.scaffold[0, 1:-2, 0].shape[0]
+        #corner nodes plus intermediate nodes
+        nodes_per_sec = self.wing.scaffold.shape[1]+(self.n-2)*(n_spars+n_angled_spars+n_top_skin_panels+n_low_skin_panels)
+        #at all but first bay, one onde is repeated
+        overall_y_count = ys_per_bay.sum()-ys_per_bay.shape[0]+1
+        self.expected_node_count = nodes_per_sec*overall_y_count
+
 
     def _railing_creation(self, inb:nt.NDArray[np.float64], oub:nt.NDArray, ny:int, eleArg:list[float], eleType:str):
         xs = np.linspace(inb[0], oub[0], ny)
@@ -80,25 +91,25 @@ class StructuralSubmesh():
         yvals = np.linspace(inbf[1], oubf[1], ny)
         xoubs = np.linspace(oubf[0], oubr[0], self.n)
         xinbs = np.linspace(inbf[0], inbr[0], self.n)
-        zoubs = np.linspace(oubf[2], oubr[2], self.n)
-        zinbs = np.linspace(inbf[2], inbr[2], self.n)
+
+        #z values depend on whether we are creating a spar or a skin - a spar can just follow linear interpolation,
+        #while the skin needs to follow the wing curvature at the stations and interpolate linearly for remaining zs
+        if skin is None:
+            zoubs = np.linspace(oubf[2], oubr[2], self.n)
+            zinbs = np.linspace(inbf[2], inbr[2], self.n)
+        elif skin:
+            zoubs = np.array([self.wing.upper_skin_z(self.wing.xperc_reduced_from_x(x, yvals[-1]), yvals[-1]) for x in xoubs])
+            zinbs = np.array([self.wing.upper_skin_z(self.wing.xperc_reduced_from_x(x, yvals[0]), yvals[0]) for x in xinbs])
+        else:
+            zoubs = np.array([self.wing.lower_skin_z(self.wing.xperc_reduced_from_x(x, yvals[-1]), yvals[-1]) for x in xoubs])
+            zinbs = np.array([self.wing.lower_skin_z(self.wing.xperc_reduced_from_x(x, yvals[0]), yvals[0]) for x in xinbs]) 
 
         # Spanwise interpolation parameter (0=inboard, 1=outboard)
         eta = np.linspace(0.0, 1.0, ny)[:, None]   # shape (ny, 1)
         X = xinbs[None, :] + eta * (xoubs - xinbs)[None, :]
         Y = np.repeat(yvals, self.n).reshape((ny, self.n))
-        Z = np.zeros((ny, self.n))
-
-        #Z is a projection for skins, but for other element it's a clear sheet
-        if skin is None:
-            Z = zinbs[None, :] + eta * (zoubs - zinbs)[None, :]
-        else: 
-            for i in range(ny):
-                for j in range(self.n):
-                    x = X[i, j]
-                    y = Y[i, j]
-                    xpc = self.wing.xperc_reduced_from_x(x, y)
-                    Z[i, j] = self.wing.upper_skin_z(xpc, y) if skin else self.wing.lower_skin_z(xpc, y)
+        Z = zinbs[None, :] + eta * (zoubs - zinbs)[None, :]
+        assert X.shape == Z.shape
 
         for x1, y1, z1, x2, y2, z2, x3, y3, z3, x4, y4, z4 in zip(X[:-1, :-1].flatten(), Y[:-1, :-1].flatten(), Z[:-1, :-1].flatten(),
                                                                   X[:-1, 1:].flatten(), Y[:-1, 1:].flatten(), Z[:-1, 1:].flatten(),

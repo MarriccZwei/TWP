@@ -50,9 +50,9 @@ def test_geometry_init():
         'li':1269.5,
     }
 
-    N = 5
+    N = 15
 
-    model, mesher = geometry_init(GEOM_SOURCE, HYPERPARAMS, MASSES, N)
+    model, mesher = geometry_init(GEOM_SOURCE, HYPERPARAMS, MASSES, N, 8)
 
     #quads
     cells = list()

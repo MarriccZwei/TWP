@@ -156,6 +156,8 @@ class InertiaSubmesh():
     
         #5) Consistency check
         assert len(self.eleTypes) == len(self.eleArgs) == len(self.eleNodes)
+        #motors, landing gear and battery points are the added nodes in this submesh, alls else should coincide with the structural submesh.
+        self.expected_node_count = len(eqpt_dict["motor_is"])+1+len(bat_centroids)
 
 
     def _LE_or_TE_inertia(self, nodes1:nt.NDArray[np.float64], nodes2:nt.NDArray[np.float64], totmass:float):
