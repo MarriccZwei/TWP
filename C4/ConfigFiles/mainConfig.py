@@ -5,12 +5,12 @@ from .classified import MASSES
 
 DESVARS_INITIAL = {
     '(2t/H)_sq':0.1,
-    '(2t/H)_pq':0.06,
-    '(2t/H)_aq':0.04,
-    'W_bb':0.01,
-    'W_mb':0.011,
-    'W_lb':0.015,
-    'Ds':.008
+    '(2t/H)_pq':0.05,
+    '(2t/H)_aq':0.05,
+    'W_bb':0.02,
+    'W_mb':0.02,
+    'W_lb':0.02,
+    'Ds':.007
 }
 
 MATERIALS = {
@@ -18,10 +18,10 @@ MATERIALS = {
     'NU_ALU':.33,
     'RHO_ALU':2780.,
     'SF_ALU':323.33e6,
-    'E_FOAM':4.93e9,
-    'NU_FOAM':.214,
-    'RHO_FOAM':433.,
-    'SF_FOAM':31.5e6
+    'E_FOAM':6.68e9,
+    'NU_FOAM':.275,
+    'RHO_FOAM':688.,
+    'SF_FOAM':45e6
 }
 
 LC_INFO = [
@@ -54,8 +54,8 @@ CAD_STRS = {
 }
 
 RES = {
-    'bres':30,
-    'cres':8,
+    'bres':20,
+    'cres':10,
     'nneighs':20,
     'kfl':30,
     'klb':4,
@@ -94,7 +94,7 @@ AIRFS = [asb.Airfoil(f"naca241{i}") for i in reversed(range(9))] #from naca 2418
 HYPERPARAMS ={
         'delta':.005,
         'D':.3,
-        'd':.02,
+        'd':.03,
         'Delta b':.1,
         '(H/c)_sq':.009,
         '(H/c)_aq':.003,

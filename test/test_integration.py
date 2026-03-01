@@ -15,7 +15,7 @@ import aerosandbox as asb
 def test_self_weight():
     HYPERPARAMS ={
         'delta':.005,
-        'D':.2,
+        'D':.3,
         'd':.03,
         'Delta b':.1,
         '(H/c)_sq':.009,
@@ -92,15 +92,14 @@ def test_self_weight():
     tes = tes_flat.reshape((len(les_flat)//3, 3)) #should have same length
     airfs = [asb.Airfoil(f"naca241{i}") for i in reversed(range(9))] #from naca 2418 to naca 2410
 
-    #lc = LoadCase(2.5, 76000, model.N, 9.81, 112800, asb.OperatingPoint(alpha=15., velocity=100.), les, tes, airfs)
-    lc = LoadCase(-1., 76000, model.N, 9.81, 32400., asb.OperatingPoint(asb.Atmosphere(7000), alpha=-4.5, velocity=187.), les, tes, airfs)
+    lc = LoadCase(2.5, 76000, model.N, 9.81, 112800, asb.OperatingPoint(asb.Atmosphere(0.), alpha=10., velocity=90.), les, tes, airfs, nneighs=20)
     lc.apply_aero(*mesher.get_submesh('sq'))
     lc.apply_thrust(mesher.get_submesh('mi')[0])
     
     #post processing
     savePath = r"C:\marek\studia\hpb\Results\C4\ForwardTests\\"
     print("processing starts")
-    margins = process_load_case(model, lc, materials, desvars, ep["beamtypes"], ep["quadtypes"], plot=True, savePath=savePath, num_eig_lb=10)
+    margins = process_load_case(model, lc, materials, desvars, ep["beamtypes"], ep["quadtypes"], plot=True, savePath=savePath, num_eig_lb=4)
     print(margins)
     print(model.ncoords.shape) #so that it can be compared with the shape from CATIA
 
