@@ -16,11 +16,11 @@ def test_self_weight():
     HYPERPARAMS ={
         'delta':.005,
         'D':.2,
-        'd':.02,
+        'd':.03,
         'Delta b':.1,
-        '(H/c)_sq':.0215,
-        '(H/c)_aq':.009,
-        '(H/c)_pq':.009
+        '(H/c)_sq':.009,
+        '(H/c)_aq':.003,
+        '(H/c)_pq':.006
     }
 
     GEOM_SOURCE ={
@@ -49,14 +49,14 @@ def test_self_weight():
         "tipfoil":asb.Airfoil("naca2410")
     }
 
-    N = 10
+    N = 5
 
     model, mesher = geometry_init(GEOM_SOURCE, HYPERPARAMS, MASSES, N, 8)
 
     desvars = {
-        '(2t/H)_sq':0.4,
-        '(2t/H)_pq':0.4,
-        '(2t/H)_aq':0.4,
+        '(2t/H)_sq':0.1,
+        '(2t/H)_pq':0.05,
+        '(2t/H)_aq':0.05,
         'W_bb':0.02,
         'W_mb':0.02,
         'W_lb':0.02,
@@ -92,7 +92,8 @@ def test_self_weight():
     tes = tes_flat.reshape((len(les_flat)//3, 3)) #should have same length
     airfs = [asb.Airfoil(f"naca241{i}") for i in reversed(range(9))] #from naca 2418 to naca 2410
 
-    lc = LoadCase(2.5, 76000, model.N, 9.81, 112800, asb.OperatingPoint(alpha=15., velocity=100.), les, tes, airfs)
+    #lc = LoadCase(2.5, 76000, model.N, 9.81, 112800, asb.OperatingPoint(alpha=15., velocity=100.), les, tes, airfs)
+    lc = LoadCase(-1., 76000, model.N, 9.81, 32400., asb.OperatingPoint(asb.Atmosphere(7000), alpha=-4.5, velocity=187.), les, tes, airfs)
     lc.apply_aero(*mesher.get_submesh('sq'))
     lc.apply_thrust(mesher.get_submesh('mi')[0])
     

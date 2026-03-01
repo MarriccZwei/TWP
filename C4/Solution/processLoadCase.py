@@ -63,9 +63,9 @@ def process_load_case(model:Pyfe3DModel, lc:LoadCase, materials:ty.Dict[str, flo
     KG = ss.coo_matrix((KGv, (KGr, KGc)), shape=(model.N, model.N)).tocsc()
     KGuu = model.uu_matrix(KG)
     eigvecs = np.zeros((model.N, num_eig_lb))
-    eigvals, eigvecsu = ssl.eigsh(A=model.KC0uu, k=num_eig_lb, M=-KGuu, sigma=0., which='LM')
+    eigvals, eigvecsu = ssl.eigsh(A=KGuu, k=num_eig_lb, which='SM', M=model.KC0uu, tol=1e-6, sigma=1., mode='cayley')
+    eigvals = -1./eigvals
     eigvecs[model.bu] = eigvecsu
-    print(eigvals)
     load_mult = eigvals[eigvals>0].min()
 
     failure_margins = np.array([
