@@ -1,12 +1,15 @@
 from .CatiaParser import CatiaParser
 from .Mesher import Mesher
+from .ElysianWing import ElysianWing
+from .InertiaSumesh import InertiaSubmesh
+from .StructuralSubmesh import StructuralSubmesh
 from ..Pyfe3DModel import Pyfe3DModel
 
 import typing as ty
 import aerosandbox.numpy as np
 import pyfe3d as pf3
 
-def geometry_init(catiaout:str, collisionDecimalPlaces:int=5, 
+def geometry_init(GEOM_SOURCE:dict[str, float], HYPERPARAMS:dict[str, float], MASSES:dict[str, float], N:int, collisionDecimalPlaces:int=8, 
                   springargs:ty.Tuple[float]=(1e10, 0., 0., 1e10, 0., 0., 0., 1., 0.)) -> ty.Tuple[Pyfe3DModel, Mesher]:
     """
     converts the elements imported from CAD into a pyfe3d model
@@ -18,10 +21,12 @@ def geometry_init(catiaout:str, collisionDecimalPlaces:int=5,
     :param springargs: parameters for initialising spring elements (in this model used as stiff massless axial connectors)
     :type springargs: Tuple[float]
     """
-    #1) resolving the mesh from catia outputs
-    parsed = CatiaParser(catiaout)
+    #1) resolving the mesh from submesh outputs
+    wing = ElysianWing(GEOM_SOURCE, HYPERPARAMS["(H/c)_sq"])
+    ism = InertiaSubmesh(wing.scaffold, HYPERPARAMS, MASSES, wing.c_at_y, wing.large_equipment_summary())
+    ssm = StructuralSubmesh(wing, HYPERPARAMS, N)
     mesher = Mesher(collisionDecimalPlaces)
-    for eleType, eleArgs, eleNodes in parsed.get_mesh_data():
+    for eleType, eleArgs, eleNodes in zip(ism.eleTypes+ssm.eleTypes, ism.eleArgs+ssm.eleArgs, ism.eleNodes+ssm.eleNodes):
         mesher.load_ele(eleNodes, eleType, eleArgs)
 
     #2) initialising the model
@@ -42,6 +47,10 @@ def geometry_init(catiaout:str, collisionDecimalPlaces:int=5,
             model.load_inertia(eleNodePoses[0])
         else:
             raise ValueError("Invalid element type. Only 'q'->Quad4, 'b'->BeamC, 's'->spring, 'i'->Inertia elements are supported!!!")
+        
+    #4) checking for the mesh being properly resolved
+    expected_node_count = ism.expected_node_count+ssm.expected_node_count
+    assert ncoords.shape[0] == expected_node_count, f"Nodes resolved: {ncoords.shape[0]}, nodes expected: {expected_node_count}"
 
     return model, mesher
 

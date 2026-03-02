@@ -10,9 +10,9 @@ import numpy.typing as nt
 import scipy.optimize as opt
 
 class Optimiser():
-    def __init__(self, desvarsInitial:ty.Dict[str,float], loadCasesInfo:ty.List[ty.Dict[str, object]], cadstrs:ty.Dict[str, str], 
-                 materials:ty.Dict[str, float], resConfig:ty.Dict[str, object], g0:float, MTOM:float, airfs:ty.List[asb.Airfoil],
-                 LINBUCKLSF:float, bounds:ty.Tuple[ty.Dict[str, float]], meshMergeDigits:int=3, logEveryNIters:int=None):
+    def __init__(self, desvarsInitial:ty.Dict[str,float], loadCasesInfo:ty.List[ty.Dict[str, object]], cadstrs:dict[str, str], GEOM_SOURCE:dict[str, float], HYPERPARAMS:dict[str, float], 
+                 MASSES:dict[str, float], N:int, materials:ty.Dict[str, float], resConfig:ty.Dict[str, object], g0:float, MTOM:float, airfs:ty.List[asb.Airfoil],
+                 LINBUCKLSF:float, bounds:ty.Tuple[ty.Dict[str, float]], meshMergeDigits:int=8, logEveryNIters:int=None):
         '''
         The constructor performs the initialisation flow as well
         
@@ -49,14 +49,26 @@ class Optimiser():
             self.iteration_number = 0
 
         #1) geometry initialization
-        self.model, self.mesher = geometry_init(cadstrs["mesh"], meshMergeDigits, resConfig["sks"])
+        self.model, self.mesher = geometry_init(GEOM_SOURCE, HYPERPARAMS, MASSES, N, meshMergeDigits, resConfig['sks'])
         les_flat = np.fromstring(cadstrs["les"], sep=",")
         tes_flat = np.fromstring(cadstrs["tes"], sep=",")
         les = les_flat.reshape((len(les_flat)//3, 3))
         tes = tes_flat.reshape((len(les_flat)//3, 3)) #should have same length
-        self.ep:ty.Dict[str, ty.List[object]] #element property dict, updated during self._update_model
+        self.ep:ty.Dict[str, ty.List[object]] = dict() #element property dict, updated during self._update_model
 
-        #2) load cases initialisation
+        #2) design variables initialisation and first model updatate
+        self.desvars = {
+            '(2t/H)_sq':0.,
+            '(2t/H)_pq':0.,
+            '(2t/H)_aq':0.,
+            'W_bb':0.,
+            'W_mb':0.,
+            'W_lb':0.,
+            'Ds':0.,
+        }
+        self._update_model(self.desvarvec(desvarsInitial))
+        
+        #3) load cases initialisation
         self.lcs:ty.List[LoadCase] = list()
         for lcinfo in loadCasesInfo:
             lc = LoadCase(lcinfo["n"], MTOM, self.model.N, g0, lcinfo["Ttot"], lcinfo["op"], 
@@ -68,18 +80,6 @@ class Optimiser():
                 lc.apply_aero(*self.mesher.get_submesh('sq'))
                 lc.apply_thrust(self.mesher.get_submesh('mi')[0])
             self.lcs.append(lc)
-
-        #3) design variables initialisation and first model updatate
-        self.desvars = {
-            '(2t/H)_sq':0.,
-            '(2t/H)_pq':0.,
-            '(2t/H)_aq':0.,
-            'W_bb':0.,
-            'W_mb':0.,
-            'W_lb':0.,
-            'Ds':0.,
-        }
-        self._update_model(self.desvarvec(desvarsInitial))
 
         #4) saving the masses of all constant inertia st. one can get structural mass in the objective
         self._mn_sum = 0.

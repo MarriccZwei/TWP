@@ -16,7 +16,7 @@ velocities = np.linspace(VMIN, VMAX, res)
 lci = mc.LC_INFO[2]
 lci['op'].velocity = VMIN
 lci = [lci]
-optimiser = Optimiser(mc.DESVARS_INITIAL, lci, mc.CAD_STRS, mc.MATERIALS, mc.RES, mc.G0, mc.MTOM, mc.AIRFS, mc.LBUCKLSF,
+optimiser = Optimiser(mc.DESVARS_INITIAL, lci, mc.CAD_STRS, mc.GEOM_SOURCE, mc.HYPERPARAMS, mc.MASSES, mc.N, mc.MATERIALS, mc.RES, mc.G0, mc.MTOM, mc.AIRFS, mc.LBUCKLSF,
                         mc.BOUNDS)
 for i, velocity in enumerate(velocities):
     ratio = (velocity/VMIN)**2
