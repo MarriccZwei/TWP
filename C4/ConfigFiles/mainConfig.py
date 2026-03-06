@@ -98,7 +98,8 @@ HYPERPARAMS ={
         'Delta b':.1,
         '(H/c)_sq':.009,
         '(H/c)_aq':.003,
-        '(H/c)_pq':.006
+        '(H/c)_pq':.006,
+        'rj/c':.1/5
     }
 
 GEOM_SOURCE ={

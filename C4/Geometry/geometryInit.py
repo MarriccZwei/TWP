@@ -1,4 +1,4 @@
-from .CatiaParser import CatiaParser
+from .Exclusion import Exclusion
 from .Mesher import Mesher
 from .ElysianWing import ElysianWing
 from .InertiaSumesh import InertiaSubmesh
@@ -23,6 +23,7 @@ def geometry_init(GEOM_SOURCE:dict[str, float], HYPERPARAMS:dict[str, float], MA
     """
     #1) resolving the mesh from submesh outputs
     wing = ElysianWing(GEOM_SOURCE, HYPERPARAMS["(H/c)_sq"])
+    excl = Exclusion(wing.scaffold, HYPERPARAMS["rj/c"], wing.c_at_y)
     ism = InertiaSubmesh(wing.scaffold, HYPERPARAMS, MASSES, wing.c_at_y, wing.large_equipment_summary())
     ssm = StructuralSubmesh(wing, HYPERPARAMS, N)
     mesher = Mesher(collisionDecimalPlaces)
@@ -52,5 +53,30 @@ def geometry_init(GEOM_SOURCE:dict[str, float], HYPERPARAMS:dict[str, float], MA
     expected_node_count = ism.expected_node_count+ssm.expected_node_count
     assert ncoords.shape[0] == expected_node_count, f"Nodes resolved: {ncoords.shape[0]}, nodes expected: {expected_node_count}"
 
-    return model, mesher
+    # from scipy.spatial import cKDTree
+    # epsilon = 1e-4  # distance threshold
+
+    # # build KD-tree
+    # tree = cKDTree(ncoords)
+
+    # # find all pairs within epsilon
+    # pairs = tree.query_pairs(r=epsilon)
+
+    # # extract indices of points that appear in any pair
+    # close_indices = np.unique(np.array(list(pairs)).flatten())
+
+    # # points that are close to at least one other
+    # close_points = ncoords[close_indices]
+
+    # import pyvista as pv
+
+    # plotter = pv.Plotter()
+    # cloud = pv.PolyData(close_points)
+    # print(len(close_indices))
+
+    # plotter = pv.Plotter()
+    # plotter.add_mesh(cloud, color="red", point_size=12, render_points_as_spheres=True)
+    # plotter.show()
+
+    return model, mesher, excl
 

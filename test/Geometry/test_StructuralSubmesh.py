@@ -13,7 +13,8 @@ class _SETUP:
         'Delta b':.1,
         '(H/c)_sq':.009,
         '(H/c)_aq':.003,
-        '(H/c)_pq':.006
+        '(H/c)_pq':.006,
+        'rj/c':.1/5
     }
 
     GEOM_SOURCE ={
@@ -42,7 +43,7 @@ class _SETUP:
         "tipfoil":asb.Airfoil("naca2410")
     }
 
-    N = 15
+    N = 6
 
     wing = ElysianWing(GEOM_SOURCE, HYPERPARAMS["(H/c)_sq"])
     ssm = StructuralSubmesh(wing, HYPERPARAMS, N)

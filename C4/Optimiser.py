@@ -49,7 +49,7 @@ class Optimiser():
             self.iteration_number = 0
 
         #1) geometry initialization
-        self.model, self.mesher = geometry_init(GEOM_SOURCE, HYPERPARAMS, MASSES, N, meshMergeDigits, resConfig['sks'])
+        self.model, self.mesher, self.excl = geometry_init(GEOM_SOURCE, HYPERPARAMS, MASSES, N, meshMergeDigits, resConfig['sks'])
         les_flat = np.fromstring(cadstrs["les"], sep=",")
         tes_flat = np.fromstring(cadstrs["tes"], sep=",")
         les = les_flat.reshape((len(les_flat)//3, 3))
@@ -116,7 +116,7 @@ class Optimiser():
             #2) load case (post) processing
             else:
                 lcmargins = process_load_case(self.model, lc, self.materials, self.desvars, self.ep["beamtypes"], self.ep["quadtypes"],
-                                            plot, savePathLC, self.resConfig["klb"])
+                                            self.excl, plot, savePathLC, self.resConfig["klb"])
                 
                 #3) assesing whether the load case is constraining and updating failure_margins if so
                 if failure_margins[0]<lcmargins[0]:#quad stresses, the more, the worse

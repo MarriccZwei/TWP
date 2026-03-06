@@ -20,7 +20,8 @@ def test_self_weight():
         'Delta b':.1,
         '(H/c)_sq':.009,
         '(H/c)_aq':.003,
-        '(H/c)_pq':.006
+        '(H/c)_pq':.006,
+        'rj/c':.1/5,
     }
 
     GEOM_SOURCE ={
@@ -51,7 +52,7 @@ def test_self_weight():
 
     N = 5
 
-    model, mesher = geometry_init(GEOM_SOURCE, HYPERPARAMS, MASSES, N, 8)
+    model, mesher, excl = geometry_init(GEOM_SOURCE, HYPERPARAMS, MASSES, N, 8)
 
     desvars = {
         '(2t/H)_sq':0.1,
@@ -60,7 +61,7 @@ def test_self_weight():
         'W_bb':0.02,
         'W_mb':0.02,
         'W_lb':0.02,
-        'Ds':.007
+        'Ds':.007,
     }
 
     materials = {
@@ -99,7 +100,7 @@ def test_self_weight():
     #post processing
     savePath = r"C:\marek\studia\hpb\Results\C4\ForwardTests\\"
     print("processing starts")
-    margins = process_load_case(model, lc, materials, desvars, ep["beamtypes"], ep["quadtypes"], plot=True, savePath=savePath, num_eig_lb=4)
+    margins = process_load_case(model, lc, materials, desvars, ep["beamtypes"], ep["quadtypes"], excl, plot=True, savePath=savePath, num_eig_lb=4)
     print(margins)
     print(model.ncoords.shape) #so that it can be compared with the shape from CATIA
 

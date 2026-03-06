@@ -13,7 +13,8 @@ def test_geometry_init():
         'Delta b':.1,
         '(H/c)_sq':.009,
         '(H/c)_aq':.003,
-        '(H/c)_pq':.006
+        '(H/c)_pq':.006,
+        'rj/c':.1/5
     }
 
     GEOM_SOURCE ={
@@ -44,7 +45,7 @@ def test_geometry_init():
 
     N = 15
 
-    model, mesher = geometry_init(GEOM_SOURCE, HYPERPARAMS, MASSES, N, 8)
+    model, mesher, excl = geometry_init(GEOM_SOURCE, HYPERPARAMS, MASSES, N, 8)
 
     #quads
     cells = list()
