@@ -34,6 +34,14 @@ class LoadCase():
         self.W = np.zeros(N) #the current value of the model's weight
         self.T = np.zeros(N) #here be the thrust
 
+        #prandl_glauert_correction
+        a = self.op.atmosphere.speed_of_sound()
+        if self.op.velocity >= a:
+            raise ValueError("(Super)sonic speed, KA invalid!")
+        else:
+            mach = self.op.velocity/a
+            self.pg = (1-mach**2)**-.5
+
 
     def aerodynamic_matrix(self, nid_pos_affected:nt.NDArray[np.int32], ncoords_affected:nt.NDArray[np.float32]):
         '''Conducting an aerodynamic simulation based on skin nodes, updating A and KA'''
@@ -41,7 +49,7 @@ class LoadCase():
         vlm_, dFv_dp = self._calc_dFv_dp(ncoords_affected[:,1].min())
         W, self.A = self._aero2fem(vlm_, ncoords_affected, nid_pos_affected, 1.)
         W_u_to_p = self._fem2aero(ncoords_affected, nid_pos_affected)
-        self.KA = W @ dFv_dp @ W_u_to_p
+        self.KA = W @ dFv_dp @ W_u_to_p * self.pg
 
 
     def apply_aero(self, nid_pos_affected:nt.NDArray[np.int32], coords_affected:nt.NDArray[np.float64]):
@@ -169,7 +177,7 @@ class LoadCase():
                                             chord=c,
                                             twist=np.rad2deg(twist), #asb has aoas and twists in degrees 
                                             airfoil=airf
-                                        )for ptle, c, airf, twist in zip(ptles, self._cs, self.airfs, twists)],
+                                        )for ptle, c, airf, twist in zip(ptles, cs, self.airfs, twists)],
                                     )
                                 ])
         vlm = asb.VortexLatticeMethod(airplane, self.op, spanwise_resolution=self.bres, chordwise_resolution=self.cres)
