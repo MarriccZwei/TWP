@@ -147,18 +147,15 @@ class LoadCase():
     def _vlm(self, displs:ty.List[float]=None, return_sol=False):
         #allowing for initial displacements for flutter. Yet, for static analysis we dont's need displacements
         if displs is None:
-            displs = np.zeros(len(self.airfs)*4)
+            displs = np.zeros(len(self.airfs)*2)
 
         #converting LE-TE displs into LE displs and twists
         rowlen = self.les.shape[0]
         ledispls = displs[:rowlen]
-        leshifts = displs[2*rowlen:3*rowlen]
         tedispls = displs[rowlen:2*rowlen]
-        teshifts = displs[3*rowlen:4*rowlen]
         ptles = [self.les[i,:]+np.array([0,0,displs[i]]) for i in range(len(ledispls))]
-        cs = [c+tes-les for c, les, tes in zip(self._cs, leshifts, teshifts)]
         crange = .55 #from .15 to .7 of chord
-        twists = [np.arctan((led-ted)/c/crange) for led, ted, c in zip(ledispls, tedispls, cs)]
+        twists = [np.arctan((led-ted)/c/crange) for led, ted, c in zip(ledispls, tedispls, self._cs)]
 
         airplane = asb.Airplane("E9X", xyz_ref=[0,0,0], wings = [
                                     asb.Wing(
@@ -185,7 +182,7 @@ class LoadCase():
 
     def _calc_dFv_dp(self, ymin:float, epsilon=.01):
         rowlen = len(self.airfs)
-        p = np.zeros(rowlen*4)
+        p = np.zeros(rowlen*2)
         airplane, vlm_, forces, moments = self._vlm(p)
         #ratio = self.MTOM*self.g0*self.n*np.cos(np.deg2rad(self.op.alpha))/forces[2]
 
@@ -195,7 +192,7 @@ class LoadCase():
 
         dFv_dp = np.zeros((v, rowlen*6)) # NOTE remember to pass both heave and twist displacements
         for i in range(len(p)):
-            p_DOF = (3*i+2) if (i<2*rowlen) else (3*(i-2*rowlen))
+            p_DOF = 3*i+2
             p2 = p.copy()
             p2[i] += epsilon
 
