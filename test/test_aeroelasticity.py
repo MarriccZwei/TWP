@@ -17,7 +17,8 @@ def test_self_weight():
         'Delta b':.1,
         '(H/c)_sq':.009,
         '(H/c)_aq':.003,
-        '(H/c)_pq':.006
+        '(H/c)_pq':.006,
+        "rj/c":.1/5
     }
 
     GEOM_SOURCE ={
@@ -48,7 +49,7 @@ def test_self_weight():
 
     N = 5
 
-    model, mesher, excl = geometry_init(GEOM_SOURCE, HYPERPARAMS, MASSES, N, 8)
+    model, mesher, excl, wing = geometry_init(GEOM_SOURCE, HYPERPARAMS, MASSES, N, 8)
 
     desvars = {
         '(2t/H)_sq':0.1,
@@ -81,13 +82,7 @@ def test_self_weight():
 
     model.KC0_M_update(beamprops, beamorients, shellprops, matdirs, inertia_vals)
 
-    les_str = "0.0, 0.0, 0.0,0.24796410315737183, 2.6250000000000013, 0.21803733205038336,0.49592820631474366, 5.250000000000003, 0.43607466410076673,0.7438923094721154, 7.875000000000002, 0.6541119961511499,0.9918564126294873, 10.500000000000005, 0.8721493282015335,1.2398205157868587, 13.125000000000002, 1.0901866602519166,1.4877846189442308, 15.750000000000004, 1.3082239923022998,1.7357487221016028, 18.37500000000001, 1.5262613243526835,1.9837128252589746, 21.00000000000001, 1.744298656403067"
-    tes_str = "4.950622318602955, 0.0, 0.009334779044329352,4.827275918562817, 2.6250000000000013, 0.22646456313206953,4.7039295185226795, 5.250000000000003, 0.4435943472198098,4.580583118482542, 7.875000000000004, 0.66072413130755,4.457236718442404, 10.500000000000005, 0.8778539153952902,4.333890318402267, 13.125000000000005, 1.09498369948303,4.210543918362128, 15.750000000000009, 1.3121134835707706,4.087197518321991, 18.37500000000001, 1.5292432676585108,3.963851118281853, 21.00000000000001, 1.7463730517462508"
-    les_flat = np.fromstring(les_str, sep=",")
-    tes_flat = np.fromstring(tes_str, sep=",")
-    les = les_flat.reshape((len(les_flat)//3, 3))
-    tes = tes_flat.reshape((len(les_flat)//3, 3)) #should have same length
-    airfs = [asb.Airfoil(f"naca241{i}") for i in reversed(range(9))] #from naca 2418 to naca 2410
+    airfs, les, tes = wing.aero_foils(10)
 
     lc = LoadCase(1., 76000, model.N, 9.81, 112800, asb.OperatingPoint(atmosphere=asb.Atmosphere(7000), alpha=.87, velocity=269.), les, tes, airfs, bres=30, cres=8, aeroelastic=True, nneighs=10)
     #lc.apply_aero(*mesher.get_submesh('sq'))

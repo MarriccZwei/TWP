@@ -78,5 +78,5 @@ def geometry_init(GEOM_SOURCE:dict[str, float], HYPERPARAMS:dict[str, float], MA
     # plotter.add_mesh(cloud, color="red", point_size=12, render_points_as_spheres=True)
     # plotter.show()
 
-    return model, mesher, excl
+    return model, mesher, excl, wing
 

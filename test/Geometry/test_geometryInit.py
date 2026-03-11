@@ -45,7 +45,7 @@ def test_geometry_init():
 
     N = 15
 
-    model, mesher, excl = geometry_init(GEOM_SOURCE, HYPERPARAMS, MASSES, N, 8)
+    model, mesher, excl, wing = geometry_init(GEOM_SOURCE, HYPERPARAMS, MASSES, N, 8)
 
     #quads
     cells = list()

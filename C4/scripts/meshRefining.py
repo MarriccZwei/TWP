@@ -8,7 +8,7 @@ ns = [5, 6, 7, 8, 9, 10, 11, 12]#, 13, 14, 15, 16]
 # quad_stresses = list()
 lms = list()
 for n in ns:
-    optimiser = Optimiser(mc.DESVARS_INITIAL, [mc.LC_INFO[0]], mc.CAD_STRS, mc.GEOM_SOURCE, mc.HYPERPARAMS, mc.MASSES, n, mc.MATERIALS, mc.RES, mc.G0, mc.MTOM, mc.AIRFS, mc.LBUCKLSF,
+    optimiser = Optimiser(mc.DESVARS_INITIAL, [mc.LC_INFO[0]], mc.GEOM_SOURCE, mc.HYPERPARAMS, mc.MASSES, n, mc.MATERIALS, mc.RES, mc.G0, mc.MTOM, mc.NAIRFS, mc.LBUCKLSF,
                         mc.BOUNDS)
     dvv = optimiser.simulate_constraints(optimiser.desvarvec(), True, uc.REFINE_SAVE_PATH+f"{n}\\")
     # quad_stresses.append(dvv[0])

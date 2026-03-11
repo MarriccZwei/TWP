@@ -14,7 +14,7 @@ desvars = {
     'W_lb':0.01
 }
 
-optimiser = Optimiser(desvars, [mc.LC_INFO[3]], mc.CAD_STRS, mc.GEOM_SOURCE, mc.HYPERPARAMS, mc.MASSES, mc.N, mc.MATERIALS, mc.RES, mc.G0, mc.MTOM, mc.AIRFS, mc.LBUCKLSF,
+optimiser = Optimiser(desvars, [mc.LC_INFO[3]], mc.GEOM_SOURCE, mc.HYPERPARAMS, mc.MASSES, mc.N, mc.MATERIALS, mc.RES, mc.G0, mc.MTOM, mc.NAIRFS, mc.LBUCKLSF,
                       mc.BOUNDS)
 
 resPq = 10

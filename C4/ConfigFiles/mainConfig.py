@@ -89,7 +89,7 @@ BOUNDS = (
     }
 )
 
-AIRFS = [asb.Airfoil(f"naca241{i}") for i in reversed(range(9))] #from naca 2418 to naca 2410
+NAIRFS = 10
 
 HYPERPARAMS ={
         'delta':.005,

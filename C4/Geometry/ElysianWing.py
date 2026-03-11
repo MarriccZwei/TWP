@@ -308,3 +308,37 @@ class ElysianWing():
             'lg_pt': (self.xlg, self.ylg, self.zlg),
             'lg_is': [i for i, value in enumerate(self.ribcodes) if value == 'lb']
         }
+    
+
+    def aero_foils(self, nairfs:int, plotter=None):
+        #sine spacing
+        i = np.arange(nairfs)
+        eta = np.sin((i/(nairfs-1)) * np.pi/2)
+        ys = eta*self.ytip
+
+        #other airfoil coordinates
+        xles = np.array([self.xle_at_y(y) for y in ys])
+        zs = np.array([self.zle_at_y(y) for y in ys])
+        cs = np.array([self.c_at_y(y) for y in ys])
+        xtes = xles+cs
+
+        airfs = [self.xsec_at_y(y).airfoil for y in ys]
+        ptles = np.vstack((xles, ys, zs)).T
+        pttes = np.vstack((xtes, ys, zs)).T
+
+        if not (plotter is None):
+            for i, airf in enumerate(airfs):
+                af = airf.repanel(200)
+                coords = af.coordinates
+
+                points = np.column_stack([
+                    coords[:, 0] * cs[i] + ptles[i, 0],
+                    np.zeros(coords.shape[0]) + ptles[i, 1],
+                    coords[:, 1] * cs[i] + ptles[i, 2]
+                ])
+
+                mesh = pv.lines_from_points(points, close=True)
+                plotter.add_mesh(mesh)
+
+        #outputs - airfoils, leading and trailing edge points
+        return airfs, ptles, pttes

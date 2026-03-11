@@ -34,6 +34,7 @@ def test_ElysianWing():
     wing = ElysianWing(GEOM_SOURCE, H_per_c_sq, debug=True)
     plotter = pv.Plotter()
     wing.plot(plotter)
+    print(wing.aero_foils(14, plotter))
     plotter.show()
 
 if __name__ == "__main__":
