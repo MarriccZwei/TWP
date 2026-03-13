@@ -10,6 +10,7 @@ class Exclusion:
         scaffold: nt.NDArray[np.float64],
         rjc: float,
         c_at_y,
+        epsilon = .1
     ):
         """
         Excludes points that lie within a radius of scaffold points.
@@ -23,10 +24,14 @@ class Exclusion:
         pts = np.reshape(scaffold, (-1, 3))
         self.points = pts
 
+        self.epsilon = epsilon
+        self.c_at_y = c_at_y
+        self.rjc = rjc
+
         # compute radii (cannot vectorize because c_at_y isn't batchable)
         radii = []
         for p in pts:
-            radii.append(rjc * c_at_y(p[1]))
+            radii.append(rjc * c_at_y(p[1]) * (1-epsilon))
         self.radii = np.array(radii)
 
         self.max_r = float(np.max(self.radii))
@@ -61,7 +66,9 @@ class Exclusion:
                         sp = self.points[idx]
                         r = self.radii[idx]
 
-                        if np.sum((point - sp)**2) <= r*r:
-                            return True
+                        if abs(point[1]-sp[1]) <= r:
+                            local_r = (1-self.epsilon)*self.c_at_y(point[1])*self.rjc
+                            if (point[0]-sp[0])**2+(point[2]-sp[2])**2 <= local_r**2:
+                                return True
 
         return False
