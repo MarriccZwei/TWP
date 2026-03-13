@@ -18,8 +18,10 @@ class InertiaSubmesh():
         Hpcaq = HYPERPARAMS["(H/c)_aq"]
         D = HYPERPARAMS["D"]
         Delta_b = HYPERPARAMS["Delta b"]
+        rjc = HYPERPARAMS["rj/c"]
 
         rho_bat = MASSES["rho_bat"]
+        rho_j = MASSES["rho_j"]
         mhi = MASSES["hi"]
         mLE = MASSES["LE"]
         mTE = MASSES["TE"]
@@ -153,8 +155,19 @@ class InertiaSubmesh():
         self.eleNodes.append([(scaffold[lgi_inb, -2, 0], scaffold[lgi_inb, -2, 1], scaffold[lgi_inb, -2, 2]), lgcoords])
         self.eleNodes.append([(scaffold[lgi_oub, -1, 0], scaffold[lgi_oub, -1, 1], scaffold[lgi_oub, -1, 2]), lgcoords])
         self.eleNodes.append([(scaffold[lgi_oub, -2, 0], scaffold[lgi_oub, -2, 1], scaffold[lgi_oub, -2, 2]), lgcoords])
+
+        #5) Joint inertia
+        self.tot_joint_mass = 0
+        scaffold_pts = scaffold.reshape(scaffold.shape[0]*scaffold.shape[1], scaffold.shape[2])
+        for i in range(scaffold_pts.shape[0]):
+            self.eleTypes.append('ji')
+            rj = rjc*c_at_y(scaffold_pts[i, 1])
+            mj = 4/3*np.pi*rj**3*rho_j
+            self.eleArgs.append(mj)
+            self.eleNodes.append([(scaffold_pts[i, 0], scaffold_pts[i, 1], scaffold_pts[i, 2])])
+            self.tot_joint_mass += mj
     
-        #5) Consistency check
+        #6) Consistency check
         assert len(self.eleTypes) == len(self.eleArgs) == len(self.eleNodes)
         #motors, landing gear and battery points are the added nodes in this submesh, alls else should coincide with the structural submesh.
         self.expected_node_count = len(eqpt_dict["motor_is"])+1+len(bat_centroids)

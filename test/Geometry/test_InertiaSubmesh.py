@@ -19,12 +19,14 @@ class _SETUP:
         'Delta b':.1,
         '(H/c)_sq':.1,
         '(H/c)_aq':.05,
+        'rj/c':.1/5
     }
 
     c_at_y = lambda y:-3/8*y+67/8
 
     MASSES_ = {
         'rho_bat': 3e3,
+        'rho_j':1e3,
         'hi':200.,
         'LE':1e3,
         'TE':928.,
@@ -67,6 +69,7 @@ def test_plot_inertia_submesh():
     ism = _SETUP.ism
 
     _plot_inertia_submesh(plotter, ism)
+    print(ism.tot_joint_mass)
         
     plotter.show()
 
@@ -79,7 +82,8 @@ def test_full_geometry():
         'Delta b':.1,
         '(H/c)_sq':.0215,
         '(H/c)_aq':.009,
-        '(H/c)_pq':.009
+        '(H/c)_pq':.009,
+        'rj/c':.1/5
     }
 
     GEOM_SOURCE ={
@@ -115,6 +119,7 @@ def test_full_geometry():
     print(f"{ism.tot_computed_bat_mass} vs required {MASSES["bi"]}")
     _plot_inertia_submesh(plotter, ism)
     plotter.show()
+    print(ism.tot_joint_mass)
 
 
 if __name__ == "__main__":
