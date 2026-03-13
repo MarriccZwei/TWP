@@ -163,7 +163,7 @@ class InertiaSubmesh():
             self.eleTypes.append('ji')
             rj = rjc*c_at_y(scaffold_pts[i, 1])
             mj = 4/3*np.pi*rj**3*rho_j
-            self.eleArgs.append(mj)
+            self.eleArgs.append([mj])
             self.eleNodes.append([(scaffold_pts[i, 0], scaffold_pts[i, 1], scaffold_pts[i, 2])])
             self.tot_joint_mass += mj
     
