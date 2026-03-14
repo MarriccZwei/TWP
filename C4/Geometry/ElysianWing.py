@@ -313,7 +313,7 @@ class ElysianWing():
     def aero_foils(self, nairfs:int, plotter=None):
         #sine spacing
         i = np.arange(nairfs)
-        eta = np.sin((i/(nairfs-1)) * np.pi/2)
+        eta = np.linspace(0, 1, nairfs)#np.sin((i/(nairfs-1)) * np.pi/2)
         ys = eta*self.ytip
 
         #other airfoil coordinates
