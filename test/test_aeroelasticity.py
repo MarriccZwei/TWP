@@ -82,9 +82,9 @@ def test_self_weight():
 
     model.KC0_M_update(beamprops, beamorients, shellprops, matdirs, inertia_vals)
 
-    airfs, les, tes = wing.aero_foils(10)
+    airfs, les, tes = wing.aero_foils(12)
 
-    lc = LoadCase(1., 76000, model.N, 9.81, 112800, asb.OperatingPoint(atmosphere=asb.Atmosphere(7000.), alpha=.87, velocity=269.), les, tes, airfs, bres=30, cres=8, aeroelastic=True, nneighs=10)
+    lc = LoadCase(1., 76000, model.N, 9.81, 112800, asb.OperatingPoint(atmosphere=asb.Atmosphere(7000.), alpha=.87, velocity=269.), les, tes, airfs, bres=25, cres=8, aeroelastic=True, nneighs=10)
     #lc.apply_aero(*mesher.get_submesh('sq'))
     lc.aerodynamic_matrix(*mesher.get_submesh('sq'))
     print(model.KC0[model.KC0>0.].mean(), np.abs(lc.KA[np.abs(lc.KA)>0.]).mean())
