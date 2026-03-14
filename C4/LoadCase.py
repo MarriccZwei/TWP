@@ -49,7 +49,7 @@ class LoadCase():
         vlm_, dFv_dp = self._calc_dFv_dp(ncoords_affected[:,1].min())
         W, self.A = self._aero2fem(vlm_, ncoords_affected, nid_pos_affected, 1.)
         W_u_to_p = self._fem2aero(ncoords_affected, nid_pos_affected)
-        self.KA = W @ dFv_dp @ W_u_to_p * self.pg
+        self.KA = W @ dFv_dp @ W_u_to_p #* self.pg
 
 
     def apply_aero(self, nid_pos_affected:nt.NDArray[np.int32], coords_affected:nt.NDArray[np.float64]):

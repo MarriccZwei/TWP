@@ -54,7 +54,7 @@ CAD_STRS = {
 }
 
 RES = {
-    'bres':20,
+    'bres':30,
     'cres':10,
     'nneighs':20,
     'kfl':30,
