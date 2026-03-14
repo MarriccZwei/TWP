@@ -163,7 +163,7 @@ class LoadCase():
         leshifts = displs[2*rowlen:3*rowlen]
         tedispls = displs[rowlen:2*rowlen]
         teshifts = displs[3*rowlen:4*rowlen]
-        ptles = [self.les[i,:]+np.array([0,0,displs[i]]) for i in range(len(ledispls))]
+        ptles = [self.les[i,:]+np.array([displs[2*rowlen+i], 0, displs[i]]) for i in range(len(ledispls))]
         cs = [c+tes-les for c, les, tes in zip(self._cs, leshifts, teshifts)]
         crange = .55 #from .15 to .7 of chord
         twists = [np.arctan((led-ted)/c/crange) for led, ted, c in zip(ledispls, tedispls, cs)]
