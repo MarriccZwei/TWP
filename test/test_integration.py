@@ -3,6 +3,7 @@ from ..C4.Solution.eleProps import load_ele_props
 from ..C4.Solution.processLoadCase import process_load_case
 from ..C4.LoadCase import LoadCase
 from ..C4.ConfigFiles.classified import MASSES
+from ..C4.ConfigFiles.userConfig import FW_SAVE_PATH
 
 import aerosandbox as asb 
 import pyfe3d as pf3
@@ -92,7 +93,7 @@ def test_self_weight():
     lc.apply_thrust(mesher.get_submesh('mi')[0])
     
     #post processing
-    savePath = r"C:\marek\studia\hpb\Results\C4\ForwardTests\\"
+    savePath = FW_SAVE_PATH
     print("processing starts")
     margins = process_load_case(model, lc, materials, desvars, ep["beamtypes"], ep["quadtypes"], excl, plot=True, savePath=savePath, num_eig_lb=4)
     print(margins)

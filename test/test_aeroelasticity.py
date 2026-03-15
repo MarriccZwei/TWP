@@ -3,6 +3,7 @@ from ..C4.Solution.eleProps import load_ele_props
 from ..C4.Solution.processLoadCase import process_aeroelastic_load_case
 from ..C4.LoadCase import LoadCase
 from ..C4.ConfigFiles.classified import MASSES
+from ..C4.ConfigFiles.userConfig import FW_SAVE_PATH
 
 import aerosandbox as asb 
 import pyfe3d as pf3
@@ -90,7 +91,7 @@ def test_self_weight():
     print(model.KC0[model.KC0>0.].mean(), np.abs(lc.KA[np.abs(lc.KA)>0.]).mean())
 
     #post processing
-    savePath = r"C:\marek\studia\hpb\Results\C4\ForwardTests\\"
+    savePath = FW_SAVE_PATH
     omegan = process_aeroelastic_load_case(model, lc, plot=True, savePath=savePath, k=30, returnOmegan=True)
     print(omegan)
 
