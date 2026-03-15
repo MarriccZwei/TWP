@@ -34,13 +34,11 @@ class LoadCase():
         self.W = np.zeros(N) #the current value of the model's weight
         self.T = np.zeros(N) #here be the thrust
 
-        #prandl_glauert_correction
-        a = self.op.atmosphere.speed_of_sound()
-        if self.op.velocity >= a:
-            raise ValueError("(Super)sonic speed, KA invalid!")
-        else:
-            mach = self.op.velocity/a
-            self.pg = (1-mach**2)**-.5
+        #critical pressure coefficient
+        gamma_air = 1.4
+        self.m2 = self.op.mach()**2
+        self.rho_atm = self.op.atmosphere.density()
+        self.cpcrit = 2/gamma_air/self.m2*(((1+(gamma_air-1)/2*self.m2)/(1+(gamma_air-1)/2))**(gamma_air/(gamma_air-1))-1)
 
 
     def aerodynamic_matrix(self, nid_pos_affected:nt.NDArray[np.int32], ncoords_affected:nt.NDArray[np.float32]):
@@ -49,7 +47,7 @@ class LoadCase():
         vlm_, dFv_dp = self._calc_dFv_dp(ncoords_affected[:,1].min())
         W, self.A = self._aero2fem(vlm_, ncoords_affected, nid_pos_affected, 1.)
         W_u_to_p = self._fem2aero(ncoords_affected, nid_pos_affected)
-        self.KA = W @ dFv_dp @ W_u_to_p #* self.pg
+        self.KA = W @ dFv_dp @ W_u_to_p
 
 
     def apply_aero(self, nid_pos_affected:nt.NDArray[np.int32], coords_affected:nt.NDArray[np.float64]):
@@ -185,10 +183,34 @@ class LoadCase():
         forces = sol["F_g"]
         moments = sol["M_g"]
 
+        #compressibility corrections
+        Fv0 = vlm.forces_geometry
+        Av = vlm.areas
+        Fv0magn = np.sqrt(Fv0[:, 0]**2+Fv0[:, 1]**2+Fv0[:, 2]**2)
+        delta_cp0 = Fv0magn/Av*2/self.op.velocity**2/self.rho_atm
+
+        #splitting the pressure contributions between the upper and lower side of the wing approximately based on cp plots
+        magnitude_ratio = 3 #how much larger in absolute value is the cp on the upper side in the plot
+        cpl0 = delta_cp0/(magnitude_ratio+1)
+        cpu0 = -magnitude_ratio*delta_cp0/(magnitude_ratio+1)
+
+        #Karman-Thiessen correction, clipping Cps that go beyond Cp_crit
+        cpl = self._karman_thiessen(cpl0)
+        cpu = np.maximum(self._karman_thiessen(cpu0), np.full(len(Av), self.cpcrit))
+        delta_cp = cpl-cpu
+
+        #broadcasting for final forces
+        vlm.forces_geometry = Fv0*(delta_cp/delta_cp0)[:, None]
+
         if return_sol:
             return airplane, vlm, forces, moments, sol
         else:
             return airplane, vlm, forces, moments
+
+
+    def _karman_thiessen(self, cp:nt.NDArray[np.float64]):
+        beta = np.sqrt(1-self.m2)
+        return cp/(beta+self.m2/(1+beta)*cp/2)
 
 
     def _calc_dFv_dp(self, ymin:float, epsilon=.01):
