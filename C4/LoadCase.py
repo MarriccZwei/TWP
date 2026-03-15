@@ -34,11 +34,9 @@ class LoadCase():
         self.W = np.zeros(N) #the current value of the model's weight
         self.T = np.zeros(N) #here be the thrust
 
-        #critical pressure coefficient
-        gamma_air = 1.4
+        #caching aero constants
         self.m2 = self.op.mach()**2
         self.rho_atm = self.op.atmosphere.density()
-        self.cpcrit = 2/gamma_air/self.m2*(((1+(gamma_air-1)/2*self.m2)/(1+(gamma_air-1)/2))**(gamma_air/(gamma_air-1))-1)
 
 
     def aerodynamic_matrix(self, nid_pos_affected:nt.NDArray[np.int32], ncoords_affected:nt.NDArray[np.float32]):
@@ -197,7 +195,7 @@ class LoadCase():
 
         #Karman-Thiessen correction, clipping Cps that go beyond Cp_crit
         cpl = self._karman_thiessen(cpl0)
-        cpu = np.maximum(self._karman_thiessen(cpu0), np.full(len(Av), self.cpcrit))
+        cpu = self._karman_thiessen(cpu0)
         delta_cp = cpl-cpu
         if debug: print(f"cpl: {cpl.min()} to {cpl.max()}, cpu: {cpu.min()} to {cpu.max()}")
 
