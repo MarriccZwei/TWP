@@ -2,7 +2,7 @@ from .Exclusion import Exclusion
 from .Mesher import Mesher
 from .ElysianWing import ElysianWing
 from .InertiaSumesh import InertiaSubmesh
-from .StructuralSubmesh import UniformStructuralSubmesh
+from .StructuralSubmesh import UniformStructuralSubmesh, JointStructuralSubmesh
 from ..Pyfe3DModel import Pyfe3DModel
 
 import typing as ty
@@ -25,7 +25,7 @@ def geometry_init(GEOM_SOURCE:dict[str, float], HYPERPARAMS:dict[str, float], MA
     wing = ElysianWing(GEOM_SOURCE, HYPERPARAMS["(H/c)_sq"])
     excl = Exclusion(wing.scaffold, HYPERPARAMS["rj/c"], wing.c_at_y)
     ism = InertiaSubmesh(wing.scaffold, HYPERPARAMS, MASSES, wing.c_at_y, wing.large_equipment_summary())
-    ssm = UniformStructuralSubmesh(wing, HYPERPARAMS, N)
+    ssm = JointStructuralSubmesh(wing, HYPERPARAMS, N)
     mesher = Mesher(collisionDecimalPlaces)
     for eleType, eleArgs, eleNodes in zip(ism.eleTypes+ssm.eleTypes, ism.eleArgs+ssm.eleArgs, ism.eleNodes+ssm.eleNodes):
         mesher.load_ele(eleNodes, eleType, eleArgs)
