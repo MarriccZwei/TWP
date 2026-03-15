@@ -39,10 +39,10 @@ class LoadCase():
         self.rho_atm = self.op.atmosphere.density()
 
 
-    def aerodynamic_matrix(self, nid_pos_affected:nt.NDArray[np.int32], ncoords_affected:nt.NDArray[np.float32]):
+    def aerodynamic_matrix(self, nid_pos_affected:nt.NDArray[np.int32], ncoords_affected:nt.NDArray[np.float32], debug=False):
         '''Conducting an aerodynamic simulation based on skin nodes, updating A and KA'''
 
-        vlm_, dFv_dp = self._calc_dFv_dp(ncoords_affected[:,1].min())
+        vlm_, dFv_dp = self._calc_dFv_dp(ncoords_affected[:,1].min(), debug=debug)
         W, self.A = self._aero2fem(vlm_, ncoords_affected, nid_pos_affected, 1.)
         W_u_to_p = self._fem2aero(ncoords_affected, nid_pos_affected)
         self.KA = W @ dFv_dp @ W_u_to_p
@@ -97,15 +97,40 @@ class LoadCase():
         assert np.allclose(weights.sum(axis=1), 1)
 
         v = vortex_valid.sum()*3
-        W = np.zeros((self.N, v))
+        n_points = node_indices.shape[0]
+        nnz = 3 * self.nneighs * n_points
 
+        Wr = np.zeros(nnz, dtype=int)
+        Wc = np.zeros(nnz, dtype=int)
+        Wv = np.zeros(nnz)
+
+        k = 0
         for j in range(self.nneighs):
             for i, node_index in enumerate(node_indices[:, j]):
-                #Here we cannot use the node_index directly, as we need to match the node indexing in the global mesh
-                W[pf3.DOF*ids_s[node_index] + 0, i*3 + 0] += weights[i, j]
-                W[pf3.DOF*ids_s[node_index] + 1, i*3 + 1] += weights[i, j]
-                W[pf3.DOF*ids_s[node_index] + 2, i*3 + 2] += weights[i, j]
-        assert np.allclose(W.sum(axis=0), 1.)
+                base_row = pf3.DOF * ids_s[node_index]
+                base_col = i * 3
+                w = weights[i, j]
+
+                Wr[k] = base_row + 0
+                Wc[k] = base_col + 0
+                Wv[k] = w
+                k += 1
+
+                Wr[k] = base_row + 1
+                Wc[k] = base_col + 1
+                Wv[k] = w
+                k += 1
+
+                Wr[k] = base_row + 2
+                Wc[k] = base_col + 2
+                Wv[k] = w
+                k += 1
+
+        # build sparse matrix
+        W = ss.coo_matrix((Wv, (Wr, Wc)), shape=(self.N, 3 * n_points)).tocsr()
+
+        # same check as before
+        assert np.allclose(np.array(W.sum(axis=0)).ravel(), 1.)
 
         Fv = vlm.forces_geometry[vortex_valid].flatten()
         #re-scaling the aerodynamic load to match the specified load factor, done due to some load factors not being achievable w\o hlds
@@ -193,14 +218,21 @@ class LoadCase():
         cpu0 = -magnitude_ratio*delta_cp0/(magnitude_ratio+1)
         if debug: print(f"cpl: {cpl0.min()} to {cpl0.max()}, cpu: {cpu0.min()} to {cpu0.max()}")
 
-        #Karman-Thiessen correction, clipping Cps that go beyond Cp_crit
+        #Karman-Thiessen correction
         cpl = self._karman_thiessen(cpl0)
-        cpu = self._karman_thiessen(cpu0)
+        cpu = np.maximum(self._karman_thiessen(cpu0), np.full(len(cpu0), -5.))
         delta_cp = cpl-cpu
         if debug: print(f"cpl: {cpl.min()} to {cpl.max()}, cpu: {cpu.min()} to {cpu.max()}")
 
         #broadcasting for final forces
         vlm.forces_geometry = Fv0*(delta_cp/delta_cp0)[:, None]
+        forces = np.sum(vlm.forces_geometry, 0)
+        assert len(forces)==3
+        #NOTE: moments not corrected for compressibilit, hence deprecated
+
+        if debug: #printing ratio
+            ratio = self.MTOM*self.g0*self.n*np.cos(np.deg2rad(self.op.alpha))/forces[2]
+            print(f"nominal load to calculated load: {ratio}")
 
         if return_sol:
             return airplane, vlm, forces, moments, sol
@@ -213,11 +245,10 @@ class LoadCase():
         return cp/(beta+self.m2/(1+beta)*cp/2)
 
 
-    def _calc_dFv_dp(self, ymin:float, epsilon=.01):
+    def _calc_dFv_dp(self, ymin:float, epsilon=.01, debug=False):
         rowlen = len(self.airfs)
         p = np.zeros(rowlen*4)
-        airplane, vlm_, forces, moments = self._vlm(p)
-        #ratio = self.MTOM*self.g0*self.n*np.cos(np.deg2rad(self.op.alpha))/forces[2]
+        airplane, vlm_, forces, moments = self._vlm(p, debug=debug)
 
         vortex_valid = vlm_.vortex_centers[:, 1] > ymin
         v = vortex_valid.sum()*3
@@ -229,7 +260,7 @@ class LoadCase():
             p2 = p.copy()
             p2[i] += epsilon
 
-            plane2, vlm2, f2, M2 = self._vlm(p2)
+            plane2, vlm2, f2, M2 = self._vlm(p2, debug=debug)
             Fv2 = vlm2.forces_geometry[vortex_valid].flatten()
             deriv = (Fv2 - Fv)/epsilon
             dFv_dp[:, p_DOF] += deriv

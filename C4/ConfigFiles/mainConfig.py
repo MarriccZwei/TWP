@@ -40,7 +40,7 @@ LC_INFO = [
     {
         'n':1.,
         'Ttot':37800., # [N]
-        'op':asb.OperatingPoint(asb.Atmosphere(7000.), velocity=269., alpha=.87), #[h]=m, [v]=m/s, [alpha]=deg
+        'op':asb.OperatingPoint(asb.Atmosphere(7000.), velocity=269., alpha=-.75), #[h]=m, [v]=m/s, [alpha]=deg
         'aeroelastic':True
     },
 ]
@@ -54,8 +54,8 @@ CAD_STRS = {
 }
 
 RES = {
-    'bres':25,
-    'cres':18,
+    'bres':20,
+    'cres':17,
     'nneighs':10,
     'kfl':30,
     'klb':4,
@@ -66,7 +66,7 @@ G0 = 9.81 # [N/kg]
 MTOM = 76000. # [kg]
 LBUCKLSF = 1.5
 
-N = 5
+N = 12
 
 BOUNDS = (
     {

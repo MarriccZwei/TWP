@@ -88,7 +88,7 @@ def test_self_weight():
 
     airfs, les, tes = wing.aero_foils(10)
 
-    lc = LoadCase(2.5, 76000, model.N, 9.81, 112800, asb.OperatingPoint(asb.Atmosphere(0.), alpha=10., velocity=90.), les, tes, airfs, nneighs=10, cres=18)
+    lc = LoadCase(2.5, 76000, model.N, 9.81, 112800, asb.OperatingPoint(asb.Atmosphere(0.), alpha=10., velocity=90.), les, tes, airfs, nneighs=5, cres=18, bres=20)
     lc.apply_aero(*mesher.get_submesh('sq'))
     lc.apply_thrust(mesher.get_submesh('mi')[0])
     

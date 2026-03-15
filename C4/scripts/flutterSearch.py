@@ -8,7 +8,7 @@ import matplotlib.pyplot as plt
 import time
 
 Ns = [5]*5
-Nfoils = [10, 11, 12, 13, 14, 15]
+Nfoils = [10, 11, 12, 13, 14]
 nfreq = 5
 omegan = np.zeros((nfreq, len(Ns)), dtype=np.complex64)
 

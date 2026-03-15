@@ -50,7 +50,7 @@ def process_load_case(model:Pyfe3DModel, lc:LoadCase, materials:ty.Dict[str, flo
     for quad, matdir, shellprop, quadType in zip(model.quads, model.matdirs, model.shellprops, quadTypes):
         quad.update_probe_ue(u)
         quad.update_probe_xe(model.ncoords_flatten)
-        quad.update_KG(KGr, KGc, KGv, shellprop)
+        if num_eig_lb > 0: quad.update_KG(KGr, KGc, KGv, shellprop)
         if (exclusion.is_excluded(model.ncoords[model.nid_pos[quad.n1], :]) or exclusion.is_excluded(model.ncoords[model.nid_pos[quad.n2], :]) or
             exclusion.is_excluded(model.ncoords[model.nid_pos[quad.n3], :]) or exclusion.is_excluded(model.ncoords[model.nid_pos[quad.n4], :])):
             quad_failure_margins.append(0.)
@@ -61,20 +61,23 @@ def process_load_case(model:Pyfe3DModel, lc:LoadCase, materials:ty.Dict[str, flo
     for beam, beamorient, beamprop, beamType in zip(model.beams, model.beamorients, model.beamprops, beamTypes):
         beam.update_probe_ue(u)
         beam.update_probe_xe(model.ncoords_flatten)
-        beam.update_KG(KGr, KGc, KGv, beamprop)
+        if num_eig_lb > 0: beam.update_KG(KGr, KGc, KGv, beamprop)
         if exclusion.is_excluded(model.ncoords[model.nid_pos[beam.n1], :]) or exclusion.is_excluded(model.ncoords[model.nid_pos[beam.n2], :]):
             beam_failure_margins.append(0.)
         else:
             beam_failure_margins.append(beam_stress_recovery(desvars, materials, beam, beamprop, beamorient, beamType, model.beamprobe))
 
     #2.3) buckling
-    KG = ss.coo_matrix((KGv, (KGr, KGc)), shape=(model.N, model.N)).tocsc()
-    KGuu = model.uu_matrix(KG)
-    eigvecs = np.zeros((model.N, num_eig_lb))
-    eigvals, eigvecsu = ssl.eigsh(A=KGuu, k=num_eig_lb, which='SM', M=model.KC0uu, tol=1e-6, sigma=1., mode='cayley')
-    eigvals = -1./eigvals
-    eigvecs[model.bu] = eigvecsu
-    load_mult = eigvals[eigvals>0].min()
+    if num_eig_lb > 0: 
+        KG = ss.coo_matrix((KGv, (KGr, KGc)), shape=(model.N, model.N)).tocsc()
+        KGuu = model.uu_matrix(KG)
+        eigvecs = np.zeros((model.N, num_eig_lb))
+        eigvals, eigvecsu = ssl.eigsh(A=KGuu, k=num_eig_lb, which='SM', M=model.KC0uu, tol=1e-6, sigma=1., mode='cayley')
+        eigvals = -1./eigvals
+        eigvecs[model.bu] = eigvecsu
+        load_mult = eigvals[eigvals>0].min()
+    else:
+        load_mult = np.inf
 
     failure_margins = np.array([
         max(quad_failure_margins),
@@ -158,8 +161,9 @@ def process_load_case(model:Pyfe3DModel, lc:LoadCase, materials:ty.Dict[str, flo
             plot_nodal_quantity(model.ncoords, lc.T[0::pf3.DOF], model, savePath, "ThrustX")
             plot_nodal_quantity(model.ncoords, lc.W[2::pf3.DOF], model, savePath, "WeightZ")
             eigvec_scaling = 25.
-            for i in range(eigvecs.shape[1]):
-                plot_nodal_quantity(prep_displacements(eigvecs[:,i], model, eigvec_scaling/max(eigvecs[:,i])), eigvecs[:,i][2::pf3.DOF],
+            if num_eig_lb > 0: 
+                for i in range(eigvecs.shape[1]):
+                    plot_nodal_quantity(prep_displacements(eigvecs[:,i], model, eigvec_scaling/max(eigvecs[:,i])), eigvecs[:,i][2::pf3.DOF],
                                     model, savePath, f"BucklingMode{i}")
             with open(savePath+"failure_margins.txt", "w") as file:
                 file.write(f"fail_margs: {failure_margins}")
