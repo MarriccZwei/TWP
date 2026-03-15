@@ -150,7 +150,7 @@ class LoadCase():
         return ss.csc_matrix(W_u_to_p)
 
 
-    def _vlm(self, displs:ty.List[float]=None, return_sol=False):
+    def _vlm(self, displs:ty.List[float]=None, return_sol=False, debug=False):
         #allowing for initial displacements for flutter. Yet, for static analysis we dont's need displacements
         if displs is None:
             displs = np.zeros(len(self.airfs)*4)
@@ -193,11 +193,13 @@ class LoadCase():
         magnitude_ratio = 3 #how much larger in absolute value is the cp on the upper side in the plot
         cpl0 = delta_cp0/(magnitude_ratio+1)
         cpu0 = -magnitude_ratio*delta_cp0/(magnitude_ratio+1)
+        if debug: print(f"cpl: {cpl0.min()} to {cpl0.max()}, cpu: {cpu0.min()} to {cpu0.max()}")
 
         #Karman-Thiessen correction, clipping Cps that go beyond Cp_crit
         cpl = self._karman_thiessen(cpl0)
         cpu = np.maximum(self._karman_thiessen(cpu0), np.full(len(Av), self.cpcrit))
         delta_cp = cpl-cpu
+        if debug: print(f"cpl: {cpl.min()} to {cpl.max()}, cpu: {cpu.min()} to {cpu.max()}")
 
         #broadcasting for final forces
         vlm.forces_geometry = Fv0*(delta_cp/delta_cp0)[:, None]
