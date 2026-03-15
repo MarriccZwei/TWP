@@ -17,7 +17,7 @@ for i, N, Nfoil in zip(range(len(Ns)), Ns, Nfoils):
     optimiser = Optimiser(mc.DESVARS_INITIAL, [mc.LC_INFO[2]], mc.GEOM_SOURCE, mc.HYPERPARAMS, mc.MASSES, N, mc.MATERIALS, mc.RES, mc.G0, mc.MTOM, Nfoil, mc.LBUCKLSF,
                         mc.BOUNDS)
     omegan[:, i] = process_aeroelastic_load_case(optimiser.model, optimiser.lcs[0], True,  uc.REFINE_SAVE_PATH+f"{i}\\", mc.RES["kfl"], True)[:nfreq]  
-    print(f"Processed {Nfoils} in {time.time()-t1} [s], freqs [rad/s]: {omegan[:, i]}\n")  
+    print(f"Processed {Nfoil} in {time.time()-t1} [s], freqs [rad/s]: {omegan[:, i]}\n")  
 
 for j in range(nfreq): 
     plt.plot(Nfoils, np.real(omegan[j, :]), label=f"frequency {j+1}")
