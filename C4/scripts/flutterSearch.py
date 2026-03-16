@@ -7,8 +7,8 @@ import aerosandbox.numpy as np
 import matplotlib.pyplot as plt
 import time
 
-Ns = [8, 9, 10, 11, 12]
-Nfoils = [10]*5
+Ns = [5]*1
+Nfoils = [11]*1
 nfreq = 5
 omegan = np.zeros((nfreq, len(Ns)), dtype=np.complex64)
 
