@@ -220,7 +220,7 @@ class LoadCase():
 
         #Karman-Thiessen correction
         cpl = self._karman_thiessen(cpl0)
-        cpu = np.maximum(self._karman_thiessen(cpu0), np.full(len(cpu0), -5.))
+        cpu = np.maximum(self._karman_thiessen(cpu0), np.full(len(cpu0), -5.)) #NOTE: clipping to avoid the non-physical cp peak
         delta_cp = cpl-cpu
         if debug: print(f"cpl: {cpl.min()} to {cpl.max()}, cpu: {cpu.min()} to {cpu.max()}")
 
