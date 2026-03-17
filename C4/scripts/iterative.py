@@ -19,6 +19,6 @@ desvarsResult = optimiser.desvars_from_vec(result.x)
 print(f"Converged to: {desvarsResult},\nwith success: {result.success}\nand message: {result.message}")
 
 #checking constraints for the converged design
-verifier = Optimiser(desvarsResult, mc.LC_INFO, mc.MATERIALS, mc.RES, mc.G0, mc.MTOM, mc.NAIRFS, mc.LBUCKLSF,
-                     mc.BOUNDS)
+verifier = Optimiser(desvarsResult, mc.LC_INFO, mc.GEOM_SOURCE, mc.HYPERPARAMS, mc.MASSES, mc.N, mc.MATERIALS, mc.RES, mc.G0, mc.MTOM, mc.NAIRFS, mc.LBUCKLSF,
+                      mc.BOUNDS)
 print(verifier.simulate_constraints(verifier.desvarvec(), True, uc.FW_SAVE_PATH))

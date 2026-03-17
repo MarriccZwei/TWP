@@ -35,8 +35,7 @@ class LoadCase():
         self.T = np.zeros(N) #here be the thrust
 
         #caching aero constants
-        self.m2 = self.op.mach()**2
-        self.rho_atm = self.op.atmosphere.density()
+        self.pg = np.sqrt(1-self.op.mach()**2)
 
 
     def aerodynamic_matrix(self, nid_pos_affected:nt.NDArray[np.int32], ncoords_affected:nt.NDArray[np.float32], debug=False):
@@ -45,7 +44,7 @@ class LoadCase():
         vlm_, dFv_dp = self._calc_dFv_dp(ncoords_affected[:,1].min(), debug=debug)
         W, self.A = self._aero2fem(vlm_, ncoords_affected, nid_pos_affected, 1.)
         W_u_to_p = self._fem2aero(ncoords_affected, nid_pos_affected)
-        self.KA = W @ dFv_dp @ W_u_to_p
+        self.KA = self.pg * W @ dFv_dp @ W_u_to_p
 
 
     def apply_aero(self, nid_pos_affected:nt.NDArray[np.int32], coords_affected:nt.NDArray[np.float64]):
@@ -206,29 +205,29 @@ class LoadCase():
         forces = sol["F_g"]
         moments = sol["M_g"]
 
-        #compressibility corrections
-        Fv0 = vlm.forces_geometry
-        Av = vlm.areas
-        Fv0magn = np.sqrt(Fv0[:, 0]**2+Fv0[:, 1]**2+Fv0[:, 2]**2)
-        delta_cp0 = Fv0magn/Av*2/self.op.velocity**2/self.rho_atm
+        # #compressibility corrections
+        # Fv0 = vlm.forces_geometry
+        # Av = vlm.areas
+        # Fv0magn = np.sqrt(Fv0[:, 0]**2+Fv0[:, 1]**2+Fv0[:, 2]**2)
+        # delta_cp0 = Fv0magn/Av*2/self.op.velocity**2/self.rho_atm
 
-        #splitting the pressure contributions between the upper and lower side of the wing approximately based on cp plots
-        magnitude_ratio = 3 #how much larger in absolute value is the cp on the upper side in the plot
-        cpl0 = delta_cp0/(magnitude_ratio+1)
-        cpu0 = -magnitude_ratio*delta_cp0/(magnitude_ratio+1)
-        if debug: print(f"cpl: {cpl0.min()} to {cpl0.max()}, cpu: {cpu0.min()} to {cpu0.max()}")
+        # #splitting the pressure contributions between the upper and lower side of the wing approximately based on cp plots
+        # magnitude_ratio = 3 #how much larger in absolute value is the cp on the upper side in the plot
+        # cpl0 = delta_cp0/(magnitude_ratio+1)
+        # cpu0 = -magnitude_ratio*delta_cp0/(magnitude_ratio+1)
+        # if debug: print(f"cpl: {cpl0.min()} to {cpl0.max()}, cpu: {cpu0.min()} to {cpu0.max()}")
 
-        #Karman-Thiessen correction
-        cpl = self._karman_thiessen(cpl0)
-        cpu = np.maximum(self._karman_thiessen(cpu0), np.full(len(cpu0), -5.)) #NOTE: clipping to avoid the non-physical cp peak
-        delta_cp = cpl-cpu
-        if debug: print(f"cpl: {cpl.min()} to {cpl.max()}, cpu: {cpu.min()} to {cpu.max()}")
+        # #Karman-Thiessen correction
+        # cpl = self._karman_thiessen(cpl0)
+        # cpu = np.maximum(self._karman_thiessen(cpu0), np.full(len(cpu0), -5.)) #NOTE: clipping to avoid the non-physical cp peak
+        # delta_cp = cpl-cpu
+        # if debug: print(f"cpl: {cpl.min()} to {cpl.max()}, cpu: {cpu.min()} to {cpu.max()}, cpu0argmax: {cpu0[cpu.argmax()]}")
 
-        #broadcasting for final forces
-        vlm.forces_geometry = Fv0*(delta_cp/delta_cp0)[:, None]
-        forces = np.sum(vlm.forces_geometry, 0)
-        assert len(forces)==3
-        #NOTE: moments not corrected for compressibilit, hence deprecated
+        # #broadcasting for final forces
+        # vlm.forces_geometry = Fv0*(delta_cp/delta_cp0)[:, None]
+        # forces = np.sum(vlm.forces_geometry, 0)
+        # assert len(forces)==3
+        # #NOTE: moments not corrected for compressibilit, hence deprecated
 
         if debug: #printing ratio
             ratio = self.MTOM*self.g0*self.n*np.cos(np.deg2rad(self.op.alpha))/forces[2]
