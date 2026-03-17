@@ -3,6 +3,7 @@ from ..ConfigFiles import mainConfig as mc
 from ..ConfigFiles import userConfig as uc
 
 import aerosandbox as asb
+import gc
 import aerosandbox.numpy as np
 import matplotlib.pyplot as plt
 import scipy.sparse.linalg as ssl
@@ -30,6 +31,7 @@ for i, mach in enumerate(machs):
     print(f"Processing Mach number {mach}...")
     omegan[i, :], _ = ssl.eigs(A=optimiser.model.KC0uu-KAuu, M=optimiser.model.Muu, k=k, sigma=-1., which='LM')
     omegan[i, :] = np.sqrt(omegan[i, :])
+    gc.collect()
 
 print("Preparing plots...")
 omegan.sort(1)
