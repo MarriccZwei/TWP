@@ -23,6 +23,6 @@ for rail_d in rail_ds:
     desvarsResult = optimiser.desvars_from_vec(result.x)
     print(f"Converged to: {desvarsResult},\nwith success: {result.success}\nand message: {result.message}")
     gc.collect()
-    objectives_report += f"For rail_d: {rail_d}, objective: {optimiser.objective(optimiser.desvarvec(desvarsResult))}\n"
+    objectives_report += f"For rail_d: {rail_d}, objective: {optimiser.objective(optimiser.desvarvec(desvarsResult))}\nOptimisantion result: {desvarsResult}\n"
 
 print(objectives_report)
