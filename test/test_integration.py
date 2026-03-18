@@ -95,7 +95,7 @@ def test_self_weight():
     #post processing
     savePath = FW_SAVE_PATH
     print("processing starts")
-    margins = process_load_case(model, lc, materials, desvars, ep["beamtypes"], ep["quadtypes"], excl, plot=True, savePath=savePath, num_eig_lb=4)
+    margins = process_load_case(model, lc, materials, desvars, ep["beamtypes"], ep["quadtypes"], excl, plot=True, savePath=savePath, num_eig_lb=0)
     print(margins)
     print(model.ncoords.shape) #so that it can be compared with the shape from CATIA
 

@@ -14,7 +14,7 @@ resNoBuckl["klb"] = 0 #exclude linear buckling from iterative analysis as it sho
 
 rail_ds = [.01,.02,.03, .04, .05]
 hypers = mc.HYPERPARAMS.copy()
-ojectives_report = "=====FINAL REPORT=====\n"
+objectives_report = "=====FINAL REPORT=====\n"
 
 for rail_d in rail_ds:
     hypers["d"] = rail_d
