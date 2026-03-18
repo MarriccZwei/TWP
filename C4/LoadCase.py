@@ -35,7 +35,7 @@ class LoadCase():
         self.T = np.zeros(N) #here be the thrust
 
         #caching aero constants
-        self.pg = np.sqrt(1-self.op.mach()**2)
+        self.pg = 1/np.sqrt(1-self.op.mach()**2)
 
 
     def aerodynamic_matrix(self, nid_pos_affected:nt.NDArray[np.int32], ncoords_affected:nt.NDArray[np.float32], debug=False):
