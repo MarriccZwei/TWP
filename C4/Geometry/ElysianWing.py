@@ -340,5 +340,14 @@ class ElysianWing():
                 mesh = pv.lines_from_points(points, close=True)
                 plotter.add_mesh(mesh)
 
+        #airfoil compressible polars - done here for caching
+        for airf in airfs:
+            airf.generate_polars(
+                #range of aerodynamic parameters experienced by the load cases
+                alphas = np.linspace(-5, 15, 50),
+                Res = np.array([2e7, 3e7, 4e7]),
+                include_compressibility_effects = True
+            )
+
         #outputs - airfoils, leading and trailing edge points
         return airfs, ptles, pttes
