@@ -15,7 +15,7 @@ resNoBuckl["klb"] = 0 #exclude linear buckling from iterative analysis as it sho
 
 rjcs = np.linspace(.03/5, .1/5, 8) #from: Sizing and Layout Design of an Aeroelastic Wingbox through Nested Optimization - Bret K. Stanford, Christine V. Jutte, Christian A. Coker
 hypers = mc.HYPERPARAMS.copy()
-ojectives_report = "=====FINAL REPORT=====\n"
+objectives_report = "=====FINAL REPORT=====\n"
 
 for rjc in rjcs:
     hypers["rj/c"] = rjc
