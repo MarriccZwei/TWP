@@ -54,7 +54,7 @@ class LoadCase():
         :type coords_affect: nt.NDArray[np.float64]
         '''
         _, vlm, forces, _ = self._vlm()
-        ratio = self.MTOM*self.g0*self.n*np.cos(np.deg2rad(self.op.alpha))/forces[2]
+        ratio = self.MTOM*self.g0*self.n*np.cos(np.deg2rad(self.op.alpha))/forces[2]/2 #we are only looking at one wing
         _, self.A = self._aero2fem(vlm, coords_affected, nid_pos_affected, ratio)
 
 
@@ -227,7 +227,7 @@ class LoadCase():
         # #NOTE: moments not corrected for compressibilit, hence deprecated
 
         if debug: #printing ratio
-            ratio = self.MTOM*self.g0*self.n*np.cos(np.deg2rad(self.op.alpha))/forces[2]
+            ratio = self.MTOM*self.g0*self.n*np.cos(np.deg2rad(self.op.alpha))/forces[2]/2
             print(f"nominal load to calculated load: {ratio}")
 
         if return_sol:
