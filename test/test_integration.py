@@ -85,6 +85,7 @@ def test_self_weight():
     inertia_vals = ep["inertia_vals"]
 
     model.KC0_M_update(beamprops, beamorients, shellprops, matdirs, inertia_vals)
+    # model.KC0_M_update(beamprops, beamorients, shellprops, matdirs, [0]*len(inertia_vals)) #optional removing bending relief
 
     airfs, les, tes = wing.aero_foils(10)
 
