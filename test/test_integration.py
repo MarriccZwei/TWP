@@ -51,18 +51,18 @@ def test_self_weight():
         "tipfoil":asb.Airfoil("naca2410")
     }
 
-    N = 5
+    N = 8
 
     model, mesher, excl, wing = geometry_init(GEOM_SOURCE, HYPERPARAMS, MASSES, N, 8)
 
     desvars = {
-        '(2t/H)_sq':0.1,
-        '(2t/H)_pq':0.05,
-        '(2t/H)_aq':0.05,
+        '(2t/H)_sq':0.3,
+        '(2t/H)_pq':0.1,
+        '(2t/H)_aq':0.1,
         'W_bb':0.004,
         'W_mb':0.004,
-        'W_lb':0.004,
-        'Ds':.008,
+        'W_lb':0.03,
+        'Ds':.02,
     }
 
     materials = {
@@ -89,14 +89,16 @@ def test_self_weight():
 
     airfs, les, tes = wing.aero_foils(10)
 
-    lc = LoadCase(2.5, 76000, model.N, 9.81, 112800, asb.OperatingPoint(asb.Atmosphere(0.), alpha=10., velocity=90.), les, tes, airfs, nneighs=5, cres=8, bres=20)
+    lc = LoadCase(1., 76000, model.N, 9.81, 112800, asb.OperatingPoint(asb.Atmosphere(0.), alpha=10., velocity=90.), les, tes, airfs, 
+                  nneighs=5, cres=8, bres=20, nlg=1.5, bank=6.)
     lc.apply_aero(*mesher.get_submesh('sq'))
     lc.apply_thrust(mesher.get_submesh('mi')[0])
+    lc.apply_landing(mesher.get_submesh('li')[0])
     
     #post processing
     savePath = FW_SAVE_PATH
     print("processing starts")
-    margins = process_load_case(model, lc, materials, desvars, ep["beamtypes"], ep["quadtypes"], excl, plot=True, savePath=savePath, num_eig_lb=0)
+    margins = process_load_case(model, lc, materials, desvars, ep["beamtypes"], ep["quadtypes"], excl, plot=True, savePath=savePath, num_eig_lb=4)
     print(margins)
     print(model.ncoords.shape) #so that it can be compared with the shape from CATIA
 

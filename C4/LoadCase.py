@@ -11,7 +11,7 @@ class LoadCase():
     def __init__(self, n:float, MTOM:float, N:float, g0:float, 
                  thrust_total:float, op_point:asb.OperatingPoint, les:nt.NDArray, tes:nt.NDArray,
                  airfs:ty.List[asb.Airfoil], bres:int=20, cres:int=10, nneighs:int=100,
-                 aeroelastic:bool=False):
+                 aeroelastic:bool=False, nlg:float=0., bank:float=0.):
         self.n = n #load factor
         self.N = N #total number of degrees of freedom in the model
         assert N%pf3.DOF==0
@@ -28,11 +28,15 @@ class LoadCase():
         self.cres = cres
         self.nneighs = nneighs
 
+        self.nlg = nlg #landing load factor, applied to one gear
+        self.bank = bank #bank angle, give in degrees, internally converted to rad
+
         self._cs = [self.tes[i,0]-self.les[i,0] for i in range(self.les.shape[0])] #obtaining the chord list
 
         self.A = np.zeros(N) #here be the aerodynamic loads (basically lift)
         self.W = np.zeros(N) #the current value of the model's weight
         self.T = np.zeros(N) #here be the thrust
+        self.L = np.zeros(N) #here be the landing load
 
 
     def aerodynamic_matrix(self, nid_pos_affected:nt.NDArray[np.int32], ncoords_affected:nt.NDArray[np.float32], debug=False):
@@ -53,8 +57,8 @@ class LoadCase():
         :param coords_affect: ncoords-formatted coordinates of the nodes affected
         :type coords_affect: nt.NDArray[np.float64]
         '''
-        _, vlm, forces, _ = self._vlm()
-        ratio = self.MTOM*self.g0*self.n*np.cos(np.deg2rad(self.op.alpha))/forces[2]/2 #we are only looking at one wing
+        _, vlm, _, _, sol = self._vlm(return_sol=True)
+        ratio = self.MTOM*self.g0*self.n/sol['L']/2 #NOTE we are only looking at one wing
         _, self.A = self._aero2fem(vlm, coords_affected, nid_pos_affected, ratio)
 
 
@@ -66,16 +70,31 @@ class LoadCase():
     def update_weight(self, M:ss.coo_matrix):
         '''Applying weight to every node using a passed mass matrix, inclues weight rotation wrt aoa'''
         aoa = np.deg2rad(self.op.alpha)
+        bank = np.deg2rad(self.bank)
         nNodes = self.N//pf3.DOF
+        gmagn = (self.n+self.nlg)*self.g0
         gvect = [0]*pf3.DOF
-        gvect[0] = self.n*self.g0*np.sin(aoa)
-        gvect[2] = -self.n*self.g0*np.cos(aoa) 
+        gvect[0] = gmagn*np.sin(aoa)*np.cos(bank)
+        gvect[1] = gmagn*np.sin(bank)
+        gvect[2] = -gmagn*np.cos(aoa)*np.cos(bank) 
         gvect = np.array(gvect*nNodes)  
         self.W = M@gvect
 
 
+    def apply_landing(self, nid_pos_affected:nt.NDArray[np.int32]):
+        '''Applying the landing load to the affected nodes
+        NOTE: there is no moment correction so centroid of the nodes has to be at the lg centroid!'''
+        nNodes = len(nid_pos_affected)
+        aoa = np.deg2rad(self.op.alpha)
+        bank = np.deg2rad(self.bank)
+        lPerNode = self.nlg*self.g0*self.MTOM/nNodes #NOTE no division by 2 - we assume asymmetric landing
+        self.L[0::pf3.DOF][nid_pos_affected] = -lPerNode*np.sin(aoa)*np.cos(bank)
+        self.L[1::pf3.DOF][nid_pos_affected] = -lPerNode*np.sin(bank)
+        self.L[2::pf3.DOF][nid_pos_affected] = lPerNode*np.cos(aoa)*np.cos(bank)
+
+
     def loadstack(self):
-        return self.A+self.T+self.W
+        return self.A+self.T+self.W+self.L
     
 
     #=====IMPLEMENTATION AERODYNAMIC LOAD==================================
