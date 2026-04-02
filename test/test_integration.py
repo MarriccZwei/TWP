@@ -53,7 +53,8 @@ def test_self_weight():
 
     N = 8
 
-    model, mesher, excl, wing = geometry_init(GEOM_SOURCE, HYPERPARAMS, MASSES, N, 8)
+    model, mesher, excl, wing = geometry_init(GEOM_SOURCE, HYPERPARAMS, MASSES, N, 8,
+                                              springargs=(1e5, 0, 0, 1e5, 0, 0, 0, 1, 0))
 
     desvars = {
         '(2t/H)_sq':0.3,
