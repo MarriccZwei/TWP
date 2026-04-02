@@ -95,6 +95,8 @@ def test_self_weight():
     lc.apply_aero(*mesher.get_submesh('sq'))
     lc.apply_thrust(mesher.get_submesh('mi')[0])
     lc.apply_landing(mesher.get_submesh('li')[0])
+    ctrl_sum_L = np.sqrt(lc.L[0::pf3.DOF].sum()**2+lc.L[1::pf3.DOF].sum()**2+lc.L[2::pf3.DOF].sum()**2)
+    assert np.isclose(ctrl_sum_L, 1118340.), ctrl_sum_L
     
     #post processing
     savePath = FW_SAVE_PATH
