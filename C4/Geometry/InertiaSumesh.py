@@ -107,11 +107,10 @@ class InertiaSubmesh():
             self.eleArgs.append([bat_mass])
             self.eleNodes.append([centr])
             #1.5.2) spring mesh - connection to all outboard points and the inboard rail
-            self.eleTypes.extend(["ms"]*4)
-            self.eleArgs.extend([[]]*4)
+            self.eleTypes.extend(["ms"]*3)
+            self.eleArgs.extend([[]]*3)
             self.eleNodes.append([forec, centr])
             self.eleNodes.append([peakc, centr])
-            self.eleNodes.append([rearc, centr])
             self.eleNodes.append([inbc, centr]) 
 
         #2) hinge and equipment inertia
@@ -135,26 +134,32 @@ class InertiaSubmesh():
         #3) motor inertia
         assert len(eqpt_dict["motor_pts"]) == len(eqpt_dict['motor_is'])
         for mcoords, midx in zip(eqpt_dict["motor_pts"], eqpt_dict['motor_is']):
-            self.eleTypes.extend(['mi', 'ms', 'ms', 'ms', 'ms'])
-            self.eleArgs.extend([[mmi], [], [], [], []])
+            self.eleTypes.extend(['mi', 'ms', 'ms', 'ms'])
+            self.eleArgs.extend([[mmi], [], [], []])
             self.eleNodes.append([mcoords])
             self.eleNodes.append([(scaffold[midx-1, 1, 0], scaffold[midx-1, 1, 1], scaffold[midx-1, 1, 2]), mcoords])
             self.eleNodes.append([(scaffold[midx, 0, 0], scaffold[midx, 0, 1], scaffold[midx, 0, 2]), mcoords])
             self.eleNodes.append([(scaffold[midx, 1, 0], scaffold[midx, 1, 1], scaffold[midx, 1, 2]), mcoords])
-            self.eleNodes.append([(scaffold[midx, 2, 0], scaffold[midx, 2, 1], scaffold[midx, 2, 2]), mcoords])
 
         #4) landing gear inertia
         lgcoords = eqpt_dict["lg_pt"]
         assert len(eqpt_dict['lg_is']) == 2
         lgi_inb = eqpt_dict["lg_is"][0]
         lgi_oub = eqpt_dict["lg_is"][1]
-        self.eleTypes.extend(['li', 'ms', 'ms', 'ms', 'ms'])
-        self.eleArgs.extend([[mli], [], [], [], []])
-        self.eleNodes.append([lgcoords])
-        self.eleNodes.append([(scaffold[lgi_inb, -1, 0], scaffold[lgi_inb, -1, 1], scaffold[lgi_inb, -1, 2]), lgcoords])
-        self.eleNodes.append([(scaffold[lgi_inb, -2, 0], scaffold[lgi_inb, -2, 1], scaffold[lgi_inb, -2, 2]), lgcoords])
-        self.eleNodes.append([(scaffold[lgi_oub, -1, 0], scaffold[lgi_oub, -1, 1], scaffold[lgi_oub, -1, 2]), lgcoords])
-        self.eleNodes.append([(scaffold[lgi_oub, -2, 0], scaffold[lgi_oub, -2, 1], scaffold[lgi_oub, -2, 2]), lgcoords])
+        self.eleTypes.extend(['li', 'ms', 'ms', 'ms', 'li', 'ms', 'ms', 'ms'])
+        self.eleArgs.extend([[mli/2], [], [], [], [mli/2], [], [], []])
+        #inboard landing gear
+        lgcoords_inb = (lgcoords[0], scaffold[lgi_inb, -1, 1], lgcoords[2])
+        self.eleNodes.append([lgcoords_inb])
+        self.eleNodes.append([(scaffold[lgi_inb, -1, 0], scaffold[lgi_inb, -1, 1], scaffold[lgi_inb, -1, 2]), lgcoords_inb])
+        self.eleNodes.append([(scaffold[lgi_inb, -2, 0], scaffold[lgi_inb, -2, 1], scaffold[lgi_inb, -2, 2]), lgcoords_inb])
+        self.eleNodes.append([(scaffold[lgi_oub, -2, 0], scaffold[lgi_oub, -2, 1], scaffold[lgi_oub, -2, 2]), lgcoords_inb])
+        #outboard landing gear
+        lgcoords_oub = (lgcoords[0], scaffold[lgi_oub, -1, 1], lgcoords[2])
+        self.eleNodes.append([lgcoords_oub])
+        self.eleNodes.append([(scaffold[lgi_oub, -1, 0], scaffold[lgi_oub, -1, 1], scaffold[lgi_oub, -1, 2]), lgcoords_oub])
+        self.eleNodes.append([(scaffold[lgi_oub, -2, 0], scaffold[lgi_oub, -2, 1], scaffold[lgi_oub, -2, 2]), lgcoords_oub])
+        self.eleNodes.append([(scaffold[lgi_inb, -2, 0], scaffold[lgi_inb, -2, 1], scaffold[lgi_inb, -2, 2]), lgcoords_oub])
 
         #5) Joint inertia
         self.tot_joint_mass = 0
@@ -170,7 +175,7 @@ class InertiaSubmesh():
         #6) Consistency check
         assert len(self.eleTypes) == len(self.eleArgs) == len(self.eleNodes)
         #motors, landing gear and battery points are the added nodes in this submesh, alls else should coincide with the structural submesh.
-        self.expected_node_count = len(eqpt_dict["motor_is"])+1+len(bat_centroids)
+        self.expected_node_count = len(eqpt_dict["motor_is"])+len(eqpt_dict["lg_is"])+len(bat_centroids)
 
 
     def _LE_or_TE_inertia(self, nodes1:nt.NDArray[np.float64], nodes2:nt.NDArray[np.float64], totmass:float):
