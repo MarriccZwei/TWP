@@ -34,7 +34,6 @@ class InertiaSubmesh():
         bat_inbconns:list[tuple[float]] = list()
         bat_peakconns:list[tuple[float]] = list()
         bat_foreconns:list[tuple[float]] = list()
-        bat_rearconns:list[tuple[float]] = list()
 
         bat_masses_in_range:list[float] = list()
         s3 = np.sqrt(3)
@@ -63,9 +62,10 @@ class InertiaSubmesh():
             y_oub, x_oub_fore, z_oub_fore, x_oub_peak, z_oub_peak,
             x_oub_rear, z_oub_rear, y_inb, x_inb, z_inb
         ):
+            #obtaining battery area by subtracting the area of spacings
             h_fore = abs(zok-zof)
             h_rear = abs(zok-zor)
-            h = h_fore if (h_fore<h_rear) else h_rear
+            h = min(h_fore, h_rear)
             a = 2*h/s3
 
             c = c_at_y(yok)
@@ -77,6 +77,13 @@ class InertiaSubmesh():
             A2 = delta_a*(a-2*delta_d/s3)
             A3 = delta_s*(a-4*delta_a/s3-delta_s/s3)
             A = h**2/s3-A1-2*A2-A3
+
+            #obtaining battery area by calculation of height and smaller side of the battery trapezoid
+            a_prime = 2/s3*(delta_d-2*delta_a)
+            h_prime = h-delta_d-delta_s
+            A_prime = a_prime*h_prime+h_prime**2/s3
+            assert np.isclose(A, A_prime)
+
             if (A>0) and (A2>0) and (A3>0): #only count in the mass of the batteries that can physically fit into their bays
                 bat_mass = rho_bat*A*(yok-yia-Delta_b)
                 self.battery_masses.append(bat_mass)
@@ -89,7 +96,6 @@ class InertiaSubmesh():
                     bat_centroids.append(((xia+xok)/2, (yok+yia)/2, (centr_oub_z+centr_inb_z)/2))
                     bat_inbconns.append((xia, yia, zia))
                     bat_foreconns.append((xof, yok, zof))
-                    bat_rearconns.append((xor, yok, zor))
                     bat_peakconns.append((xok, yok, zok))
         
         #1.5) adjusting for the nominal battery mass
@@ -99,8 +105,8 @@ class InertiaSubmesh():
         bat_masses_in_range = [m_bat_raw*ratio_bat_mass for m_bat_raw in bat_masses_in_range]
 
         #1.6) battery mesh
-        for forec, peakc, rearc, inbc, centr, bat_mass in zip( 
-            bat_foreconns, bat_peakconns, bat_rearconns, bat_inbconns, bat_centroids, bat_masses_in_range
+        for forec, peakc, inbc, centr, bat_mass in zip( 
+            bat_foreconns, bat_peakconns, bat_inbconns, bat_centroids, bat_masses_in_range
         ): 
             #1.5.1) battery inertia
             self.eleTypes.append("bi")
