@@ -54,7 +54,7 @@ def test_self_weight():
     N = 8
 
     model, mesher, excl, wing = geometry_init(GEOM_SOURCE, HYPERPARAMS, MASSES, N, 8,
-                                              springargs=(1e5, 0, 0, 1e5, 0, 0, 0, 1, 0))
+                                              springargs=(1e10, 0, 0, 1e10, 0, 0, 0, 1, 0))
 
     desvars = {
         '(2t/H)_sq':0.3,
@@ -92,6 +92,8 @@ def test_self_weight():
 
     lc = LoadCase(1., 76000, model.N, 9.81, 112800, asb.OperatingPoint(asb.Atmosphere(0.), alpha=10., velocity=90.), les, tes, airfs, 
                   nneighs=5, cres=8, bres=20, nlg=1.5, bank=6.)
+    # lc = LoadCase(-1., 76000, model.N, 9.81, 32400., asb.OperatingPoint(asb.Atmosphere(7000.), alpha=-4.5, velocity=187.), les, tes, airfs, 
+    #               nneighs=5, cres=8, bres=20, nlg=0., bank=0.)
     lc.apply_aero(*mesher.get_submesh('sq'))
     lc.apply_thrust(mesher.get_submesh('mi')[0])
     lc.apply_landing(mesher.get_submesh('li')[0])
