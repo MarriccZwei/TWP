@@ -119,15 +119,24 @@ class InertiaSubmesh():
             self.eleNodes.append([peakc, centr])
             self.eleNodes.append([inbc, centr]) 
 
-        #2) hinge and equipment inertia
-        #2.1) hinge
-        hnPts = scaffold[-1, ::2, :]
-        nhnpts = hnPts.shape[0]
-        mhi_per = mhi/nhnpts
-        for i in range(nhnpts):
-            self.eleTypes.append("hi")
-            self.eleArgs.append([mhi_per])
-            self.eleNodes.append([(hnPts[i, 0], hnPts[i, 1], hnPts[i, 2])])
+        #2) wingtip and equipment inertia
+        #2.1) wingtip
+        #creating hinge+wingtip centroid
+        wingtip_pt = (scaffold[-1, 0, :]+scaffold[-1, -1, :])/2
+        delta_y_hn = (scaffold[-1, -1, 0]-scaffold[-1, 0, 0])
+        wingtip_pt[1] += delta_y_hn
+        wingtip_pt[2] += delta_y_hn/2
+        wingtip_pt = (wingtip_pt[0], wingtip_pt[1], wingtip_pt[2])
+        #asigning the inertia element
+        self.eleTypes.append("hi")
+        self.eleArgs.append([mhi])
+        self.eleNodes.append([wingtip_pt])
+        #assigning the spring elements
+        self.eleTypes.extend(["ms"]*3)
+        self.eleArgs.extend([[]]*3)
+        self.eleNodes.append([(scaffold[-1, 0, 0], scaffold[-1, 0, 1], scaffold[-1, 0, 2]), wingtip_pt])
+        self.eleNodes.append([(scaffold[-1, 1, 0], scaffold[-1, 1, 1], scaffold[-1, 1, 2]), wingtip_pt])
+        self.eleNodes.append([(scaffold[-1, -1, 0], scaffold[-1, -1, 1], scaffold[-1, -1, 2]), wingtip_pt])
 
         #2.2) LE-TE equipment
         nodes_LE_top = scaffold[:, 0, :]
@@ -180,8 +189,8 @@ class InertiaSubmesh():
     
         #6) Consistency check
         assert len(self.eleTypes) == len(self.eleArgs) == len(self.eleNodes)
-        #motors, landing gear and battery points are the added nodes in this submesh, alls else should coincide with the structural submesh.
-        self.expected_node_count = len(eqpt_dict["motor_is"])+len(eqpt_dict["lg_is"])+len(bat_centroids)
+        #motors, landing gear, wingtip and battery points are the added nodes in this submesh, alls else should coincide with the structural submesh.
+        self.expected_node_count = len(eqpt_dict["motor_is"])+len(eqpt_dict["lg_is"])+1+len(bat_centroids)
 
 
     def _LE_or_TE_inertia(self, nodes1:nt.NDArray[np.float64], nodes2:nt.NDArray[np.float64], totmass:float):

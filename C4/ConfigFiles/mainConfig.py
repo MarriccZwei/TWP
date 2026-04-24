@@ -114,7 +114,7 @@ GEOM_SOURCE ={
         "cr":5.,
         "ct":2.,
         "ylg":5.768546,
-        "deltaxlg":.80115,
+        "deltaxlg":.4039,
         "rlg":.801187,
         "ym1":4.005935,
         "ym2":8.091988,
@@ -124,6 +124,6 @@ GEOM_SOURCE ={
         "deltaxm2":-.267062,
         "deltaxm3":.267062,
         "deltaxm4":.801187,
-        "rootfoil":asb.Airfoil("naca2418"),
+        "rootfoil":asb.Airfoil("naca2419"),
         "tipfoil":asb.Airfoil("naca2410")
     }

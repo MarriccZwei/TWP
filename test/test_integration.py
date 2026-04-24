@@ -37,7 +37,7 @@ def test_self_weight():
         "cr":5.,
         "ct":2.,
         "ylg":5.768546,
-        "deltaxlg":.80115,
+        "deltaxlg":.4039,
         "rlg":.801187,
         "ym1":4.005935,
         "ym2":8.091988,
@@ -47,18 +47,18 @@ def test_self_weight():
         "deltaxm2":-.267062,
         "deltaxm3":.267062,
         "deltaxm4":.801187,
-        "rootfoil":asb.Airfoil("naca2418"),
+        "rootfoil":asb.Airfoil("naca2419"),
         "tipfoil":asb.Airfoil("naca2410")
     }
 
-    N = 8
+    N = 10
 
     model, mesher, excl, wing = geometry_init(GEOM_SOURCE, HYPERPARAMS, MASSES, N, 8,
                                               springargs=(1e10, 0, 0, 1e10, 0, 0, 0, 1, 0))
 
     desvars = {
         '(2t/H)_sq':0.3,
-        '(2t/H)_pq':0.1,
+        '(2t/H)_pq':0.15,
         '(2t/H)_aq':0.1,
         'W_bb':0.004,
         'W_mb':0.004,

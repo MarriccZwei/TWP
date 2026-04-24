@@ -98,7 +98,7 @@ def test_full_geometry():
         "cr":5.,
         "ct":2.,
         "ylg":5.768546,
-        "deltaxlg":.80115,
+        "deltaxlg":.4039,
         "rlg":.801187,
         "ym1":4.005935,
         "ym2":8.091988,
