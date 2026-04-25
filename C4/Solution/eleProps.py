@@ -140,8 +140,8 @@ def quad_stress_recovery(desvars:ty.Dict[str,float], materials:ty.Dict[str,float
 
     #NOTE: we are looking for maximum stress in 4 places: on both the upper and lower boundaries of the core and on the outer sheet zs.
     strains = sr.strains_quad(quadprobe)
-    normal_core, shear_core, tau_yz_core, tau_xz_core = sr.recover_stresses(strains, Ef, nuf, shellprop.scf_k13)
-    normal_sheet, shear_sheet, tau_yz_sheet, tau_xz_sheet = sr.recover_stresses(strains, Ea, nua, shellprop.scf_k13)
+    normal_core, shear_core, tau_xz_core, tau_yz_core = sr.recover_stresses(strains, Ef, nuf, shellprop.scf_k13)
+    normal_sheet, shear_sheet, tau_xz_sheet, tau_yz_sheet = sr.recover_stresses(strains, Ea, nua, shellprop.scf_k13)
     H = shellprop.h
     h = (1-desvars[f"(2t/H)_{quadType}"])*H #core height
     margins:ty.List[float] = list()
@@ -217,5 +217,5 @@ def beam_stress_recovery(desvars:ty.Dict[str,float], materials:ty.Dict[str,float
         sigma = exx(ye, ze)*E
         tau_xy = exy(ze)*G
         tau_xz = exz(ye)*G
-        s_vmises.append(sr.von_mises(sigma, 0., 0., tau_xy, tau_xz, 0.))
+        s_vmises.append(sr.von_mises(sigma, 0., 0., tau_xy, 0., tau_xz))
     return max(s_vmises)/sfa

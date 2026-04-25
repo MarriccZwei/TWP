@@ -10,6 +10,7 @@ def strains_quad(probe:pf3.Quad4Probe):
     Obtained by constructing the BL matrix and multiplying it with the displacements vector
     BLgxz, BLgyz are obtained by summing up the rot and grad BL row vectors before multiplication
     BL constructed at xi, eta = (0,0), the element's integratio point
+    NOTE: The strains follow pyfe3d naming and sign convention, not the stress tensor one!
     '''
     probe.update_BL(0,0)
     return np.vstack([np.asarray(probe.BLexx),
@@ -33,17 +34,19 @@ def recover_stresses(strains:nt.NDArray[np.float32], E:float, nu:float, sc:float
     kxx = strains[3]
     kyy = strains[4]
     kxy = strains[5]
-    gyz = strains[6]
-    gxz = strains[7]
+    #to satisfy the sign convention of the stress tensor of positive xz shear causing shrinking along x=z line, 
+    #the yz in pyfe3d strain is actually the xz one in the stress tensor as well. See tests.
+    gyz = -strains[7]
+    gxz = -strains[6]
 
     #NOTE: curvature signs - in the test when it bends up kappas are negative, we want negative strain on top if
     # bends up,so adding kxx and kyy seems right.
-    normal_stresses = lambda z:E_pois*np.array([[1, nu], [nu, 1]])@np.array([kxx*z+exx, kyy*z+eyy])
+    normal_stresses = lambda z:E_pois*np.array([[1, nu], [nu, 1]])@np.array([kxx*z+exx, kyy*z+eyy]) #kxx is bending along y, actually
     shear_stress = lambda z:G*(gxy+kxy*z)
     tau_yz = G*sc*gyz
     tau_xz = G*sc*gxz
 
-    return normal_stresses, shear_stress, tau_yz, tau_xz
+    return normal_stresses, shear_stress, tau_xz, tau_yz 
 
     
 def von_mises(s_11, s_22, s_33, s_12, s_23, s_13):
