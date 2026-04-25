@@ -204,7 +204,6 @@ def test_static_point_load_square():
 
 
 def test_quad_recovery(sheet_first:bool, plot:bool=False):
-
     #resolution
     nx = 7
     ny = 30 #must have a middle element
@@ -390,16 +389,15 @@ def test_quad_recovery(sheet_first:bool, plot:bool=False):
 
                 assert np.isclose(recovered_margin, ref_margin, rtol=1e-4), f"recovered: {recovered_margin}, reference: {ref_margin}"
 
-            #for checkin foam failure
+            #for checking foam failure
             else:
                 sig = sten+sbend_foam
                 sm = sig/3
                 svm = sig
-                print(f"sig {sig}")
                 alph = 3*np.sqrt((.5-nu)/(1+nu))
                 sfoam = np.sqrt((svm**2+alph**2*sm**2)/(1+(alph/3)**2))
                 ref_margin = sfoam/sf_foam
-                assert np.isclose(recovered_margin, ref_margin, rtol=1e-3), f"recovered: {recovered_margin}, reference: {ref_margin}"
+                assert np.isclose(recovered_margin, ref_margin, rtol=1e-4), f"recovered: {recovered_margin}, reference: {ref_margin}"
 
 
 if __name__ == '__main__':
