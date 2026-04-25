@@ -33,7 +33,7 @@ def recover_stresses(strains:nt.NDArray[np.float32], E:float, nu:float, sc:float
     gxy = strains[2]
     kxx = strains[3]
     kyy = strains[4]
-    kxy = strains[5]
+    kxy = -strains[5] #so that moment that translates to positive shear on top actually causes positive shear on top. see tests
     #to satisfy the sign convention of the stress tensor of positive xz shear causing shrinking along x=z line, 
     #the yz in pyfe3d strain is actually the xz one in the stress tensor as well. See tests.
     gyz = -strains[7]

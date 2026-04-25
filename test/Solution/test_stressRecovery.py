@@ -655,11 +655,20 @@ def test_stress_recovery_sub():
     ref_shear = u*E/(1+nu)/2*sc
     assert np.isclose(shear, ref_shear), f"{shear}, {ref_shear}"
 
+    #sign of torsion
+    quad.update_probe_ue(np.array([0., 0., 0., 0., 0., 0., 
+                                   0., 0., 0., 0., u, 0., 
+                                   0., 0., 0., -u, u, 0.,
+                                   0., 0., 0., -u, 0., 0.]))
+    strains = strains_quad(probe)
+    _, shear, _, _  = recover_stresses(strains, E, nu, sc)
+    assert(shear(t)>0), shear(t)
+
 
 if __name__ == '__main__':
     test_static_point_load_square()
     test_quad_recovery(True)
     test_quad_recovery(False)
-    test_quad_recovery_x(True, plot=True)
+    test_quad_recovery_x(True)
     test_quad_recovery_x(False)
     test_stress_recovery_sub()
