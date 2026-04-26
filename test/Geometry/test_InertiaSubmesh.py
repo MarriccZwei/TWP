@@ -6,45 +6,6 @@ import aerosandbox as asb
 import aerosandbox.numpy as np
 import pyvista as pv
 
-class _SETUP:
-    s3 = np.sqrt(3)
-    scaffold = np.zeros((3, 6, 3))
-    tippts = np.array([[0., 9., 1.], [0., 9., 0.], [2., 9., 2*s3], [3., 9., s3], [5., 9., 3*s3], [5., 9., 0.]])
-    fuspts = np.array([[1., 1., 1.], [1., 1., 0.], [5., 1., 4*s3], [7., 1., 2*s3], [8., 1., 3*s3], [8., 1., 0.]])
-    scaffold = fuspts[None, :, :]+(tippts-fuspts)[None, :, :]*np.linspace(0., 1., 9)[:, None, None]
-    HYPERPARAMS ={
-        'delta':.005,
-        'D':.95,
-        'd':.2,
-        'Delta b':.1,
-        '(H/c)_sq':.1,
-        '(H/c)_aq':.05,
-        'rj/c':.1/5
-    }
-
-    c_at_y = lambda y:-3/8*y+67/8
-
-    MASSES_ = {
-        'rho_bat': 3e3,
-        'rho_j':1e3,
-        'hi':200.,
-        'LE':1e3,
-        'TE':928.,
-        'bi':17480.,
-        'mi':694.625,
-        'li':1269.5,
-    }
-
-    eqpt_dict = {
-        'motor_pts':[(0., 2., .5), (-1, 5., 1.)],
-        'motor_is':[1, 4],
-        'lg_pt':(8., 3.5, 4.),
-        'lg_is':[2, 3]
-    }
-
-    ism = InertiaSubmesh(scaffold, HYPERPARAMS, MASSES_, c_at_y, eqpt_dict)
-
-
 def _plot_inertia_submesh(plotter:pv.Plotter, inesm:InertiaSubmesh):
     for element in inesm.eleNodes:
         if len(element) == 1:
@@ -64,16 +25,6 @@ def _plot_inertia_submesh(plotter:pv.Plotter, inesm:InertiaSubmesh):
             raise ValueError(f"Each element must contain either 1 or 2 nodes. Got: {element}")
 
 
-def test_plot_inertia_submesh():
-    plotter = pv.Plotter()
-    ism = _SETUP.ism
-
-    _plot_inertia_submesh(plotter, ism)
-    print(ism.tot_joint_mass)
-        
-    plotter.show()
-
-
 def test_full_geometry():
     HYPERPARAMS ={
         'delta':.005,
@@ -83,8 +34,41 @@ def test_full_geometry():
         '(H/c)_sq':.0215,
         '(H/c)_aq':.009,
         '(H/c)_pq':.009,
-        'rj/c':.1/5
     }
+
+    LC_INFO = [
+    {
+        'n':2.5,
+        'nlg':0.,
+        'Ttot':112800., # [N]
+        'op':asb.OperatingPoint(asb.Atmosphere(0.), velocity=90., alpha=10.), #[h]=m, [v]=m/s, [alpha]=deg
+        'aeroelastic':False
+    },
+    {
+        'n':-1.,
+        'nlg':0.,
+        'Ttot':32400., # [N]
+        'op':asb.OperatingPoint(asb.Atmosphere(7000.), velocity=187., alpha=-4.5), #[h]=m, [v]=m/s, [alpha]=deg
+        'aeroelastic':False
+    },
+    {
+        'n':1.,
+        'nlg':1.5,
+        'Ttot':0., # [N]
+        'op':asb.OperatingPoint(asb.Atmosphere(7000.), velocity=187., alpha=-4.5), #[h]=m, [v]=m/s, [alpha]=deg
+        'aeroelastic':False
+    },
+    {
+        'n':1.,
+        'nlg':0.,
+        'Ttot':37800., # [N]
+        'op':asb.OperatingPoint(asb.Atmosphere(7000.), velocity=269., alpha=-.75), #[h]=m, [v]=m/s, [alpha]=deg
+        'aeroelastic':True
+    },
+    ]
+
+    MTOM = 76000
+    G0 = 9.81
 
     GEOM_SOURCE ={
         #NOTE: all coordinates in m
@@ -108,20 +92,41 @@ def test_full_geometry():
         "deltaxm2":-.267062,
         "deltaxm3":.267062,
         "deltaxm4":.801187,
-        "rootfoil":asb.Airfoil("naca2418"),
+        "rootfoil":asb.Airfoil("naca2419"),
         "tipfoil":asb.Airfoil("naca2410")
     }
+
+    BOLT_DATA = [
+        {
+            "Nmax":5110,
+            "Vmax":2840,
+            "Vbea":4300*1.2,
+            "Lconst":(2*3-3.75)*.005,
+            "LperPair":3.75*.005,
+            "Mconst":(2*3-3.75)*.005*1.2*(2*1.5+3.75)*.005*7000,
+            "MperPair":3.75*.005*1.2*(2*1.5+3.75)*.005*7000
+        },
+        {
+            "Nmax":161600,
+            "Vmax":107700,
+            "Vbea":107700,
+            "Lconst":(2*3-3.75)*.005,
+            "LperPair":3.75*.005,
+            "Mconst":(2*3-3.75)*.005*1.2*(2*1.5+3.75)*.005*7000*10,
+            "MperPair":3.75*.005*1.2*(2*1.5+3.75)*.005*7000*10
+        },
+    ]
 
     wing = ElysianWing(GEOM_SOURCE, HYPERPARAMS["(H/c)_sq"])
     plotter = pv.Plotter()
     wing.plot(plotter, 9, 20)
-    ism = InertiaSubmesh(wing.scaffold, HYPERPARAMS, MASSES, wing.c_at_y, wing.large_equipment_summary())
+    ism = InertiaSubmesh(wing.scaffold, HYPERPARAMS, MASSES, wing.c_at_y, wing.large_equipment_summary(), LC_INFO, G0, MTOM, BOLT_DATA, True)
     print(f"{ism.tot_computed_bat_mass} vs required {MASSES["bi"]}")
     _plot_inertia_submesh(plotter, ism)
     plotter.show()
     print(ism.tot_joint_mass)
+    print(ism.rjperc)
 
 
 if __name__ == "__main__":
-    #test_plot_inertia_submesh()
     test_full_geometry()

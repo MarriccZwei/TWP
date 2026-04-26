@@ -168,7 +168,7 @@ class LoadCase():
             tree = ssp.cKDTree(ncoords_s)
             d, node_indices = tree.query(self.les[None, i], k=1)
             node_index = node_indices[0]
-            weigh = 4/3
+            weigh = 2
 
             W_u_to_p[i*3+0, pf3.DOF*ids_s[node_index]+0] += weigh
             W_u_to_p[i*3+1, pf3.DOF*ids_s[node_index]+1] += weigh
@@ -179,7 +179,7 @@ class LoadCase():
             tree = ssp.cKDTree(ncoords_s)
             d, node_indices = tree.query(self.tes[None, i], k=1)
             node_index = node_indices[0]
-            weigh = 4/3
+            weigh = 2
 
             W_u_to_p[(NAIRFS+i)*3+0, pf3.DOF*ids_s[node_index]+0] += weigh
             W_u_to_p[(NAIRFS+i)*3+1, pf3.DOF*ids_s[node_index]+1] += weigh

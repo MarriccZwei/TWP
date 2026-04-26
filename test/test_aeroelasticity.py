@@ -16,9 +16,9 @@ def test_self_weight():
         'D':.3,
         'd':.02,
         'Delta b':.1,
-        '(H/c)_sq':.003,
+        '(H/c)_sq':.009,
         '(H/c)_aq':.003,
-        '(H/c)_pq':.003,
+        '(H/c)_pq':.006,
         "rj/c":.1/5
     }
 
@@ -34,7 +34,7 @@ def test_self_weight():
         "cr":5.,
         "ct":2.,
         "ylg":5.768546,
-        "deltaxlg":.80115,
+        "deltaxlg":.4039,
         "rlg":.801187,
         "ym1":4.005935,
         "ym2":8.091988,
@@ -44,7 +44,7 @@ def test_self_weight():
         "deltaxm2":-.267062,
         "deltaxm3":.267062,
         "deltaxm4":.801187,
-        "rootfoil":asb.Airfoil("naca2418"),
+        "rootfoil":asb.Airfoil("naca2419"),
         "tipfoil":asb.Airfoil("naca2410")
     }
 

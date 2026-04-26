@@ -2,9 +2,16 @@ import aerosandbox.numpy as np
 import numpy.typing as nt
 import pyvista as pv
 import typing as ty
+import pypardiso as ppd
+import pyfe3d as pf3
+
+from ..Pyfe3DModel import Pyfe3DModel
+from .Mesher import Mesher
+from ..LoadCase import LoadCase
 
 class InertiaSubmesh():
-    def __init__(self, scaffold:nt.NDArray[np.float64], HYPERPARAMS:dict[str, float], MASSES:dict[str, float], c_at_y:ty.Callable[[float], float], eqpt_dict:dict[str, ty.Any]):
+    def __init__(self, scaffold:nt.NDArray[np.float64], HYPERPARAMS:dict[str, float], MASSES:dict[str, float], c_at_y:ty.Callable[[float], float], eqpt_dict:dict[str, ty.Any], 
+                 lcs:list[LoadCase], G0:float, MTOM:float, BOLT_DATAS:list[dict[str, float]], plot_joint_loading=False):
         self.eleTypes:list[str] = list()
         self.eleArgs:list[list[float]] = list()
         self.eleNodes:list[list[tuple[float]]] = list()
@@ -18,7 +25,6 @@ class InertiaSubmesh():
         Hpcaq = HYPERPARAMS["(H/c)_aq"]
         D = HYPERPARAMS["D"]
         Delta_b = HYPERPARAMS["Delta b"]
-        rjc = HYPERPARAMS["rj/c"]
 
         rho_bat = MASSES["rho_bat"]
         rho_j = MASSES["rho_j"]
@@ -178,19 +184,109 @@ class InertiaSubmesh():
 
         #5) Joint inertia
         self.tot_joint_mass = 0
-        scaffold_pts = scaffold.reshape(scaffold.shape[0]*scaffold.shape[1], scaffold.shape[2])
-        for i in range(scaffold_pts.shape[0]):
-            self.eleTypes.append('ji')
-            rj = rjc*c_at_y(scaffold_pts[i, 1])
-            mj = 4/3*np.pi*rj**3*rho_j
-            self.eleArgs.append([mj])
-            self.eleNodes.append([(scaffold_pts[i, 0], scaffold_pts[i, 1], scaffold_pts[i, 2])])
-            self.tot_joint_mass += mj
+        
+        #running a simulation on how the loads on engines, lg, hinge and the batteries will translate into loads @ joints
+        collisionDecimalPlaces = 8
+        mesher = Mesher(collisionDecimalPlaces)
+        for eT, eA, eN in zip(self.eleTypes, self.eleArgs, self.eleNodes):
+            mesher.load_ele(eN, eT, eA)
+
+        ncoords = np.array(mesher.nodes)
+
+        #boundary condition  scaffold points are fixed
+        to_tuple_entry = lambda _float:int(round(_float*10**collisionDecimalPlaces))
+        to_tuple = lambda x, y, z: (to_tuple_entry(x), to_tuple_entry(y), to_tuple_entry(z))
+        scaffold_flat = scaffold.reshape(scaffold.shape[0]*scaffold.shape[1], scaffold.shape[2])
+        scaffold_hash = set([to_tuple(x, y, z) for x, y, z in zip(scaffold_flat[:, 0], scaffold_flat[:, 1], scaffold_flat[:, 2])])
+        boundary = lambda x,y,z:tuple([to_tuple(x, y, z) in scaffold_hash]*pf3.DOF)
+
+        model = Pyfe3DModel(np.array(mesher.nodes), boundary)
+
+        #populating the model inertia
+        inertia_vals:list[float] = list() 
+        for eleType, eleArg, eleNodePoses in zip(self.eleTypes, self.eleArgs, mesher.eleNodePoses):
+            if eleType[1] == 'i':
+                inertia_vals.append(eleArg[0])
+                model.load_inertia(eleNodePoses[0])
+            elif eleType == 'ms':
+                model.load_spring(*eleNodePoses, 1e6, 0., 0., 1e6, 0., 0., 0., 1., 0.)
+
+        model.KC0_M_update([], [], [], [], inertia_vals)
+
+        #control sum of the DOF remaining free
+        ctrl_sum = pf3.DOF*(len(eqpt_dict["motor_is"])+len(eqpt_dict["lg_is"])+1+len(bat_centroids))
+        assert np.count_nonzero(model.bu) == ctrl_sum, f"dofs: {np.count_nonzero(model.bu)}, ctrl sum: {ctrl_sum}, N:{model.N}"
+        
+        #load application
+        fints:list[nt.NDArray[np.float_]] = list()
+        fexts:list[nt.NDArray[np.float_]] = list()
+        for lcinfo in lcs:
+            lc = LoadCase(lcinfo["n"], MTOM, model.N, G0, lcinfo["Ttot"], lcinfo["op"], np.array([]), np.array([]), np.array([]), nlg=lcinfo["nlg"])
+            lc.apply_thrust(mesher.get_submesh('mi')[0])
+            lc.apply_landing(mesher.get_submesh('li')[0])
+            lc.update_weight(model.M)
+            fext = lc.loadstack()
+            fu = fext[model.bu]
+            uu = ppd.spsolve(model.KC0uu, fu)
+            u = np.zeros_like(fext)
+            u[model.bu] = uu
+
+            fint = np.zeros_like(fext)
+            for spring in model.springs:
+                spring.update_probe_ue(u)
+                spring.update_fint(fint)
+            
+            fints.append(fint)
+            fexts.append(fext)
+
+        #create fint_envelope fint at joint accessible by coordinates
+        self.rjperc = 0.
+        fint_envelope = np.vstack(np.abs(fints)).max(axis=0)
+        fint_dict:dict[tuple[float], tuple[float]] = dict()
+        for i, x, y, z in zip(range(len(model.x)), model.x, model.y, model.z):
+            fint_dict[to_tuple(x, y, z)] = (fint_envelope[pf3.DOF*i+0], fint_envelope[pf3.DOF*i+1], fint_envelope[pf3.DOF*i+2])
+
+        #translate to joint shear and normal forces
+        for x, y, z in zip(scaffold_flat[:, 0], scaffold_flat[:, 1], scaffold_flat[:, 2]):
+            if to_tuple(x, y, z) in fint_dict: #equipment is not attached to every scaffold point out there
+                Vx, Vy, Nz = fint_dict[to_tuple(x, y, z)]
+                V2 = Vx**2+Vy**2
+                N2 = Nz**2
+
+                rjs = list()
+                mjs = list()
+                for BOLT_DATA in BOLT_DATAS:
+                    #evaluate fastener and bearing failure. NOTE: sheet failure not evaluated as we are using adequate spacing
+                    n_bolt = int(np.ceil(np.sqrt(N2/BOLT_DATA["Nmax"]**2+V2/BOLT_DATA["Vmax"]**2)))
+                    n_bear = int(np.ceil(np.sqrt(V2/BOLT_DATA["Vbea"]**2)))
+                    n_higher = max(n_bolt, n_bear)
+                    n_actual = n_higher + n_higher % 2 #to accout for the fact that we need an even number of joints
+
+                    #joint properties
+                    rjs.append(BOLT_DATA["Lconst"]+n_actual/2*BOLT_DATA["LperPair"])
+                    mjs.append(BOLT_DATA["Mconst"]+n_actual/2*BOLT_DATA["MperPair"])
+
+                despoint = np.argmin(rjs) #we want to minimise joint excluded area, for the in-wing space will probs be quite confined
+                rj = rjs[despoint]
+                mj = mjs[despoint]
+
+                self.rjperc = max(rj/c_at_y(y), self.rjperc)
+                self.tot_joint_mass += mj
+                
+                #joint element creation
+                self.eleTypes.append('ji')
+                self.eleArgs.append([mj])
+                self.eleNodes.append([(x, y, z)])
     
         #6) Consistency check
         assert len(self.eleTypes) == len(self.eleArgs) == len(self.eleNodes)
         #motors, landing gear, wingtip and battery points are the added nodes in this submesh, alls else should coincide with the structural submesh.
         self.expected_node_count = len(eqpt_dict["motor_is"])+len(eqpt_dict["lg_is"])+1+len(bat_centroids)
+
+        #7) plotting if so requested
+        if plot_joint_loading:
+            for fvect in fexts+fints+[fint_envelope]:
+                self._plot_force_vector(model.ncoords, fvect)
 
 
     def _LE_or_TE_inertia(self, nodes1:nt.NDArray[np.float64], nodes2:nt.NDArray[np.float64], totmass:float):
@@ -201,3 +297,33 @@ class InertiaSubmesh():
             self.eleArgs.extend([[m]]*2)
             self.eleNodes.append([(nodes1[i, 0], nodes1[i, 1], nodes1[i, 2])])
             self.eleNodes.append([(nodes2[i, 0], nodes2[i, 1], nodes2[i, 2])])
+
+    def _plot_force_vector(self, ncoords:nt.NDArray[np.float64], force_vec:nt.NDArray[np.float64]):
+        fx = force_vec[0::pf3.DOF]
+        fy = force_vec[1::pf3.DOF]
+        fz = force_vec[2::pf3.DOF]
+
+        vectors = np.column_stack((fx, fy, fz))  # shape (n_points, 3)
+
+        # compute magnitudes
+        magnitudes = np.linalg.norm(vectors, axis=1)
+
+        # avoid division by zero
+        nonzero = magnitudes > 0
+
+        unit_vectors = np.zeros_like(vectors)
+        unit_vectors[nonzero] = vectors[nonzero] / magnitudes[nonzero][:, None]
+
+        mesh = pv.PolyData(ncoords)
+        mesh["vectors"] = unit_vectors      # direction (normalized)
+        mesh["magnitude"] = magnitudes      # scalar for coloring
+
+        arrows = mesh.glyph(
+            orient="vectors",
+            scale=False,        # ensures all arrows same size
+            factor=0.2          # adjust arrow length globally
+        )
+
+        plotter = pv.Plotter()
+        plotter.add_mesh(arrows, scalars="magnitude", cmap="viridis")
+        plotter.show()
