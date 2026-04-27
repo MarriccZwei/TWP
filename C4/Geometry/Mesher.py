@@ -50,6 +50,7 @@ class Mesher:
 
         self.eleNodePoses.append(eleNodePos)
 
+
     def get_submesh(self, eleType:str) -> ty.Tuple[nt.NDArray[np.int32], nt.NDArray[np.float64]]:
         '''
         Returns node indices and node coordinates in the pyfe3d ncoords format that are connected to at least one element of the provided eleType
@@ -60,5 +61,13 @@ class Mesher:
         :rtype: Tuple[NDArray[int32], NDArray[float64]]
         '''
         indices = np.array(list(self._submeshIdxHashMap[eleType].keys()), dtype=np.int32)
+        return indices, np.array(self.nodes)[indices, :]
+    
+
+    def get_submesh_list(self, eleTypes:list[str]) -> ty.Tuple[nt.NDArray[np.int32], nt.NDArray[np.float64]]:
+        indices = list()
+        for eleType in eleTypes:
+            indices.extend(list(self._submeshIdxHashMap[eleType].keys()))
+        indices = np.array(indices, dtype=np.int32)
         return indices, np.array(self.nodes)[indices, :]
         

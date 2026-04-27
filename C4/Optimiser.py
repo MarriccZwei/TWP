@@ -49,19 +49,23 @@ class Optimiser():
             self.iteration_number = 0
 
         #1) geometry initialization
-        self.model, self.mesher, self.excl, self.wing = geometry_init(GEOM_SOURCE, HYPERPARAMS, MASSES, N, meshMergeDigits, resConfig['sks'])
+        self.model, self.mesher, self.excl, self.wing = geometry_init(GEOM_SOURCE, HYPERPARAMS, MASSES, N, loadCasesInfo, g0, MTOM, meshMergeDigits, resConfig['sks'])
         airfs, les, tes = self.wing.aero_foils(nairfs)
         self.ep:ty.Dict[str, ty.List[object]] = dict() #element property dict, updated during self._update_model
 
         #2) design variables initialisation and first model updatate
         self.desvars = {
-            '(2t/H)_sq':0.,
-            '(2t/H)_pq':0.,
-            '(2t/H)_aq':0.,
+            '(2t/H)_Sq':0.,
+            '(2t/H)_Pq':0.,
+            '(2t/H)_Aq':0.,
             'W_bb':0.,
             'W_mb':0.,
             'W_lb':0.,
-            'Ds':0.,
+            'ds':0.,
+            'de':0.,
+            '(2t/H)_sq':0.,
+            '(2t/H)_pq':0.,
+            '(2t/H)_aq':0.,
         }
         self._update_model(self.desvarvec(desvarsInitial))
         
@@ -70,11 +74,12 @@ class Optimiser():
         for lcinfo in loadCasesInfo:
             lc = LoadCase(lcinfo["n"], MTOM, self.model.N, g0, lcinfo["Ttot"], lcinfo["op"], 
                                      les, tes, airfs, resConfig["bres"], resConfig["cres"], resConfig["nneighs"], 
-                                     lcinfo["aeroelastic"])
+                                     lcinfo["aeroelastic"], lcinfo["nlg"], lcinfo['bank'])
             if lcinfo["aeroelastic"]:
-                lc.aerodynamic_matrix(*self.mesher.get_submesh('sq'))
+                lc.aerodynamic_matrix(*self.mesher.get_submesh_list(['sq', 'Sq']))
             else:
-                lc.apply_aero(*self.mesher.get_submesh('sq'))
+                lc.apply_aero(*self.mesher.get_submesh_list(['sq', 'Sq']))
+                lc.apply_landing(self.mesher.get_submesh('li')[0])
                 lc.apply_thrust(self.mesher.get_submesh('mi')[0])
             self.lcs.append(lc)
 
@@ -201,7 +206,7 @@ class Optimiser():
             normalise = lambda key:(self.desvars[key]-self.lb[key])/(self.ub[key]-self.lb[key])
         else:
             normalise = lambda key:(vardict[key]-self.lb[key])/(self.ub[key]-self.lb[key])
-        return np.array([normalise(key) for key in ['(2t/H)_sq', '(2t/H)_pq', '(2t/H)_aq', 'W_bb', 'W_mb', 'W_lb', 'Ds']])
+        return np.array([normalise(key) for key in ['(2t/H)_Sq', '(2t/H)_Pq', '(2t/H)_Aq', 'W_bb', 'W_mb', 'W_lb', 'ds', 'de', '(2t/H)_sq', '(2t/H)_pq', '(2t/H)_aq']])
     
 
     def desvars_from_vec(self, desvarvec:nt.NDArray[np.float64]):
@@ -212,11 +217,15 @@ class Optimiser():
         :type desvarvec: nt.NDArray[np.float64]
         '''
         return {
-            '(2t/H)_sq':desvarvec[0]*self.ub['(2t/H)_sq']+(1-desvarvec[0])*self.lb['(2t/H)_sq'],
-            '(2t/H)_pq':desvarvec[1]*self.ub['(2t/H)_pq']+(1-desvarvec[1])*self.lb['(2t/H)_pq'],
-            '(2t/H)_aq':desvarvec[2]*self.ub['(2t/H)_aq']+(1-desvarvec[2])*self.lb['(2t/H)_aq'],
+            '(2t/H)_Sq':desvarvec[0]*self.ub['(2t/H)_sq']+(1-desvarvec[0])*self.lb['(2t/H)_Sq'],
+            '(2t/H)_Pq':desvarvec[1]*self.ub['(2t/H)_pq']+(1-desvarvec[1])*self.lb['(2t/H)_Pq'],
+            '(2t/H)_Aq':desvarvec[2]*self.ub['(2t/H)_aq']+(1-desvarvec[2])*self.lb['(2t/H)_Aq'],
             'W_bb':desvarvec[3]*self.ub['W_bb']+(1-desvarvec[3])*self.lb['W_bb'],
             'W_mb':desvarvec[4]*self.ub['W_mb']+(1-desvarvec[4])*self.lb['W_mb'],
             'W_lb':desvarvec[5]*self.ub['W_lb']+(1-desvarvec[5])*self.lb['W_lb'],
-            'Ds':desvarvec[6]*self.ub['Ds']+(1-desvarvec[6])*self.lb['Ds']
+            'ds':desvarvec[6]*self.ub['ds']+(1-desvarvec[6])*self.lb['ds'],
+            'de':desvarvec[6]*self.ub['ds']+(1-desvarvec[6])*self.lb['de'],
+            '(2t/H)_sq':desvarvec[0]*self.ub['(2t/H)_sq']+(1-desvarvec[0])*self.lb['(2t/H)_sq'],
+            '(2t/H)_pq':desvarvec[1]*self.ub['(2t/H)_pq']+(1-desvarvec[1])*self.lb['(2t/H)_pq'],
+            '(2t/H)_aq':desvarvec[2]*self.ub['(2t/H)_aq']+(1-desvarvec[2])*self.lb['(2t/H)_aq'],
         }

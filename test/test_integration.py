@@ -119,11 +119,11 @@ def test_self_weight():
 
     airfs, les, tes = wing.aero_foils(10)
 
-    lc = LoadCase(1., 76000, model.N, 9.81, 112800, asb.OperatingPoint(asb.Atmosphere(0.), alpha=10., velocity=90.), les, tes, airfs, 
-                  nneighs=5, cres=8, bres=20, nlg=1.5, bank=6.)
+    lc = LoadCase(1., 76000, model.N, 9.81, 112800, asb.OperatingPoint(asb.Atmosphere(0.), alpha=15., velocity=90.), les, tes, airfs, 
+                  nneighs=10, cres=10, bres=20, nlg=1.5, bank=6.)
     # lc = LoadCase(-1., 76000, model.N, 9.81, 32400., asb.OperatingPoint(asb.Atmosphere(7000.), alpha=-4.5, velocity=187.), les, tes, airfs, 
     #               nneighs=5, cres=8, bres=20, nlg=0., bank=0.)
-    lc.apply_aero(*mesher.get_submesh('sq'))
+    lc.apply_aero(*mesher.get_submesh_list(['sq', 'Sq']))
     lc.apply_thrust(mesher.get_submesh('mi')[0])
     lc.apply_landing(mesher.get_submesh('li')[0])
     ctrl_sum_L = np.sqrt(lc.L[0::pf3.DOF].sum()**2+lc.L[1::pf3.DOF].sum()**2+lc.L[2::pf3.DOF].sum()**2)

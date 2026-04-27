@@ -104,7 +104,7 @@ def test_full_geometry():
     _plot_inertia_submesh(plotter, ism)
     plotter.show()
     print(ism.tot_joint_mass)
-    print(ism.rjperc)
+    print(ism.rjperc) #NOTE: that would equate to 4 3/4 inch bolts which if you napkin math it through the MIL spec is roughly 1e6 in tensile allowable load., which is roughly the load we have in the lg joints
 
 
 if __name__ == "__main__":

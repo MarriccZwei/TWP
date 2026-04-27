@@ -4,14 +4,18 @@ import aerosandbox as asb
 from .classified import MASSES
 
 DESVARS_INITIAL = {
-    '(2t/H)_sq':0.1,
-    '(2t/H)_pq':0.05,
-    '(2t/H)_aq':0.05,
-    'W_bb':0.02,
-    'W_mb':0.02,
-    'W_lb':0.02,
-    'Ds':.007
-}
+        '(2t/H)_Sq':0.3,
+        '(2t/H)_Pq':0.15,
+        '(2t/H)_Aq':0.1,
+        'W_bb':0.004,
+        'W_mb':0.004,
+        'W_lb':0.03,
+        'ds':.02,
+        'de':.01,
+        '(2t/H)_sq':0.06,
+        '(2t/H)_pq':0.03,
+        '(2t/H)_aq':0.03
+    }
 
 MATERIALS = {
     'E_ALU':72.4e9,
@@ -30,6 +34,7 @@ LC_INFO = [
         'nlg':0.,
         'Ttot':112800., # [N]
         'op':asb.OperatingPoint(asb.Atmosphere(0.), velocity=90., alpha=10.), #[h]=m, [v]=m/s, [alpha]=deg
+        'bank':0.,
         'aeroelastic':False
     },
     {
@@ -37,14 +42,24 @@ LC_INFO = [
         'nlg':0.,
         'Ttot':32400., # [N]
         'op':asb.OperatingPoint(asb.Atmosphere(7000.), velocity=187., alpha=-4.5), #[h]=m, [v]=m/s, [alpha]=deg
+        'bank':0.,
         'aeroelastic':False
     },
     {
         'n':1.,
-        'nlg':1.5,
+        'nlg':0.,
         'Ttot':37800., # [N]
         'op':asb.OperatingPoint(asb.Atmosphere(7000.), velocity=269., alpha=-.75), #[h]=m, [v]=m/s, [alpha]=deg
+        'bank':0.,
         'aeroelastic':True
+    },
+    {
+        'n':1.,
+        'nlg':1.5,
+        'Ttot':0., # [N]
+        'op':asb.OperatingPoint(asb.Atmosphere(0.), velocity=90., alpha=15.), #[h]=m, [v]=m/s, [alpha]=deg
+        'bank':6.,
+        'aeroelastic':False
     },
 ]
 
@@ -61,26 +76,34 @@ G0 = 9.81 # [N/kg]
 MTOM = 76000. # [kg]
 LBUCKLSF = 1.5
 
-N = 12
+N = 7
 
 BOUNDS = (
     {
-        '(2t/H)_sq':0.03,
-        '(2t/H)_pq':0.03,
-        '(2t/H)_aq':0.03,
+        '(2t/H)_Sq':0.03,
+        '(2t/H)_Pq':0.03,
+        '(2t/H)_Aq':0.03,
         'W_bb':0.003,
         'W_mb':0.003,
         'W_lb':0.003,
-        'Ds':.004,
+        'ds':.004,
+        'de':.004,
+        '(2t/H)_sq':0.03,
+        '(2t/H)_pq':0.03,
+        '(2t/H)_aq':0.03,
     },
     {
-        '(2t/H)_sq':0.3,
-        '(2t/H)_pq':0.3,
-        '(2t/H)_aq':0.3,
+        '(2t/H)_Sq':0.3,
+        '(2t/H)_Pq':0.3,
+        '(2t/H)_Aq':0.3,
         'W_bb':0.03,
         'W_mb':0.03,
         'W_lb':0.03,
-        'Ds':.02,
+        'ds':.02,
+        'de':.02,
+        '(2t/H)_sq':0.3,
+        '(2t/H)_pq':0.3,
+        '(2t/H)_aq':0.3,
     }
 )
 
