@@ -8,10 +8,11 @@ import pyfe3d as pf3
 from ..Pyfe3DModel import Pyfe3DModel
 from .Mesher import Mesher
 from ..LoadCase import LoadCase
+from .joints_available import JointsAvailable
 
 class InertiaSubmesh():
     def __init__(self, scaffold:nt.NDArray[np.float64], HYPERPARAMS:dict[str, float], MASSES:dict[str, float], c_at_y:ty.Callable[[float], float], eqpt_dict:dict[str, ty.Any], 
-                 lcs:list[LoadCase], G0:float, MTOM:float, BOLT_DATAS:list[dict[str, float]], plot_joint_loading=False):
+                 lcs:list[LoadCase], G0:float, MTOM:float, plot_joint_loading=False):
         self.eleTypes:list[str] = list()
         self.eleArgs:list[list[float]] = list()
         self.eleNodes:list[list[tuple[float]]] = list()
@@ -250,26 +251,9 @@ class InertiaSubmesh():
         for x, y, z in zip(scaffold_flat[:, 0], scaffold_flat[:, 1], scaffold_flat[:, 2]):
             if to_tuple(x, y, z) in fint_dict: #equipment is not attached to every scaffold point out there
                 Vx, Vy, Nz = fint_dict[to_tuple(x, y, z)]
-                V2 = Vx**2+Vy**2
-                N2 = Nz**2
+                V = np.sqrt(Vx**2+Vy**2)
 
-                rjs = list()
-                mjs = list()
-                for BOLT_DATA in BOLT_DATAS:
-                    #evaluate fastener and bearing failure. NOTE: sheet failure not evaluated as we are using adequate spacing
-                    n_bolt = int(np.ceil(np.sqrt(N2/BOLT_DATA["Nmax"]**2+V2/BOLT_DATA["Vmax"]**2)))
-                    n_bear = int(np.ceil(np.sqrt(V2/BOLT_DATA["Vbea"]**2)))
-                    n_higher = max(n_bolt, n_bear)
-                    n_actual = n_higher + n_higher % 2 #to accout for the fact that we need an even number of joints
-
-                    #joint properties
-                    rjs.append(BOLT_DATA["Lconst"]+n_actual/2*BOLT_DATA["LperPair"])
-                    mjs.append(BOLT_DATA["Mconst"]+n_actual/2*BOLT_DATA["MperPair"])
-
-                despoint = np.argmin(rjs) #we want to minimise joint excluded area, for the in-wing space will probs be quite confined
-                rj = rjs[despoint]
-                mj = mjs[despoint]
-
+                rj, mj = JointsAvailable.size_joint(Nz, V, Hpcsq)
                 self.rjperc = max(rj/c_at_y(y), self.rjperc)
                 self.tot_joint_mass += mj
                 

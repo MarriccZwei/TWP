@@ -1,0 +1,90 @@
+import aerosandbox.numpy as np
+
+class Joint():
+    def __init__(self, d_inch:float, bearing_ratio:float, d_ratio_insert:float, Nmax:float, Vmax:float, sig_b_sheet:float=441e6, rho_bolt:float=7750., rho_insert:float=2780., rho_sheet:float=2780., spacing_ratio:float=3., edge_ratio:float=2.):
+        #input data in ich (bolt d), mm (sheet t) and lbf (allowable forces), as taken from the MIL-B-6812E datasheet
+        #spacing as load direction from Chapter 4 DOI: https://doi.org/10.1016/B978-0-323-91682-0.00018-2
+        #defaults assuming steel bolts, rest from alu 2024-T4
+        #steel density HSB 12115-01 page 3 prep. by G. Volkmann
+        mm_to_m = .001
+        inch_to_m = 0.0254
+        lbf_to_N = 4.44822
+
+        self.d_bolt = d_inch*inch_to_m
+        self.d_insert = d_ratio_insert*self.d_bolt
+        self.spacing = spacing_ratio*self.d_bolt
+        self.edge = edge_ratio*self.d_bolt
+        self.Nmax = Nmax*lbf_to_N
+        self.Vmax = Vmax*lbf_to_N
+
+        #sheet thickness derivative of bearing to max shear strength
+        self.Vbea = bearing_ratio*self.Vmax
+        self.t_sheet = self.Vbea/sig_b_sheet/self.d_bolt
+        
+        self.rho_bolt = rho_bolt
+        self.rho_insert = rho_insert
+        self.rho_sheet = rho_sheet
+
+    
+    def get_joint_n(self, N:float, V:float):
+        n_bolt = int(np.ceil(np.sqrt(N**2/self.Nmax**2+V**2/self.Vmax**2)))
+        n_bear = int(np.ceil(V/self.Vbea))
+        n_higher = max(n_bolt, n_bear, 2)
+        return n_higher + n_higher % 2 #to accout for the fact that we need an even number of joints
+    
+
+    def get_joint_dims(self, n:int):
+        assert n%2 == 0 #as needed for our joint geometry
+        npair = n//2
+        assert npair >= 1
+        return self.spacing*max(npair-1, 1)+2*self.edge #a single row of bolts will have the perpendicular dim longer
+    
+
+    def get_joint_mass(self, n:int, H:float, rj:float):
+        #NOTE: ignores bolt head, but assumes bolt agoes all the way through height
+        bolt_area = np.pi*self.d_bolt**2/4
+        m_bolt = bolt_area*H*self.rho_bolt
+        m_insert = np.pi*(self.d_insert**2-self.d_bolt**2)/4*H*self.rho_insert
+        l1 = 2*self.edge if n==2 else self.spacing+2*self.edge #to compensate for rjoint
+        m_sheet = (l1*rj-n*bolt_area)*self.t_sheet*self.rho_sheet
+        return n*(m_bolt+m_insert)+m_sheet
+    
+
+
+class JointsAvailable():
+    #NOTE: MIL-B-6812E assumes double shear, we will have single shear so we have to halve the values
+    #all bolt fine-threaded steel
+    bear_ratio_res = 10
+    _JOINT_DATA = [Joint(d_inch, bear_ratio, inse_ratio, Nmax, Vmax) for d_inch, bear_ratio, inse_ratio, Nmax, Vmax in zip(
+       [1/4, 5/16, 3/8, 7/16, 1/2, 9/16, 5/8, 3/4, 7/8, 1, 1+1/8, 1+1/4]*bear_ratio_res, #diameters
+       np.repeat(np.linspace(.1, 1, bear_ratio_res), 12), #selected bearing/shear allowable ratios
+       [1.25, 1.25, 1.19, 1.19, 1.1, 1.1, 1.1, 1.1, 1.1, 1.1, 1.1, 1.1, 1.1]*bear_ratio_res, #insert diameter ratios
+       [4080, 6500, 10100, 13600, 18500, 23600, 30100, 44000, 60000, 80700, 101800, 130200]*bear_ratio_res, #allowable tesile
+       [7360/2, 11500/2, 16560/2, 22500/2, 29400/2, 37400/2, 46000/2, 66300/2, 90100/2, 117800/2, 147500/2, 182100/2]*bear_ratio_res #allowable shear
+    )]
+
+    @classmethod
+    def size_joint(cls, N:float, V:float, H:float, debug=False):
+        ns = list()
+        rjs = list()
+        mjs = list()
+
+        for joint_candidate in cls._JOINT_DATA:
+            n = joint_candidate.get_joint_n(N, V)
+            rj = joint_candidate.get_joint_dims(n)
+            mj = joint_candidate.get_joint_mass(n, H, rj)
+            
+            ns.append(n)
+            rjs.append(rj)
+            mjs.append(mj)
+        
+        smallest_joint_idx = np.argmin(rjs)
+        rj = rjs[smallest_joint_idx]
+        mj = mjs[smallest_joint_idx]
+        if not debug:
+            return (rj, mj)
+        
+        n = ns[smallest_joint_idx]
+        smallest_joint = cls._JOINT_DATA[smallest_joint_idx]
+
+        return (smallest_joint, n, rj)

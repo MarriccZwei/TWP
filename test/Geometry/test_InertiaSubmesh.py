@@ -92,35 +92,14 @@ def test_full_geometry():
         "deltaxm2":-.267062,
         "deltaxm3":.267062,
         "deltaxm4":.801187,
-        "rootfoil":asb.Airfoil("naca2419"),
+        "rootfoil":asb.Airfoil("naca2418"),
         "tipfoil":asb.Airfoil("naca2410")
     }
-
-    BOLT_DATA = [
-        {
-            "Nmax":5110,
-            "Vmax":2840,
-            "Vbea":4300*1.2,
-            "Lconst":(2*3-3.75)*.005,
-            "LperPair":3.75*.005,
-            "Mconst":(2*3-3.75)*.005*1.2*(2*1.5+3.75)*.005*7000,
-            "MperPair":3.75*.005*1.2*(2*1.5+3.75)*.005*7000
-        },
-        {
-            "Nmax":161600,
-            "Vmax":107700,
-            "Vbea":107700,
-            "Lconst":(2*3-3.75)*.005,
-            "LperPair":3.75*.005,
-            "Mconst":(2*3-3.75)*.005*1.2*(2*1.5+3.75)*.005*7000*10,
-            "MperPair":3.75*.005*1.2*(2*1.5+3.75)*.005*7000*10
-        },
-    ]
 
     wing = ElysianWing(GEOM_SOURCE, HYPERPARAMS["(H/c)_sq"])
     plotter = pv.Plotter()
     wing.plot(plotter, 9, 20)
-    ism = InertiaSubmesh(wing.scaffold, HYPERPARAMS, MASSES, wing.c_at_y, wing.large_equipment_summary(), LC_INFO, G0, MTOM, BOLT_DATA, True)
+    ism = InertiaSubmesh(wing.scaffold, HYPERPARAMS, MASSES, wing.c_at_y, wing.large_equipment_summary(), LC_INFO, G0, MTOM, False)
     print(f"{ism.tot_computed_bat_mass} vs required {MASSES["bi"]}")
     _plot_inertia_submesh(plotter, ism)
     plotter.show()

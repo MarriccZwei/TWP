@@ -47,7 +47,7 @@ def test_self_weight():
         "deltaxm2":-.267062,
         "deltaxm3":.267062,
         "deltaxm4":.801187,
-        "rootfoil":asb.Airfoil("naca2419"),
+        "rootfoil":asb.Airfoil("naca2418"),
         "tipfoil":asb.Airfoil("naca2410")
     }
 
