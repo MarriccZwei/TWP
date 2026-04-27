@@ -33,9 +33,6 @@ def test_Joint():
     assert np.isclose(mj, .0263565555), mj
 
 def test_AvailableJoints():
-    plt.plot([1/4, 5/16, 3/8, 7/16, 1/2, 9/16, 5/8, 3/4, 7/8, 1, 1+1/8, 1+1/4, 1+1/2], [4080, 6500, 10100, 13600, 18500, 23600, 30100, 44000, 60000, 80700, 101800, 130200, 187488])
-    plt.show()
-
     #case 1: increasing the shear load fraction with load magn staying same. expected: increasing sheet thickness
     loadfrac = np.linspace(0, 1., 11)*np.pi/2
     magn = 1e6

@@ -28,7 +28,6 @@ class InertiaSubmesh():
         Delta_b = HYPERPARAMS["Delta b"]
 
         rho_bat = MASSES["rho_bat"]
-        rho_j = MASSES["rho_j"]
         mhi = MASSES["hi"]
         mLE = MASSES["LE"]
         mTE = MASSES["TE"]
@@ -253,14 +252,16 @@ class InertiaSubmesh():
                 Vx, Vy, Nz = fint_dict[to_tuple(x, y, z)]
                 V = np.sqrt(Vx**2+Vy**2)
 
-                rj, mj = JointsAvailable.size_joint(Nz, V, Hpcsq)
-                self.rjperc = max(rj/c_at_y(y), self.rjperc)
+                lj, mj = JointsAvailable.size_joint(Nz, V, Hpcsq)
+                self.rjperc = max(lj/c_at_y(y), self.rjperc)
                 self.tot_joint_mass += mj
                 
                 #joint element creation
                 self.eleTypes.append('ji')
                 self.eleArgs.append([mj])
                 self.eleNodes.append([(x, y, z)])
+
+        self.rjperc /= 2 #accounting for the fact that rj = .5 lj
     
         #6) Consistency check
         assert len(self.eleTypes) == len(self.eleArgs) == len(self.eleNodes)

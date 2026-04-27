@@ -14,7 +14,6 @@ def test_geometry_init():
         '(H/c)_sq':.009,
         '(H/c)_aq':.003,
         '(H/c)_pq':.006,
-        'rj/c':.1/5
     }
 
     GEOM_SOURCE ={
@@ -29,8 +28,8 @@ def test_geometry_init():
         "cr":5.,
         "ct":2.,
         "ylg":5.768546,
-        "deltaxlg":.80115,
-        "rlg":.4039,
+        "deltaxlg":.4039,
+        "rlg":.801187,
         "ym1":4.005935,
         "ym2":8.091988,
         "ym3":12.178042,
@@ -45,7 +44,34 @@ def test_geometry_init():
 
     N = 15
 
-    model, mesher, excl, wing = geometry_init(GEOM_SOURCE, HYPERPARAMS, MASSES, N, 8)
+    LC_INFO = [
+    {
+        'n':2.5,
+        'nlg':0.,
+        'Ttot':112800., # [N]
+        'op':asb.OperatingPoint(asb.Atmosphere(0.), velocity=90., alpha=10.), #[h]=m, [v]=m/s, [alpha]=deg
+        'aeroelastic':False
+    },
+    {
+        'n':-1.,
+        'nlg':0.,
+        'Ttot':32400., # [N]
+        'op':asb.OperatingPoint(asb.Atmosphere(7000.), velocity=187., alpha=-4.5), #[h]=m, [v]=m/s, [alpha]=deg
+        'aeroelastic':False
+    },
+    {
+        'n':1.,
+        'nlg':1.5,
+        'Ttot':37800., # [N]
+        'op':asb.OperatingPoint(asb.Atmosphere(7000.), velocity=269., alpha=-.75), #[h]=m, [v]=m/s, [alpha]=deg
+        'aeroelastic':True
+    },
+    ]
+
+    G0 = 9.81 # [N/kg]
+    MTOM = 76000. # [kg]
+
+    model, mesher, excl, wing = geometry_init(GEOM_SOURCE, HYPERPARAMS, MASSES, N, LC_INFO, G0, MTOM, 8)
 
     #quads
     cells = list()

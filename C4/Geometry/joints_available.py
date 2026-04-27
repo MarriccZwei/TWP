@@ -66,25 +66,25 @@ class JointsAvailable():
     @classmethod
     def size_joint(cls, N:float, V:float, H:float, debug=False):
         ns = list()
-        rjs = list()
+        ljs = list()
         mjs = list()
 
         for joint_candidate in cls._JOINT_DATA:
             n = joint_candidate.get_joint_n(N, V)
-            rj = joint_candidate.get_joint_dims(n)
-            mj = joint_candidate.get_joint_mass(n, H, rj)
+            lj = joint_candidate.get_joint_dims(n)
+            mj = joint_candidate.get_joint_mass(n, H, lj)
             
             ns.append(n)
-            rjs.append(rj)
+            ljs.append(lj)
             mjs.append(mj)
         
-        smallest_joint_idx = np.argmin(rjs)
-        rj = rjs[smallest_joint_idx]
+        smallest_joint_idx = np.argmin(ljs)
+        lj = ljs[smallest_joint_idx]
         mj = mjs[smallest_joint_idx]
         if not debug:
-            return (rj, mj)
+            return (lj, mj)
         
         n = ns[smallest_joint_idx]
         smallest_joint = cls._JOINT_DATA[smallest_joint_idx]
 
-        return (smallest_joint, n, rj)
+        return (smallest_joint, n, lj)

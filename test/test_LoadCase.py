@@ -58,7 +58,34 @@ def test_moments(plot=False):
     }
 
     N = 7
-    model, mesher, excl, wing = geometry_init(GEOM_SOURCE, HYPERPARAMS, MASSES, N, 8)
+    LC_INFO = [
+    {
+        'n':2.5,
+        'nlg':0.,
+        'Ttot':112800., # [N]
+        'op':asb.OperatingPoint(asb.Atmosphere(0.), velocity=90., alpha=10.), #[h]=m, [v]=m/s, [alpha]=deg
+        'aeroelastic':False
+    },
+    {
+        'n':-1.,
+        'nlg':0.,
+        'Ttot':32400., # [N]
+        'op':asb.OperatingPoint(asb.Atmosphere(7000.), velocity=187., alpha=-4.5), #[h]=m, [v]=m/s, [alpha]=deg
+        'aeroelastic':False
+    },
+    {
+        'n':1.,
+        'nlg':1.5,
+        'Ttot':37800., # [N]
+        'op':asb.OperatingPoint(asb.Atmosphere(7000.), velocity=269., alpha=-.75), #[h]=m, [v]=m/s, [alpha]=deg
+        'aeroelastic':True
+    },
+    ]
+
+    G0 = 9.81 # [N/kg]
+    MTOM = 76000. # [kg]
+
+    model, mesher, excl, wing = geometry_init(GEOM_SOURCE, HYPERPARAMS, MASSES, N, LC_INFO, G0, MTOM, 8)
     airfs, les, tes = wing.aero_foils(10)
 
     lc_dummy = LoadCase(1., 76000., model.N, 9.81, 0., asb.OperatingPoint(velocity=269., alpha=-.75, atmosphere=asb.Atmosphere(7000)), les, tes, airfs, 20, 10, 10, True)

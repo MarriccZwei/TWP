@@ -190,11 +190,16 @@ class UniformStructuralSubmesh(StructuralSubmesh):
 
 
 class JointStructuralSubmesh(StructuralSubmesh):
+    def __init__(self, wing:ElysianWing, HYPERPARAMS:dict[str, float], n:int, rjperc:float):
+        self.rjperc = rjperc
+        super().__init__(wing, HYPERPARAMS, n)
+        
+
     def _railing_creation(self, inb:nt.NDArray[np.float64], oub:nt.NDArray, ny:int, eleArg:list[float], eleType:str):
         c_inb = self.wing.c_at_y(inb[1])
         c_oub = self.wing.c_at_y(oub[1])
-        rj_inb = self.HYPERPARAMS["rj/c"]*c_inb
-        rj_oub = self.HYPERPARAMS["rj/c"]*c_oub
+        rj_inb = self.rjperc*c_inb
+        rj_oub = self.rjperc*c_oub
         dj_avg = rj_oub+rj_inb
         delta_y = oub[1]-inb[1]
         nj_n = dj_avg/delta_y
@@ -221,8 +226,8 @@ class JointStructuralSubmesh(StructuralSubmesh):
 
         c_inb = self.wing.c_at_y(inbf[1])
         c_oub = self.wing.c_at_y(oubf[1])
-        rj_inb = self.HYPERPARAMS["rj/c"]*c_inb
-        rj_oub = self.HYPERPARAMS["rj/c"]*c_oub
+        rj_inb = self.rjperc*c_inb
+        rj_oub = self.rjperc*c_oub
         dj_avg = rj_oub+rj_inb
 
         delta_y = oubf[1]-inbf[1]
@@ -273,7 +278,7 @@ class JointStructuralSubmesh(StructuralSubmesh):
         Hsq = self.HYPERPARAMS["(H/c)_sq"]*c
         Hpq = self.HYPERPARAMS["(H/c)_pq"]*c
         Haq = self.HYPERPARAMS["(H/c)_aq"]*c
-        rj = self.HYPERPARAMS["rj/c"]*c
+        rj = self.rjperc*c
 
         #1) the part of rib on the fore spar
         _, zpqf = self._ribbing_xzs(0., self.wing.scaffold[istation, 0, 2], 0., self.wing.scaffold[istation, 1, 2], rj)

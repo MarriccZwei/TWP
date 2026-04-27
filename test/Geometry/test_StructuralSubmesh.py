@@ -3,7 +3,7 @@ import aerosandbox.numpy as np
 import pyvista as pv
 
 from ...C4.Geometry.ElysianWing import ElysianWing
-from ...C4.Geometry.StructuralSubmesh import StructuralSubmesh
+from ...C4.Geometry.StructuralSubmesh import JointStructuralSubmesh
 
 class _SETUP:
     HYPERPARAMS ={
@@ -13,9 +13,10 @@ class _SETUP:
         'Delta b':.1,
         '(H/c)_sq':.009,
         '(H/c)_aq':.003,
-        '(H/c)_pq':.006,
-        'rj/c':.1/5
+        '(H/c)_pq':.006
     }
+
+    rjperc = .04
 
     GEOM_SOURCE ={
         #NOTE: all coordinates in m
@@ -29,7 +30,7 @@ class _SETUP:
         "cr":5.,
         "ct":2.,
         "ylg":5.768546,
-        "deltaxlg":.80115,
+        "deltaxlg":.4039,
         "rlg":.801187,
         "ym1":4.005935,
         "ym2":8.091988,
@@ -46,7 +47,7 @@ class _SETUP:
     N = 6
 
     wing = ElysianWing(GEOM_SOURCE, HYPERPARAMS["(H/c)_sq"])
-    ssm = StructuralSubmesh(wing, HYPERPARAMS, N)
+    ssm = JointStructuralSubmesh(wing, HYPERPARAMS, N, rjperc)
 
 
 def test_ssm():

@@ -4,12 +4,13 @@ from .ElysianWing import ElysianWing
 from .InertiaSumesh import InertiaSubmesh
 from .StructuralSubmesh import UniformStructuralSubmesh, JointStructuralSubmesh
 from ..Pyfe3DModel import Pyfe3DModel
+from ..LoadCase import LoadCase
 
 import typing as ty
 import aerosandbox.numpy as np
 import pyfe3d as pf3
 
-def geometry_init(GEOM_SOURCE:dict[str, float], HYPERPARAMS:dict[str, float], MASSES:dict[str, float], N:int, collisionDecimalPlaces:int=8, 
+def geometry_init(GEOM_SOURCE:dict[str, float], HYPERPARAMS:dict[str, float], MASSES:dict[str, float], N:int, lcs:list[LoadCase], G0:float, MTOM:float, collisionDecimalPlaces:int=8, 
                   springargs:ty.Tuple[float]=(1e10, 0., 0., 1e10, 0., 0., 0., 1., 0.)) -> ty.Tuple[Pyfe3DModel, Mesher]:
     """
     converts the elements imported from CAD into a pyfe3d model
@@ -23,9 +24,9 @@ def geometry_init(GEOM_SOURCE:dict[str, float], HYPERPARAMS:dict[str, float], MA
     """
     #1) resolving the mesh from submesh outputs
     wing = ElysianWing(GEOM_SOURCE, HYPERPARAMS["(H/c)_sq"])
-    excl = Exclusion(wing.scaffold, HYPERPARAMS["rj/c"], wing.c_at_y)
-    ism = InertiaSubmesh(wing.scaffold, HYPERPARAMS, MASSES, wing.c_at_y, wing.large_equipment_summary())
-    ssm = JointStructuralSubmesh(wing, HYPERPARAMS, N)
+    ism = InertiaSubmesh(wing.scaffold, HYPERPARAMS, MASSES, wing.c_at_y, wing.large_equipment_summary(), lcs, G0, MTOM)
+    excl = Exclusion(wing.scaffold, ism.rjperc, wing.c_at_y)
+    ssm = JointStructuralSubmesh(wing, HYPERPARAMS, N, ism.rjperc)
     mesher = Mesher(collisionDecimalPlaces)
     for eleType, eleArgs, eleNodes in zip(ism.eleTypes+ssm.eleTypes, ism.eleArgs+ssm.eleArgs, ism.eleNodes+ssm.eleNodes):
         mesher.load_ele(eleNodes, eleType, eleArgs)
