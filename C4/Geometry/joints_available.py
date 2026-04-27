@@ -4,8 +4,7 @@ class Joint():
     def __init__(self, d_inch:float, d_ratio_insert:float, Nmax:float, Vmax:float, bearing_ratio:float=1., sig_b_sheet:float=441e6, rho_bolt:float=7750., rho_insert:float=2780., rho_sheet:float=2780., spacing_ratio:float=3., edge_ratio:float=2.):
         #input data in ich (bolt d), mm (sheet t) and lbf (allowable forces), as taken from the MIL-B-6812E datasheet
         #spacing as load direction from Chapter 4 DOI: https://doi.org/10.1016/B978-0-323-91682-0.00018-2
-        #defaults assuming steel bolts, rest from alu 2024-T4
-        #steel density HSB 12115-01 page 3 prep. by G. Volkmann
+        #defaults assuming steel bolts, rest from alu 2024-T4. alu from the ususal source,
         mm_to_m = .001
         inch_to_m = 0.0254
         lbf_to_N = 4.44822
@@ -41,9 +40,8 @@ class Joint():
     
 
     def get_joint_mass(self, n:int, H:float, rj:float):
-        #NOTE: ignores bolt head, but assumes bolt agoes all the way through height
         bolt_area = np.pi*self.d_bolt**2/4
-        m_bolt = bolt_area*H*self.rho_bolt
+        m_bolt = bolt_area*(H+4*.6*self.d_bolt)*self.rho_bolt
         m_insert = np.pi*(self.d_insert**2-self.d_bolt**2)/4*H*self.rho_insert
         l1 = 2*self.edge if n==2 else self.spacing+2*self.edge #to compensate for rjoint
         m_sheet = (l1*rj-n*bolt_area)*self.t_sheet*self.rho_sheet

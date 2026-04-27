@@ -4,7 +4,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 def test_Joint():
-    j = Joint(1/4, 1.25, 4080, 7360/2, .5) #the smallest bolt from the dataset
+    j = Joint(1/4, 1.25, 4080, 7360/2, .5, rho_bolt=7750.) #the smallest bolt from the dataset
     H = .03
     lbf_to_N = 4.44822
 
@@ -14,7 +14,7 @@ def test_Joint():
     rj = j.get_joint_dims(n)
     assert np.isclose(rj, .04445), rj
     mj = j.get_joint_mass(n, H, rj)
-    assert np.isclose(mj, .0504197031), mj
+    assert np.isclose(mj, .065381), mj
 
     #case 2: normal load = 2*allowable in tension + .2 allowable in fastener shear
     n = j.get_joint_n(4080*2.*lbf_to_N, 7360*.1*lbf_to_N)
@@ -22,7 +22,7 @@ def test_Joint():
     rj = j.get_joint_dims(n)
     assert np.isclose(rj, .04445), rj
     mj = j.get_joint_mass(n, H, rj)
-    assert np.isclose(mj, .0504197031), mj
+    assert np.isclose(mj, .065381), mj
 
     #case 3: no loads (should be 2 bolts, smallest possible)
     n = j.get_joint_n(0, 0)
@@ -30,7 +30,7 @@ def test_Joint():
     rj = j.get_joint_dims(n)
     assert np.isclose(rj, .04445), rj
     mj = j.get_joint_mass(n, H, rj)
-    assert np.isclose(mj, .0263565555), mj
+    assert np.isclose(mj, .0338374581), mj
 
 def test_AvailableJoints():
     #case 1: increasing the shear load fraction with load magn staying same. expected: increasing sheet thickness
