@@ -4,7 +4,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 def test_Joint():
-    j = Joint(1/4, .5, 1.25, 4080, 7360/2) #the smallest bolt from the dataset
+    j = Joint(1/4, 1.25, 4080, 7360/2, .5) #the smallest bolt from the dataset
     H = .03
     lbf_to_N = 4.44822
 

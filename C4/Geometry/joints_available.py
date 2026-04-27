@@ -1,7 +1,7 @@
 import aerosandbox.numpy as np
 
 class Joint():
-    def __init__(self, d_inch:float, bearing_ratio:float, d_ratio_insert:float, Nmax:float, Vmax:float, sig_b_sheet:float=441e6, rho_bolt:float=7750., rho_insert:float=2780., rho_sheet:float=2780., spacing_ratio:float=3., edge_ratio:float=2.):
+    def __init__(self, d_inch:float, d_ratio_insert:float, Nmax:float, Vmax:float, bearing_ratio:float=1., sig_b_sheet:float=441e6, rho_bolt:float=7750., rho_insert:float=2780., rho_sheet:float=2780., spacing_ratio:float=3., edge_ratio:float=2.):
         #input data in ich (bolt d), mm (sheet t) and lbf (allowable forces), as taken from the MIL-B-6812E datasheet
         #spacing as load direction from Chapter 4 DOI: https://doi.org/10.1016/B978-0-323-91682-0.00018-2
         #defaults assuming steel bolts, rest from alu 2024-T4
@@ -54,13 +54,11 @@ class Joint():
 class JointsAvailable():
     #NOTE: MIL-B-6812E assumes double shear, we will have single shear so we have to halve the values
     #all bolt fine-threaded steel
-    bear_ratio_res = 10
-    _JOINT_DATA = [Joint(d_inch, bear_ratio, inse_ratio, Nmax, Vmax) for d_inch, bear_ratio, inse_ratio, Nmax, Vmax in zip(
-       [1/4, 5/16, 3/8, 7/16, 1/2, 9/16, 5/8, 3/4, 7/8, 1, 1+1/8, 1+1/4]*bear_ratio_res, #diameters
-       np.repeat(np.linspace(.1, 1, bear_ratio_res), 12), #selected bearing/shear allowable ratios
-       [1.25, 1.25, 1.19, 1.19, 1.1, 1.1, 1.1, 1.1, 1.1, 1.1, 1.1, 1.1, 1.1]*bear_ratio_res, #insert diameter ratios
-       [4080, 6500, 10100, 13600, 18500, 23600, 30100, 44000, 60000, 80700, 101800, 130200]*bear_ratio_res, #allowable tesile
-       [7360/2, 11500/2, 16560/2, 22500/2, 29400/2, 37400/2, 46000/2, 66300/2, 90100/2, 117800/2, 147500/2, 182100/2]*bear_ratio_res #allowable shear
+    _JOINT_DATA = [Joint(d_inch, inse_ratio, Nmax, Vmax) for d_inch, inse_ratio, Nmax, Vmax in zip(
+       [1/4, 5/16, 3/8, 7/16, 1/2, 9/16, 5/8, 3/4, 7/8, 1, 1+1/8, 1+1/4], #diameters
+       [1.25, 1.25, 1.19, 1.19, 1.1, 1.1, 1.1, 1.1, 1.1, 1.1, 1.1, 1.1, 1.1], #insert diameter ratios
+       [4080, 6500, 10100, 13600, 18500, 23600, 30100, 44000, 60000, 80700, 101800, 130200], #allowable tesile
+       [7360/2, 11500/2, 16560/2, 22500/2, 29400/2, 37400/2, 46000/2, 66300/2, 90100/2, 117800/2, 147500/2, 182100/2] #allowable shear
     )]
 
     @classmethod
