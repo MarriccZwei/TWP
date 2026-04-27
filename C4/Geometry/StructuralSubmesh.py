@@ -48,8 +48,8 @@ class StructuralSubmesh():
             self._rib_creation(i+1)
 
             if i < furthest_motor_i: #NOTE: for i = furthest i we have our inboard at the boundary so the bay is outboard of the boundary
-                self._railing_creation(self.wing.scaffold[i, 0, :], self.wing.scaffold[i+1, 0, :], ny, [], "sb") #top motor support
-                self._railing_creation(self.wing.scaffold[i, 1, :], self.wing.scaffold[i+1, 1, :], ny, [], "sb") #bottom motor support
+                self._railing_creation(self.wing.scaffold[i, 0, :], self.wing.scaffold[i+1, 0, :], ny, [], "eb") #top motor support
+                self._railing_creation(self.wing.scaffold[i, 1, :], self.wing.scaffold[i+1, 1, :], ny, [], "eb") #bottom motor support
 
             if i < furthest_lg_i: #same for landing gear supports
                 self._railing_creation(self.wing.scaffold[i, -1, :], self.wing.scaffold[i+1, -1, :], ny, [], "sb")
@@ -193,7 +193,7 @@ class JointStructuralSubmesh(StructuralSubmesh):
     def __init__(self, wing:ElysianWing, HYPERPARAMS:dict[str, float], n:int, rjperc:float):
         self.rjperc = rjperc
         super().__init__(wing, HYPERPARAMS, n)
-        
+
 
     def _railing_creation(self, inb:nt.NDArray[np.float64], oub:nt.NDArray, ny:int, eleArg:list[float], eleType:str):
         c_inb = self.wing.c_at_y(inb[1])
@@ -266,7 +266,12 @@ class JointStructuralSubmesh(StructuralSubmesh):
                                                                   X[1:, :-1].flatten(), Y[1:, :-1].flatten(), Z[1:, :-1].flatten()):
             c = (self.wing.c_at_y(y1)+self.wing.c_at_y(y4))/2
             H = Hpc*c
-            self.eleTypes.append(eleType)
+            
+            #eleType correction for within the lg region
+            if (y1+y2+y3+y4)/4 > self.wing.ym2:
+                self.eleTypes.append(eleType)
+            else:
+                self.eleTypes.append(eleType[0].upper()+eleType[1]) #within lg region marked by uppercase, e.g. 'Sq' instead of 'sq
             self.eleArgs.append([H])
             self.eleNodes.append([(x1, y1, z1), (x2, y2, z2), (x3, y3, z3), (x4, y4, z4)])
 

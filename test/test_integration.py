@@ -50,7 +50,7 @@ def test_self_weight():
         "tipfoil":asb.Airfoil("naca2410")
     }
 
-    N = 10
+    N = 7
 
     LC_INFO = [
     {
@@ -82,13 +82,17 @@ def test_self_weight():
     model, mesher, excl, wing = geometry_init(GEOM_SOURCE, HYPERPARAMS, MASSES, N, LC_INFO, G0, MTOM, 8)
 
     desvars = {
-        '(2t/H)_sq':0.3,
-        '(2t/H)_pq':0.15,
-        '(2t/H)_aq':0.1,
+        '(2t/H)_Sq':0.3,
+        '(2t/H)_Pq':0.15,
+        '(2t/H)_Aq':0.1,
         'W_bb':0.004,
         'W_mb':0.004,
         'W_lb':0.03,
-        'Ds':.02,
+        'ds':.02,
+        'de':.01,
+        '(2t/H)_sq':0.06,
+        '(2t/H)_pq':0.03,
+        '(2t/H)_aq':0.03
     }
 
     materials = {

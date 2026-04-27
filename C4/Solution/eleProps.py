@@ -48,7 +48,7 @@ def load_ele_props(desvars:ty.Dict[str,float], materials:ty.Dict[str,float], ele
 
     for eleType, eleArg in zip(eleTypes, eleArgs):
         if eleType[1] == 'q': #sandwich elements
-            H = eleArg[0]#*desvars[f"(H'/H)_{eleType}"] NOTE: still disputed - probs 2 remove
+            H = eleArg[0]
             t = desvars[f"(2t/H)_{eleType}"]/2*H
             h = H-2*t
             shellprops.append(psu.laminated_plate([0,0,0], laminaprops=[(Ea, nua), (Ef, nuf), (Ea, nua)], 
@@ -58,12 +58,17 @@ def load_ele_props(desvars:ty.Dict[str,float], materials:ty.Dict[str,float], ele
         elif eleType[1] == 'i': #inertia elements
             inertia_vals.append(eleArg[0])
 
-        elif eleType in ['rb', 'sb']: #rails & scaffolding - circular beams
-            D = eleArg[0] if eleType=='rb' else desvars["Ds"]
+        elif eleType in ['rb', 'sb', 'eb']: #rails & scaffolding - circular beams
+            if eleType=='rb':
+                d = eleArg[0]
+            elif eleType=='sb':
+                d = desvars["ds"]
+            else:
+                d = desvars["de"]
             prop_rail = pbp.BeamProp()
             prop_rail.E = Ea
-            prop_rail.A = np.pi/4*D**2
-            prop_rail.Iyy = np.pi/64*D**4
+            prop_rail.A = np.pi/4*d**2
+            prop_rail.Iyy = np.pi/64*d**4
             prop_rail.Izz = prop_rail.Iyy
             prop_rail.J = prop_rail.Iyy+prop_rail.Izz
             prop_rail.G = Gc
@@ -196,7 +201,7 @@ def beam_stress_recovery(desvars:ty.Dict[str,float], materials:ty.Dict[str,float
     yes = list()
     zes = list()
 
-    if beamType in ['rb', 'sb']: #rail or scaffold evaluation
+    if beamType in ['rb', 'sb', 'eb']: #rail or scaffold evaluation
         R = np.sqrt(beamprop.A/np.pi)
         EVAL_PTS = 16 #how many points to evaluate around cross-section
         theta = np.linspace(0, np.pi*2, EVAL_PTS+1)[:-1]
