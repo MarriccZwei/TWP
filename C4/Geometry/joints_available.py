@@ -1,10 +1,11 @@
 import aerosandbox.numpy as np
 
 class Joint():
-    def __init__(self, d_inch:float, d_ratio_insert:float, Nmax:float, Vmax:float, bearing_ratio:float=1., sig_b_sheet:float=441e6, rho_bolt:float=7750., rho_insert:float=2780., rho_sheet:float=2780., spacing_ratio:float=3., edge_ratio:float=2.):
+    def __init__(self, d_inch:float, d_ratio_insert:float, Nmax:float, Vmax:float, bearing_ratio:float=1., sig_b_sheet:float=441e6, rho_bolt:float=8000., rho_insert:float=2780., rho_sheet:float=2780., spacing_ratio:float=3., edge_ratio:float=2.):
         #input data in ich (bolt d), mm (sheet t) and lbf (allowable forces), as taken from the MIL-B-6812E datasheet
         #spacing as load direction from Chapter 4 DOI: https://doi.org/10.1016/B978-0-323-91682-0.00018-2
         #defaults assuming steel bolts, rest from alu 2024-T4. alu from the ususal source,
+        #steel density from https://www.greatmetal.com/astm-a193-grade-b7-bolts-fasteners.html
         mm_to_m = .001
         inch_to_m = 0.0254
         lbf_to_N = 4.44822
