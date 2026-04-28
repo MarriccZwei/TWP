@@ -85,7 +85,10 @@ class Optimiser():
 
         #4) saving the masses of all constant inertia st. one can get structural mass in the objective
         self._mn_sum = 0.
-        for iv in self.model.inertia_vals:
+        #we have to include those as structural mass so we cannot excludethm
+        n_joint_pts = self.wing.scaffold.shape[0] *self.wing.scaffold.shape[1]
+        #we use the fact that this is the final inertia added to the list
+        for iv in self.model.inertia_vals[:-n_joint_pts]:
             self._mn_sum += iv
 
 
