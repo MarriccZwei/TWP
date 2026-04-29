@@ -10,8 +10,11 @@ quad_stresses = list()
 lcinfo = [mc.LC_INFO[3]]
 lcinfo[0]["Ttot"] = 112800. # [N]
 
+res_no_buckl = mc.RES
+res_no_buckl["klb"] = 0
+
 for n in ns:
-    optimiser = Optimiser(mc.DESVARS_INITIAL, lcinfo, mc.GEOM_SOURCE, mc.HYPERPARAMS, mc.MASSES, n, mc.MATERIALS, mc.RES, mc.G0, mc.MTOM, mc.NAIRFS, mc.LBUCKLSF,
+    optimiser = Optimiser(mc.DESVARS_INITIAL, lcinfo, mc.GEOM_SOURCE, mc.HYPERPARAMS, mc.MASSES, n, mc.MATERIALS, res_no_buckl, mc.G0, mc.MTOM, mc.NAIRFS, mc.LBUCKLSF,
                         mc.BOUNDS)
     dvv = optimiser.simulate_constraints(optimiser.desvarvec(), True, uc.REFINE_SAVE_PATH+f"{n}\\")
     quad_stresses.append(dvv[0])
