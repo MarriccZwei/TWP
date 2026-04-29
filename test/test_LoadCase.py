@@ -85,7 +85,7 @@ def test_moments(plot=False):
     G0 = 9.81 # [N/kg]
     MTOM = 76000. # [kg]
 
-    model, mesher, excl, wing = geometry_init(GEOM_SOURCE, HYPERPARAMS, MASSES, N, LC_INFO, G0, MTOM, 8)
+    model, mesher, excl, wing, ism = geometry_init(GEOM_SOURCE, HYPERPARAMS, MASSES, N, LC_INFO, G0, MTOM, 8)
     airfs, les, tes = wing.aero_foils(10)
 
     lc_dummy = LoadCase(1., 76000., model.N, 9.81, 0., asb.OperatingPoint(velocity=269., alpha=-.75, atmosphere=asb.Atmosphere(7000)), les, tes, airfs, 20, 10, 10, True)

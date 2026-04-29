@@ -49,7 +49,7 @@ class Optimiser():
             self.iteration_number = 0
 
         #1) geometry initialization
-        self.model, self.mesher, self.excl, self.wing = geometry_init(GEOM_SOURCE, HYPERPARAMS, MASSES, N, loadCasesInfo, g0, MTOM, meshMergeDigits, resConfig['sks'])
+        self.model, self.mesher, self.excl, self.wing, ism = geometry_init(GEOM_SOURCE, HYPERPARAMS, MASSES, N, loadCasesInfo, g0, MTOM, meshMergeDigits, resConfig['sks'])
         airfs, les, tes = self.wing.aero_foils(nairfs)
         self.ep:ty.Dict[str, ty.List[object]] = dict() #element property dict, updated during self._update_model
 
@@ -84,11 +84,8 @@ class Optimiser():
             self.lcs.append(lc)
 
         #4) saving the masses of all constant inertia st. one can get structural mass in the objective
-        self._mn_sum = 0.
-        #we have to include those as structural mass so we cannot excludethm
-        n_joint_pts = self.wing.scaffold.shape[0] *self.wing.scaffold.shape[1]
-        #we use the fact that this is the final inertia added to the list
-        for iv in self.model.inertia_vals[:-n_joint_pts]:
+        self._mn_sum = -ism.tot_joint_mass #we have to include joints as structural mass so we cannot exclude them
+        for iv in self.model.inertia_vals:
             self._mn_sum += iv
 
 

@@ -7,8 +7,12 @@ ns = [5, 6, 7, 8, 9, 10, 11, 12]#, 13, 14, 15, 16]
 # beam_stresses = list()
 # quad_stresses = list()
 lms = list()
+
+lcinfo = [mc.LC_INFO[3]]
+lcinfo[0]["Ttot"] = 112800. # [N]
+
 for n in ns:
-    optimiser = Optimiser(mc.DESVARS_INITIAL, [mc.LC_INFO[0]], mc.GEOM_SOURCE, mc.HYPERPARAMS, mc.MASSES, n, mc.MATERIALS, mc.RES, mc.G0, mc.MTOM, mc.NAIRFS, mc.LBUCKLSF,
+    optimiser = Optimiser(mc.DESVARS_INITIAL, lcinfo, mc.GEOM_SOURCE, mc.HYPERPARAMS, mc.MASSES, n, mc.MATERIALS, mc.RES, mc.G0, mc.MTOM, mc.NAIRFS, mc.LBUCKLSF,
                         mc.BOUNDS)
     dvv = optimiser.simulate_constraints(optimiser.desvarvec(), True, uc.REFINE_SAVE_PATH+f"{n}\\")
     # quad_stresses.append(dvv[0])

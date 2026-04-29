@@ -78,7 +78,7 @@ def test_self_weight():
     G0 = 9.81 # [N/kg]
     MTOM = 76000. # [kg]
 
-    model, mesher, excl, wing = geometry_init(GEOM_SOURCE, HYPERPARAMS, MASSES, N, LC_INFO, G0, MTOM, 8)
+    model, mesher, excl, wing, ism = geometry_init(GEOM_SOURCE, HYPERPARAMS, MASSES, N, LC_INFO, G0, MTOM, 8)
 
     desvars = {
         '(2t/H)_sq':0.01,
