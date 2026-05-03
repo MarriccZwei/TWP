@@ -38,6 +38,8 @@ class LoadCase():
         self.T = np.zeros(N) #here be the thrust
         self.L = np.zeros(N) #here be the landing load
 
+        self.pg = 1/np.sqrt(1-(self.op.velocity/self.op.atmosphere.speed_of_sound())**2) #Prandtl-Glauert correction
+
 
     def aerodynamic_matrix(self, nid_pos_affected:nt.NDArray[np.int32], ncoords_affected:nt.NDArray[np.float32], debug=False):
         '''Conducting an aerodynamic simulation based on skin nodes, updating A and KA'''
@@ -48,7 +50,7 @@ class LoadCase():
         self.KA = W @ dFv_dp @ W_u_to_p
 
 
-    def apply_aero(self, nid_pos_affected:nt.NDArray[np.int32], coords_affected:nt.NDArray[np.float64]):
+    def apply_aero(self, nid_pos_affected:nt.NDArray[np.int32], coords_affected:nt.NDArray[np.float64], debug=False):
         '''
         Applying the aerodynamic load to the given subset of nodes
 
@@ -57,8 +59,8 @@ class LoadCase():
         :param coords_affect: ncoords-formatted coordinates of the nodes affected
         :type coords_affect: nt.NDArray[np.float64]
         '''
-        _, vlm, _, _, sol = self._vlm(return_sol=True)
-        ratio = self.MTOM*self.g0*self.n/sol['L']/2 #NOTE we are only looking at one wing
+        _, vlm, _, _, lift = self._vlm(return_lift=True, debug=debug)
+        ratio = self.MTOM*self.g0*self.n/lift
         _, self.A = self._aero2fem(vlm, coords_affected, nid_pos_affected, ratio)
 
 
@@ -188,7 +190,7 @@ class LoadCase():
         return ss.csc_matrix(W_u_to_p)
 
 
-    def _vlm(self, displs:ty.List[float]=None, return_sol=False, debug=False):
+    def _vlm(self, displs:ty.List[float]=None, return_lift=False, debug=False):
         #allowing for initial displacements for flutter. Yet, for static analysis we dont's need displacements
         if displs is None:
             displs = np.zeros(len(self.airfs)*4)
@@ -220,37 +222,21 @@ class LoadCase():
         sol = vlm.run()
         forces = sol["F_g"]
         moments = sol["M_g"]
+        lift = sol['L']
 
         # #compressibility corrections
-        # Fv0 = vlm.forces_geometry
-        # Av = vlm.areas
-        # Fv0magn = np.sqrt(Fv0[:, 0]**2+Fv0[:, 1]**2+Fv0[:, 2]**2)
-        # delta_cp0 = Fv0magn/Av*2/self.op.velocity**2/self.rho_atm
+        vlm.forces_geometry *= self.pg
+        forces *= self.pg
+        moments *= self.pg
+        lift *= self.pg
 
-        # #splitting the pressure contributions between the upper and lower side of the wing approximately based on cp plots
-        # magnitude_ratio = 3 #how much larger in absolute value is the cp on the upper side in the plot
-        # cpl0 = delta_cp0/(magnitude_ratio+1)
-        # cpu0 = -magnitude_ratio*delta_cp0/(magnitude_ratio+1)
-        # if debug: print(f"cpl: {cpl0.min()} to {cpl0.max()}, cpu: {cpu0.min()} to {cpu0.max()}")
-
-        # #Karman-Thiessen correction
-        # cpl = self._karman_thiessen(cpl0)
-        # cpu = np.maximum(self._karman_thiessen(cpu0), np.full(len(cpu0), -5.)) #NOTE: clipping to avoid the non-physical cp peak
-        # delta_cp = cpl-cpu
-        # if debug: print(f"cpl: {cpl.min()} to {cpl.max()}, cpu: {cpu.min()} to {cpu.max()}, cpu0argmax: {cpu0[cpu.argmax()]}")
-
-        # #broadcasting for final forces
-        # vlm.forces_geometry = Fv0*(delta_cp/delta_cp0)[:, None]
-        # forces = np.sum(vlm.forces_geometry, 0)
-        # assert len(forces)==3
-        # #NOTE: moments not corrected for compressibilit, hence deprecated
 
         if debug: #printing ratio
-            ratio = self.MTOM*self.g0*self.n*np.cos(np.deg2rad(self.op.alpha))/forces[2]/2
+            ratio = self.MTOM*self.g0*self.n/lift
             print(f"nominal load to calculated load: {ratio}")
 
-        if return_sol:
-            return airplane, vlm, forces, moments, sol
+        if return_lift:
+            return airplane, vlm, forces, moments, lift
         else:
             return airplane, vlm, forces, moments
 
