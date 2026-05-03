@@ -8,14 +8,6 @@ import pyfe3d as pf3
 import matplotlib.pyplot as plt
 import pyvista as pv
 
-def test_compressibility_corrections():
-    for i in range(8, 12):
-        lc_dummy = LoadCase(1., 100., 36, 9.81, 0., asb.OperatingPoint(velocity=270.), np.array([[0., 0., 0.], [0., 1., 0.], [0., 2., 0.]]), 
-                            np.array([[0.2, 0., 0.], [0.2, 1., 0.], [0.2, 2., 0.]]), [asb.Airfoil("naca5412")]*3, 20, i, 10, True)
-        airplane, vlm, forces, moments = lc_dummy._vlm(debug=True)
-        print(forces)
-    vlm.draw()
-
 
 def test_moments(plot=False):
     #see if the pitching moment stays equivalent after the interpolation
@@ -88,15 +80,16 @@ def test_moments(plot=False):
     model, mesher, excl, wing, ism = geometry_init(GEOM_SOURCE, HYPERPARAMS, MASSES, N, LC_INFO, G0, MTOM, 8)
     airfs, les, tes = wing.aero_foils(10)
 
-    lc_dummy = LoadCase(1., 76000., model.N, 9.81, 0., asb.OperatingPoint(velocity=269., alpha=-.75, atmosphere=asb.Atmosphere(7000)), les, tes, airfs, 20, 10, 10, True)
+    lc_dummy = LoadCase(1., 76000., model.N, 9.81, 0., asb.OperatingPoint(velocity=269., alpha=-.78, atmosphere=asb.Atmosphere(7000)), les, tes, airfs, 20, 10, 10, True)
 
     #total moment as applied to the structure
-    lc_dummy.apply_aero(*mesher.get_submesh('sq'))
+    lc_dummy.apply_aero(*mesher.get_submesh_list(['sq', 'Sq']), debug=True)
     moments_applied = lc_dummy.A[2::pf3.DOF]*model.x
     mom_appl = moments_applied.sum()
     
     airplane, vlm, forces, moments = lc_dummy._vlm(debug=True)
     vortex_valid = vlm.vortex_centers[:, 1] > model.y.min()
+    print(model.y.min())
     Fvz = vlm.forces_geometry[vortex_valid][:, 2]
     moments_vlm = Fvz*vlm.vortex_centers[vortex_valid][:, 0]
     mom_vlm = moments_vlm.sum()
@@ -201,5 +194,4 @@ def plot_upward_arrows(
 
 
 if __name__ == "__main__":
-    #test_compressibility_corrections()
     test_moments(True)
