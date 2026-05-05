@@ -15,7 +15,7 @@ resNoBuckl["klb"] = 0 #exclude linear buckling from iterative analysis as it sho
 optimiser = Optimiser(desvarsInit, [mc.LC_INFO[0], mc.LC_INFO[3]], mc.GEOM_SOURCE, mc.HYPERPARAMS, mc.MASSES, mc.N, mc.MATERIALS, resNoBuckl, mc.G0, mc.MTOM, mc.NAIRFS, mc.LBUCKLSF,
                       mc.BOUNDS, logEveryNIters=1)
 result = opt.minimize(optimiser.objective, optimiser.desvarvec(), method='COBYLA', constraints=optimiser.constraint(),
-                      options={'rhobeg':.2})
+                      options={'rhobeg':.2, 'catol':1e-7})
 desvarsResult = optimiser.desvars_from_vec(result.x)
 print(f"Converged to: {desvarsResult},\nwith success: {result.success}\nand message: {result.message}")
 gc.collect()
