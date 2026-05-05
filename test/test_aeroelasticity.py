@@ -129,7 +129,7 @@ def test_self_weight():
     lc = LoadCase(1., 76000, model.N, 9.81, 112800, asb.OperatingPoint(atmosphere=asb.Atmosphere(7000.), alpha=-.75, velocity=269.), les, tes, airfs, bres=20, cres=18, aeroelastic=True, nneighs=10)
     #lc.apply_aero(*mesher.get_submesh('sq'))
     # lc._vlm(debug=True)
-    lc.aerodynamic_matrix(*mesher.get_submesh(['sq', 'Sq']), True)
+    lc.aerodynamic_matrix(*mesher.get_submesh_list(['sq', 'Sq']), True)
     print(model.KC0[model.KC0>0.].mean(), np.abs(lc.KA[np.abs(lc.KA)>0.]).mean())
 
     #post processing
