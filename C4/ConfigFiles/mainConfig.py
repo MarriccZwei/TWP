@@ -25,7 +25,7 @@ MATERIALS = {
     'E_FOAM':6.68e9,
     'NU_FOAM':.275,
     'RHO_FOAM':688.,
-    'SF_FOAM':45e6/1.5
+    'SF_FOAM':16.62e6/1.5
 }
 
 LC_INFO = [
