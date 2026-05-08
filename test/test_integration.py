@@ -103,7 +103,7 @@ def test_self_weight():
         'E_FOAM':6.68e9,
         'NU_FOAM':.275,
         'RHO_FOAM':688.,
-        'SF_FOAM':45e6
+        'SF_FOAM':45e6/1.5
     }
 
     ep = load_ele_props(desvars, materials, mesher.eleTypes, mesher.eleArgs)
