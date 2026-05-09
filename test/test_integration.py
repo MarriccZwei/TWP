@@ -83,12 +83,12 @@ def test_self_weight():
 
     desvars = {
         '(2t/H)_Sq':0.3,
-        '(2t/H)_Pq':0.15,
+        '(2t/H)_Pq':0.25,
         '(2t/H)_Aq':0.1,
         'W_bb':0.004,
         'W_mb':0.004,
-        'W_lb':0.03,
-        'ds':.02,
+        'W_lb':0.02,
+        'ds':.01,
         'de':.01,
         '(2t/H)_sq':0.06,
         '(2t/H)_pq':0.03,
@@ -100,10 +100,10 @@ def test_self_weight():
         'NU_ALU':.33,
         'RHO_ALU':2780.,
         'SF_ALU':323.33e6,
-        'E_FOAM':0.3747e9,
+        'E_FOAM':0.58644e9,
         'NU_FOAM':.275,
-        'RHO_FOAM':688.,
-        'SF_FOAM':2.605e6
+        'RHO_FOAM':250.2,
+        'SF_FOAM':3.645e6
     }
 
     ep = load_ele_props(desvars, materials, mesher.eleTypes, mesher.eleArgs)

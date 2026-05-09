@@ -12,7 +12,7 @@ for key in mc.BOUNDS[0].keys(): #centered initial conditions
 resNoBuckl = mc.RES.copy()
 resNoBuckl["klb"] = 0 #exclude linear buckling from iterative analysis as it should be not constraining
 
-rho_fs = [100, 200, 300, 400, 500, 600, 700]
+rho_fs = [175, 200, 225, 250.2, 275, 300, 325]
 materials = mc.MATERIALS.copy()
 objectives_report = "=====FINAL REPORT=====\n"
 
