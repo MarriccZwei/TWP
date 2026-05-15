@@ -198,6 +198,13 @@ class Optimiser():
                 print(f"\nStep {self.iteration_number} desvars: {self.desvars}")
 
     
+    ORDER = [
+    '(2t/H)_Sq', '(2t/H)_Pq', '(2t/H)_Aq',
+    'W_bb', 'W_mb', 'W_lb',
+    'ds', 'de',
+    '(2t/H)_sq', '(2t/H)_pq', '(2t/H)_aq'
+    ]
+
     def desvarvec(self, vardict:ty.Dict[str, float]=None):
         '''
         Returns the current design variables as a vector to be plugged into scipy optimiser
@@ -206,7 +213,7 @@ class Optimiser():
             normalise = lambda key:(self.desvars[key]-self.lb[key])/(self.ub[key]-self.lb[key])
         else:
             normalise = lambda key:(vardict[key]-self.lb[key])/(self.ub[key]-self.lb[key])
-        return np.array([normalise(key) for key in ['(2t/H)_Sq', '(2t/H)_Pq', '(2t/H)_Aq', 'W_bb', 'W_mb', 'W_lb', 'ds', 'de', '(2t/H)_sq', '(2t/H)_pq', '(2t/H)_aq']])
+        return np.array([normalise(key) for key in self.ORDER])
     
 
     def desvars_from_vec(self, desvarvec:nt.NDArray[np.float64]):
@@ -217,15 +224,6 @@ class Optimiser():
         :type desvarvec: nt.NDArray[np.float64]
         '''
         return {
-            '(2t/H)_Sq':desvarvec[0]*self.ub['(2t/H)_sq']+(1-desvarvec[0])*self.lb['(2t/H)_Sq'],
-            '(2t/H)_Pq':desvarvec[1]*self.ub['(2t/H)_pq']+(1-desvarvec[1])*self.lb['(2t/H)_Pq'],
-            '(2t/H)_Aq':desvarvec[2]*self.ub['(2t/H)_aq']+(1-desvarvec[2])*self.lb['(2t/H)_Aq'],
-            'W_bb':desvarvec[3]*self.ub['W_bb']+(1-desvarvec[3])*self.lb['W_bb'],
-            'W_mb':desvarvec[4]*self.ub['W_mb']+(1-desvarvec[4])*self.lb['W_mb'],
-            'W_lb':desvarvec[5]*self.ub['W_lb']+(1-desvarvec[5])*self.lb['W_lb'],
-            'ds':desvarvec[6]*self.ub['ds']+(1-desvarvec[6])*self.lb['ds'],
-            'de':desvarvec[6]*self.ub['ds']+(1-desvarvec[6])*self.lb['de'],
-            '(2t/H)_sq':desvarvec[0]*self.ub['(2t/H)_sq']+(1-desvarvec[0])*self.lb['(2t/H)_sq'],
-            '(2t/H)_pq':desvarvec[1]*self.ub['(2t/H)_pq']+(1-desvarvec[1])*self.lb['(2t/H)_pq'],
-            '(2t/H)_aq':desvarvec[2]*self.ub['(2t/H)_aq']+(1-desvarvec[2])*self.lb['(2t/H)_aq'],
+            k: self.lb[k] + desvarvec[i] * (self.ub[k] - self.lb[k])
+            for i, k in enumerate(self.ORDER)
         }

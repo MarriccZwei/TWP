@@ -4,6 +4,7 @@ from ...C4.ConfigFiles.classified import MASSES
 import pyvista as pv
 import numpy as np
 import aerosandbox as asb
+import matplotlib.pyplot as plt
 
 def test_geometry_init():
     HYPERPARAMS ={
@@ -137,6 +138,26 @@ def test_geometry_init():
     )
 
     plotter.show()
+
+    #checking appropriate placement of element codes
+    outer_quad_centroids_x = list()
+    outer_quad_centroids_y = list()
+    inner_quad_centroids_x = list()
+    inner_quad_centroids_y = list()
+
+    for eleposes, elecode in zip(mesher.eleNodePoses, mesher.eleTypes):
+        if elecode == 'sq':
+            outer_quad_centroids_x.append(sum(model.x[elepos] for elepos in eleposes) / 4)
+            outer_quad_centroids_y.append(sum(model.y[elepos] for elepos in eleposes) / 4)
+        elif elecode == 'Sq':
+            inner_quad_centroids_x.append(sum(model.x[elepos] for elepos in eleposes) / 4)
+            inner_quad_centroids_y.append(sum(model.y[elepos] for elepos in eleposes) / 4)
+
+    plt.plot([0., 5.], [wing.ym2, wing.ym2])
+    plt.scatter(outer_quad_centroids_x, outer_quad_centroids_y)
+    plt.scatter(inner_quad_centroids_x, inner_quad_centroids_y)
+    plt.show()
+            
 
 if __name__ == "__main__":
     test_geometry_init()
