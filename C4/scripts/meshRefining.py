@@ -3,7 +3,7 @@ from ..ConfigFiles import mainConfig as mc
 from ..ConfigFiles import userConfig as uc
 import matplotlib.pyplot as plt
 
-ns = [5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16]#, 13, 14, 15, 16]
+ns = [5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15]#, 13, 14, 15, 16]
 # beam_stresses = list()
 # quad_stresses = list()
 lms = list()
