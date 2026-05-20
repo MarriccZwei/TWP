@@ -24,7 +24,12 @@ for rail_d in rail_ds:
                         options={'rhobeg':.2})
     desvarsResult = optimiser.desvars_from_vec(result.x)
     print(f"Converged to: {desvarsResult},\nwith success: {result.success}\nand message: {result.message}")
-    gc.collect()
     objectives_report += f"For rail_d: {rail_d}, objective: {optimiser.objective(optimiser.desvarvec(desvarsResult))}\nOptimisantion result: {desvarsResult}\n"
+    gc.collect()
+
+    verifier = Optimiser(desvarsResult, mc.LC_INFO, mc.GEOM_SOURCE, hypers, mc.MASSES, mc.N, mc.MATERIALS, mc.RES, mc.G0, mc.MTOM, mc.NAIRFS, mc.LBUCKLSF,
+                      mc.BOUNDS)
+    objectives_report += f"failure margins: {verifier.simulate_constraints(verifier.desvarvec())}\n"
+    gc.collect()
 
 print(objectives_report)
