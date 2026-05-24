@@ -139,8 +139,8 @@ def process_load_case(model:Pyfe3DModel, lc:LoadCase, materials:ty.Dict[str, flo
         plotter.add_mesh(
         meshs,
         show_edges=True,
-        color="yellow",
-        edge_color="black"
+        color="orange",
+        edge_color="orange"
         )
 
         plotter.add_mesh(
@@ -293,8 +293,8 @@ def plot_nodal_quantity(ncoords:nt.NDArray[np.float64], qty:nt.NDArray[np.float6
     plotter.add_mesh(
         meshs,
         show_edges=True,
-        color="yellow",
-        edge_color="black"
+        color="orange",
+        edge_color="orange"
     )
 
     plotter.add_mesh(

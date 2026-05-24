@@ -24,7 +24,8 @@ for n in ns:
 
 plt.plot(ns, quad_stresses, label="quad elements")
 plt.plot(ns, beam_stresses, label="beam elements")
-plt.ylabel("max. stress / failure stress")
+plt.ylabel("Max. stress / failure stress")
+plt.xlabel("Nodes per sheet width")
 plt.legend()
 plt.savefig(uc.FW_SAVE_PATH+"StressConvergence.pdf")
 plt.show()

@@ -23,6 +23,6 @@ for j in range(nfreq):
     plt.plot(Ns, np.real(omegan[j, :]), label=f"frequency {j+1}")
 plt.legend()
 plt.ylabel("Natural frequency [rad/s]")
-plt.xlabel("Number of nodes per wavelength")
+plt.xlabel("Nodes per sheet width")
 plt.savefig(uc.FW_SAVE_PATH+"FlutterConvergence.pdf")
 plt.show()

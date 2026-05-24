@@ -26,7 +26,7 @@ for n in ns:
 plt.plot(ns, lms)
 plt.ylabel("Buckling load multiplier")
 #plt.ylabel("max. stress / failure stress")
-plt.xlabel("nodes per sheet width")
+plt.xlabel("Nodes per sheet width")
 #plt.legend()
 plt.savefig(uc.FW_SAVE_PATH+"BucklingConvergence.pdf")
 plt.show()

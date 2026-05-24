@@ -76,7 +76,7 @@ G0 = 9.81 # [N/kg]
 MTOM = 76000. # [kg]
 LBUCKLSF = 1.5
 
-N = 11
+N = 12
 
 BOUNDS = (
     {
