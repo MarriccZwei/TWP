@@ -101,7 +101,7 @@ class Optimiser():
         :rtype: NDArray[float64]
         '''
         self._update_model(desvarvec)
-        failure_margins = np.array([0., 0., np.inf, 0.])
+        failure_margins = np.zeros(len(self.lcs) * 2)
         for i, lc in enumerate(self.lcs):
             #1) handling savePath for multiple load case results
             if savePath is None:
@@ -111,22 +111,27 @@ class Optimiser():
 
             #2.0) separate processing for the 'aeroelastic load cases'
             if lc.aeroelastic:
-                flutterCount = process_aeroelastic_load_case(self.model, lc, plot, savePathLC, self.resConfig["kfl"])
-                if flutterCount>failure_margins[3]:
-                    failure_margins[3] = flutterCount
+                # flutterCount = process_aeroelastic_load_case(self.model, lc, plot, savePathLC, self.resConfig["kfl"])
+                # if flutterCount>failure_margins[3]:
+                #     failure_margins[3] = flutterCount
+                raise NotImplementedError("Aeroelastic Load Case deprecated!!!")
                     
             #2) load case (post) processing
             else:
+                if self.resConfig["klb"] > .5:
+                    raise NotImplementedError("Buckling deprecated!!!")
                 lcmargins = process_load_case(self.model, lc, self.materials, self.desvars, self.ep["beamtypes"], self.ep["quadtypes"],
                                             self.excl, plot, savePathLC, self.resConfig["klb"])
                 
                 #3) assesing whether the load case is constraining and updating failure_margins if so
-                if failure_margins[0]<lcmargins[0]:#quad stresses, the more, the worse
-                    failure_margins[0]=lcmargins[0]
-                if failure_margins[1]<lcmargins[1]:#beam stresses, the more, the worse
-                    failure_margins[1]=lcmargins[1]
-                if failure_margins[2]>lcmargins[2]:#linear buckling load multiplier, the less, the worse
-                    failure_margins[2]=lcmargins[2]
+                # if failure_margins[0]<lcmargins[0]:#quad stresses, the more, the worse
+                #     failure_margins[0]=lcmargins[0]
+                # if failure_margins[1]<lcmargins[1]:#beam stresses, the more, the worse
+                #     failure_margins[1]=lcmargins[1]
+                # if failure_margins[2]>lcmargins[2]:#linear buckling load multiplier, the less, the worse
+                #     failure_margins[2]=lcmargins[2]
+                failure_margins[2*i] = lcmargins[0]
+                failure_margins[2*i + 1] = lcmargins[1]
 
         #4) logging if enabled
         if not (self.logEveryNIters is None):
@@ -167,11 +172,11 @@ class Optimiser():
         :return: the constraint list to pass to the scipy optimizer
         :rtype: List[Union[opt.NonlinearConstraint, opt.LinearConstraint]]
         '''
-        epsilon = 1e-3
+        epsilon = 1e-5
         comparisonFlutter = .5
         ndesvars = len(self.desvars)
-        return [opt.NonlinearConstraint(self.simulate_constraints, np.array([0.,0., self.LINBUCKLSF, -epsilon]),
-                                       np.array([1., 1., np.inf, comparisonFlutter])),
+        return [opt.NonlinearConstraint(self.simulate_constraints, np.zeros(len(self.lcs) * 2),
+                                       np.ones(len(self.lcs) * 2)),
                 opt.LinearConstraint(np.eye(ndesvars), np.ones(ndesvars)*epsilon, #for some margin from divergence
                                      np.ones(ndesvars))] #making use of the fact that the desvarvec is normalised
 
