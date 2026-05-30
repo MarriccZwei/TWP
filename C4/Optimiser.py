@@ -139,6 +139,53 @@ class Optimiser():
                 print(f"Step {self.iteration_number} failure margins: {failure_margins}")
         
         return failure_margins
+    
+
+    def forward(self, desvarvec:nt.NDArray[np.float64], plot=False, savePath=None)->nt.NDArray[np.float64]:
+        '''
+        Updates the FEM model if necessary and calculates the failure margins based on the provided load cases
+        
+        :param desvarvec: vector of design variables, in the format required by the optimiser
+        :type desvarvec: nt.NDArray[np.float64]
+        :param plot: vector of design variables
+        :param savePath: the path to which the plots of load case processing results are to be saved
+        :return: the array of failure margins: [quad stress, beam stress, load multiplier, complex eigenfrequencies count]
+        :rtype: NDArray[float64]
+        '''
+        self._update_model(desvarvec)
+        failure_margins = np.array([0., 0., np.inf, 0.])
+        for i, lc in enumerate(self.lcs):
+            #1) handling savePath for multiple load case results
+            if savePath is None:
+                savePathLC = None
+            else:
+                savePathLC = f"{savePath}LC{i}\\"
+
+            #2.0) separate processing for the 'aeroelastic load cases'
+            if lc.aeroelastic:
+                flutterCount = process_aeroelastic_load_case(self.model, lc, plot, savePathLC, self.resConfig["kfl"])
+                if flutterCount>failure_margins[3]:
+                    failure_margins[3] = flutterCount
+                    
+            #2) load case (post) processing
+            else:
+                lcmargins = process_load_case(self.model, lc, self.materials, self.desvars, self.ep["beamtypes"], self.ep["quadtypes"],
+                                            self.excl, plot, savePathLC, self.resConfig["klb"])
+                
+                #3) assesing whether the load case is constraining and updating failure_margins if so
+                if failure_margins[0]<lcmargins[0]:#quad stresses, the more, the worse
+                    failure_margins[0]=lcmargins[0]
+                if failure_margins[1]<lcmargins[1]:#beam stresses, the more, the worse
+                    failure_margins[1]=lcmargins[1]
+                if failure_margins[2]>lcmargins[2]:#linear buckling load multiplier, the less, the worse
+                    failure_margins[2]=lcmargins[2]
+
+        #4) logging if enabled
+        if not (self.logEveryNIters is None):
+            if self.iteration_number%self.logEveryNIters==0:
+                print(f"Step {self.iteration_number} failure margins: {failure_margins}")
+        
+        return failure_margins
             
 
     def objective(self, desvarvec:nt.NDArray[np.float64])->float:

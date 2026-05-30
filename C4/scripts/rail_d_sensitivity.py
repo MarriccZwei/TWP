@@ -29,7 +29,7 @@ for rail_d in rail_ds:
 
     verifier = Optimiser(desvarsResult, mc.LC_INFO, mc.GEOM_SOURCE, hypers, mc.MASSES, mc.N, mc.MATERIALS, mc.RES, mc.G0, mc.MTOM, mc.NAIRFS, mc.LBUCKLSF,
                       mc.BOUNDS)
-    objectives_report += f"failure margins: {verifier.simulate_constraints(verifier.desvarvec())}\n"
+    objectives_report += f"failure margins: {verifier.forward(verifier.desvarvec())}\n"
     gc.collect()
 
 print(objectives_report)

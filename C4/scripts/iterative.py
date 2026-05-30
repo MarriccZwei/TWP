@@ -23,4 +23,4 @@ gc.collect()
 #checking constraints for the converged design
 verifier = Optimiser(desvarsResult, mc.LC_INFO, mc.GEOM_SOURCE, mc.HYPERPARAMS, mc.MASSES, mc.N, mc.MATERIALS, mc.RES, mc.G0, mc.MTOM, mc.NAIRFS, mc.LBUCKLSF,
                       mc.BOUNDS)
-print(verifier.simulate_constraints(verifier.desvarvec(), True, uc.FW_SAVE_PATH))
+print(verifier.forward(verifier.desvarvec(), True, uc.FW_SAVE_PATH))

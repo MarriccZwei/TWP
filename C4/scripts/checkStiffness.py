@@ -18,7 +18,7 @@ for i, k in enumerate(ks):
 
     optimiser = Optimiser(desvars, mc.LC_INFO, mc.GEOM_SOURCE, mc.HYPERPARAMS, mc.MASSES, mc.N, mc.MATERIALS, mc.RES, mc.G0, mc.MTOM, mc.NAIRFS, mc.LBUCKLSF,
                       mc.BOUNDS)
-    margins[:, i] = optimiser.simulate_constraints(optimiser.desvarvec())
+    margins[:, i] = optimiser.forward(optimiser.desvarvec())
 
 logks = np.log10(ks)
 plt.figure(figsize=(10, 10))

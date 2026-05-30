@@ -27,5 +27,5 @@ desvars_initial = {
 
 optimiser = Optimiser(desvars_initial, mc.LC_INFO, mc.GEOM_SOURCE, hypers, mc.MASSES, mc.N, mc.MATERIALS, res, mc.G0, mc.MTOM, mc.NAIRFS, mc.LBUCKLSF,
                       mc.BOUNDS)
-print(optimiser.simulate_constraints(optimiser.desvarvec(), True, uc.FW_SAVE_PATH))
+print(optimiser.forward(optimiser.desvarvec(), True, uc.FW_SAVE_PATH))
 print(optimiser.objective(optimiser.desvarvec()))
