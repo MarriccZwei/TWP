@@ -19,7 +19,6 @@ class InertiaSubmesh():
 
         self.battery_masses:list[float] = list()
         self.tot_computed_bat_mass:float = 0.
-        self.batteryVertices:list[nt.NDArray[np.float64]] = list()
 
         delta = HYPERPARAMS["delta"]
         Hpcsq = HYPERPARAMS["(H/c)_sq"]
@@ -106,6 +105,7 @@ class InertiaSubmesh():
         
         #1.5) adjusting for the nominal battery mass
         self.tot_computed_bat_mass = sum(self.battery_masses)
+        self.bat_masses_in_range = bat_masses_in_range #to get the pre scaling battery capacity
         ratio_bat_mass = m_bat_nominal/self.tot_computed_bat_mass
         self.battery_masses = [m_bat_raw*ratio_bat_mass for m_bat_raw in self.battery_masses]
         bat_masses_in_range = [m_bat_raw*ratio_bat_mass for m_bat_raw in bat_masses_in_range]
@@ -124,6 +124,8 @@ class InertiaSubmesh():
             self.eleNodes.append([forec, centr])
             self.eleNodes.append([peakc, centr])
             self.eleNodes.append([inbc, centr]) 
+
+        self.battery_centroids = bat_centroids
 
         #2) wingtip and equipment inertia
         #2.1) wingtip

@@ -105,6 +105,12 @@ def test_full_geometry():
     plotter.show()
     print(ism.tot_joint_mass)
     print(ism.rjperc) #NOTE: that would equate to 4 3/4 inch bolts which if you napkin math it through the MIL spec is roughly 1e6 in tensile allowable load., which is roughly the load we have in the lg joints
+    
+    assert len(ism.battery_centroids) == len(ism.bat_masses_in_range)
+    print(len(ism.battery_masses))
+
+    for centr, mass in zip(ism.battery_centroids, ism.bat_masses_in_range):
+        print(f"Battery @ {centr} with mass: {mass}")
 
 
 if __name__ == "__main__":
