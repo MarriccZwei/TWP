@@ -39,7 +39,7 @@ class Joint():
         n_bolt = int(np.ceil(np.sqrt(N**2/self.Nmax**2+V**2/self.Vmax**2)))
         n_bear = int(np.ceil(V/self.Vbea))
         n_higher = max(n_bolt, n_bear, self.nrows)
-        return self._ceil_to_int(n_higher, self.nrows) #to accout for the fact that we need an even number of joints
+        return self._ceil_to_int(n_higher, self.nrows) #to accout for the fact that we need an even number of fasteners
     
 
     def get_joint_dims(self, n:int):
