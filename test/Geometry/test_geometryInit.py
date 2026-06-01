@@ -43,7 +43,7 @@ def test_geometry_init():
         "tipfoil":asb.Airfoil("naca2410")
     }
 
-    N = 15
+    N = 5
 
     LC_INFO = [
     {
@@ -126,7 +126,7 @@ def test_geometry_init():
     plotter.add_mesh(
         meshs,
         show_edges=True,
-        color="yellow",
+        color="orange",
         edge_color="black"
     )
 
