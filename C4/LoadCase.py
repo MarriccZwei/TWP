@@ -193,16 +193,18 @@ class LoadCase():
     def _vlm(self, displs:ty.List[float]=None, return_lift=False, debug=False):
         #allowing for initial displacements for flutter. Yet, for static analysis we dont's need displacements
         if displs is None:
-            displs = np.zeros(len(self.airfs)*4)
+            displs = np.zeros(len(self.airfs)*2)
 
         #converting LE-TE displs into LE displs and twists
         rowlen = self.les.shape[0]
         ledispls = displs[:rowlen]
-        leshifts = displs[2*rowlen:3*rowlen]
+        #leshifts = displs[2*rowlen:3*rowlen]
         tedispls = displs[rowlen:2*rowlen]
-        teshifts = displs[3*rowlen:4*rowlen]
-        ptles = [self.les[i,:]+np.array([displs[2*rowlen+i], 0, displs[i]]) for i in range(len(ledispls))]
-        cs = [c+tes-les for c, les, tes in zip(self._cs, leshifts, teshifts)]
+        #teshifts = displs[3*rowlen:4*rowlen]
+        # ptles = [self.les[i,:]+np.array([displs[2*rowlen+i], 0, displs[i]]) for i in range(len(ledispls))]
+        ptles = [self.les[i,:]+np.array([0, 0, displs[i]]) for i in range(len(ledispls))]
+        #cs = [c+tes-les for c, les, tes in zip(self._cs, leshifts, teshifts)]
+        cs = self._cs
         crange = .55 #from .15 to .7 of chord
         twists = [np.arctan((led-ted)/c/crange) for led, ted, c in zip(ledispls, tedispls, cs)]
 
@@ -248,7 +250,7 @@ class LoadCase():
 
     def _calc_dFv_dp(self, ymin:float, epsilon=.01, debug=False):
         rowlen = len(self.airfs)
-        p = np.zeros(rowlen*4)
+        p = np.zeros(rowlen*2)
         airplane, vlm_, forces, moments = self._vlm(p, debug=debug)
 
         vortex_valid = vlm_.vortex_centers[:, 1] > ymin
@@ -257,7 +259,7 @@ class LoadCase():
 
         dFv_dp = np.zeros((v, rowlen*6)) # NOTE remember to pass both heave and twist displacements
         for i in range(len(p)):
-            p_DOF = (3*i+2) if (i<2*rowlen) else (3*(i-2*rowlen))
+            p_DOF = (3*i+2) #if (i<2*rowlen) else (3*(i-2*rowlen))
             p2 = p.copy()
             p2[i] += epsilon
 
