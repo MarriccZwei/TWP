@@ -284,9 +284,9 @@ class InertiaSubmesh():
         self.expected_node_count = len(eqpt_dict["motor_is"])+len(eqpt_dict["lg_is"])+1+len(bat_centroids)
 
         #7) plotting if so requested
-        if plot_joint_loading:
-            for fvect in fexts+fints+[fint_envelope]:
-                self._plot_force_vector(model.ncoords, fvect)
+        # if plot_joint_loading:
+        #     for fvect in fexts+fints+[fint_envelope]:
+        #         self._plot_force_vector(model.ncoords, fvect)
 
 
     def _LE_or_TE_inertia(self, nodes1:nt.NDArray[np.float64], nodes2:nt.NDArray[np.float64], totmass:float):
