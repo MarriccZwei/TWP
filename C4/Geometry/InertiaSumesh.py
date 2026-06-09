@@ -243,24 +243,37 @@ class InertiaSubmesh():
 
         #create fint_envelope fint at joint accessible by coordinates
         self.rjperc = 0.
-        fint_envelope = np.vstack(np.abs(fints)).max(axis=0)
-        fint_dict:dict[tuple[float], tuple[float]] = dict()
-        for i, x, y, z in zip(range(len(model.x)), model.x, model.y, model.z):
-            fint_dict[to_tuple(x, y, z)] = (fint_envelope[pf3.DOF*i+0], fint_envelope[pf3.DOF*i+1], fint_envelope[pf3.DOF*i+2])
+        # fint_envelope = np.vstack(np.abs(fints)).max(axis=0)
+        fint_dicts:list[dict[tuple[float], tuple[float]]] = list()
+        for finti in fints:
+            fintd = dict()
+            for i, x, y, z in zip(range(len(model.x)), model.x, model.y, model.z):
+                fintd[to_tuple(x, y, z)] = (finti[pf3.DOF*i+0], finti[pf3.DOF*i+1], finti[pf3.DOF*i+2])
+            fint_dicts.append(fintd)
 
         #translate to joint shear and normal forces
         for x, y, z in zip(scaffold_flat[:, 0], scaffold_flat[:, 1], scaffold_flat[:, 2]):
-            if to_tuple(x, y, z) in fint_dict: #equipment is not attached to every scaffold point out there
-                Vx, Vy, Nz = fint_dict[to_tuple(x, y, z)]
-                V = np.sqrt(Vx**2+Vy**2)
+            flag_joint = False
+            lj_ref = 0
+            mj_ref = 0
 
-                lj, mj = JointsAvailable.size_joint(Nz, V, Hpcsq)
-                self.rjperc = max(lj/c_at_y(y), self.rjperc)
-                self.tot_joint_mass += mj
+            for fint_dict in fint_dicts:
+                if to_tuple(x, y, z) in fint_dict: #equipment is not attached to every scaffold point out there
+                    Vx, Vy, Nz = fint_dict[to_tuple(x, y, z)]
+                    V = np.sqrt(Vx**2+Vy**2)
+                    lj, mj = JointsAvailable.size_joint(Nz, V, Hpcsq)
+                    if lj > lj_ref:
+                        lj_ref = lj
+                        mj_ref = mj
+                        flag_joint = True
+
+            if flag_joint:
+                self.rjperc = max(lj_ref/c_at_y(y), self.rjperc)
+                self.tot_joint_mass += mj_ref
                 
                 #joint element creation
                 self.eleTypes.append('ji')
-                self.eleArgs.append([mj])
+                self.eleArgs.append([mj_ref])
                 self.eleNodes.append([(x, y, z)])
 
         self.rjperc /= 2 #accounting for the fact that rj = .5 lj
