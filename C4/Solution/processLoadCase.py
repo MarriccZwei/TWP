@@ -173,7 +173,7 @@ def process_load_case(model:Pyfe3DModel, lc:LoadCase, materials:ty.Dict[str, flo
     return failure_margins
 
 
-def process_aeroelastic_load_case(model:Pyfe3DModel, lc:LoadCase, plot:bool=False, savePath:str=None, k:int=7, returnOmegan=False):
+def process_aeroelastic_load_case(model:Pyfe3DModel, lc:LoadCase, plot:bool=False, savePath:str=None, k:int=7, returnOmegan=False, returnBoth=False):
     """
     
     """
@@ -191,6 +191,9 @@ def process_aeroelastic_load_case(model:Pyfe3DModel, lc:LoadCase, plot:bool=Fals
         with open(savePath+"flutter_omegans.txt", "w") as file:
             file.write(f"omegans: {omegan}")
 
+    if returnBoth:
+        return omegan, peigvecs
+    
     if returnOmegan:
         return omegan
     else:            

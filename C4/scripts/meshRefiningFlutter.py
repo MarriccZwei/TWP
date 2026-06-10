@@ -7,6 +7,11 @@ import aerosandbox.numpy as np
 import matplotlib.pyplot as plt
 import time
 
+import pickle
+
+def MAC(self, vec1, vec2):
+    return (np.dot(vec1, vec2)**2 / np.dot(vec1, vec1) / np.dot(vec2, vec2))
+
 Ns = [5, 6, 7, 8, 9, 10, 11, 12]
 Nfoils = [11]*8
 nfreq = 5
@@ -16,8 +21,12 @@ for i, N, Nfoil in zip(range(len(Ns)), Ns, Nfoils):
     t1 = time.time()
     optimiser = Optimiser(mc.DESVARS_INITIAL, [mc.LC_INFO[2]], mc.GEOM_SOURCE, mc.HYPERPARAMS, mc.MASSES, N, mc.MATERIALS, mc.RES, mc.G0, mc.MTOM, Nfoil, mc.LBUCKLSF,
                         mc.BOUNDS)
-    omegan[:, i] = process_aeroelastic_load_case(optimiser.model, optimiser.lcs[0], True,  uc.REFINE_SAVE_PATH+f"{N}\\", mc.RES["kfl"], True)[:nfreq]  
-    print(f"Processed N: {N}, nfoil: {Nfoil} in {time.time()-t1} [s], freqs [rad/s]: {omegan[:, i]}\n")  
+    omegas_returned, peigvecs = process_aeroelastic_load_case(optimiser.model, optimiser.lcs[0], True,  uc.REFINE_SAVE_PATH+f"{N}\\", mc.RES["kfl"], False, True)
+    omegan[:, i] = omegas_returned[:nfreq]  
+    print(f"Processed N: {N}, nfoil: {Nfoil} in {time.time()-t1} [s], freqs [rad/s]: {omegan[:, i]}\n") 
+
+    with open(uc.REFINE_SAVE_PATH+f"{N}\\freqmodes.pcl", 'wb+') as f:
+        pickle.dump((omegan[:, i], peigvecs), f)
 
 for j in range(nfreq): 
     plt.plot(Ns, np.real(omegan[j, :]), label=f"frequency {j+1}")
