@@ -4,6 +4,7 @@ import pyvista as pv
 import typing as ty
 import pypardiso as ppd
 import pyfe3d as pf3
+import matplotlib.pyplot as plt
 
 from ..Pyfe3DModel import Pyfe3DModel
 from .Mesher import Mesher
@@ -40,6 +41,10 @@ class InertiaSubmesh():
         bat_peakconns:list[tuple[float]] = list()
         bat_foreconns:list[tuple[float]] = list()
 
+        self.all_battery_centroids = list()
+        self.xs_wb_bound = [scaffold[0, 0, 0], scaffold[-1, 0, 0], scaffold[-1, -1, 0], scaffold[0, -1, 0]]
+        self.ys_wb_bound = [scaffold[0, 0, 1], scaffold[-1, 0, 1], scaffold[-1, -1, 1], scaffold[0, -1, 1]]
+
         bat_masses_in_range:list[float] = list()
         s3 = np.sqrt(3)
 
@@ -58,8 +63,10 @@ class InertiaSubmesh():
         x_oub_rear = scaffold[:, 3:-1, 0].flatten()
         z_oub_rear = scaffold[:, 3:-1, 2].flatten()
         x_inb[1:, :] = scaffold[:-1, 2:-2, 0]
+        x_inb[0, :] = x_inb[1, :]
         x_inb = x_inb.flatten()
         z_inb[1:, :] = scaffold[:-1, 2:-2, 2]
+        z_inb[0, :] = z_inb[1, :]
         z_inb = z_inb.flatten()
         y_fus = scaffold[:, :, 1].min()
         
@@ -92,13 +99,15 @@ class InertiaSubmesh():
             if (A>0) and (A2>0) and (A3>0): #only count in the mass of the batteries that can physically fit into their bays
                 bat_mass = rho_bat*A*(yok-yia-Delta_b)
                 self.battery_masses.append(bat_mass)
+                centr_oub_z = zok-2*h/3*np.sign(zok-zof)
+                centr_inb_z = zia+centr_oub_z-zok
+                bat_centr = ((xia+xok)/2, (yok+yia)/2, (centr_oub_z+centr_inb_z)/2)
+                self.all_battery_centroids.append(bat_centr)
                 if yok > y_fus: #only mesh batteries inboard from the fuselage plane
                     bat_masses_in_range.append(bat_mass)
                     
                     #centroid computation.
-                    centr_oub_z = zok-2*h/3*np.sign(zok-zof)
-                    centr_inb_z = zia+centr_oub_z-zok
-                    bat_centroids.append(((xia+xok)/2, (yok+yia)/2, (centr_oub_z+centr_inb_z)/2))
+                    bat_centroids.append(bat_centr)
                     bat_inbconns.append((xia, yia, zia))
                     bat_foreconns.append((xof, yok, zof))
                     bat_peakconns.append((xok, yok, zok))
@@ -285,6 +294,7 @@ class InertiaSubmesh():
             self.eleNodes.append([(nodes1[i, 0], nodes1[i, 1], nodes1[i, 2])])
             self.eleNodes.append([(nodes2[i, 0], nodes2[i, 1], nodes2[i, 2])])
 
+
     def _plot_force_vector(self, ncoords:nt.NDArray[np.float64], force_vec:nt.NDArray[np.float64]):
         fx = force_vec[0::pf3.DOF]
         fy = force_vec[1::pf3.DOF]
@@ -314,3 +324,29 @@ class InertiaSubmesh():
         plotter = pv.Plotter()
         plotter.add_mesh(arrows, scalars="magnitude", cmap="viridis")
         plotter.show()
+
+
+    def plot_battery_arrangement(self):
+        fig = plt.figure(figsize=(9, 6))
+        plt.xlabel("y [m]")
+        plt.xlim((0., 21.))
+        plt.ylabel("x [m]")
+        batm = np.array(self.battery_masses)
+        batc = np.array(self.all_battery_centroids)
+        batx = batc[:, 0]
+        baty = batc[:, 1]
+
+        batx1kV = batx[batm >= 30.]
+        baty1kV = baty[batm >= 30.]
+        batxS = batx[batm < 30.]
+        batyS = baty[batm < 30.]
+
+        plt.scatter(baty1kV, batx1kV, label="Battery Packs >= 1 kV")
+        plt.scatter(batyS, batxS, label="Battery Packs < 1 kV")
+
+        plt.plot([0]+self.ys_wb_bound+[0], [self.xs_wb_bound[0]]+self.xs_wb_bound+[self.xs_wb_bound[-1]], label="Wingbox boundary", color="black")
+        plt.plot([self.ys_wb_bound[0], self.ys_wb_bound[0]], [self.xs_wb_bound[0], self.xs_wb_bound[-1]], label="Fuselage boundary", color="red")
+
+        plt.legend(loc="lower right")
+        plt.savefig("IsmOut.pdf")
+        plt.show()

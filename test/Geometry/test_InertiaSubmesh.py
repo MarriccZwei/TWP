@@ -112,6 +112,8 @@ def test_full_geometry():
     for centr, mass in zip(ism.battery_centroids, ism.bat_masses_in_range):
         print(f"Battery @ {centr} with mass: {mass}")
 
+    ism.plot_battery_arrangement()
+
 
 if __name__ == "__main__":
     test_full_geometry()
