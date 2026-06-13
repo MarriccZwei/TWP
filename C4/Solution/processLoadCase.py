@@ -166,7 +166,7 @@ def process_load_case(model:Pyfe3DModel, lc:LoadCase, materials:ty.Dict[str, flo
                 for i in range(eigvecs.shape[1]):
                     plot_nodal_quantity(prep_displacements(eigvecs[:,i], model, eigvec_scaling/max(eigvecs[:,i])), eigvecs[:,i][2::pf3.DOF],
                                     model, savePath, f"BucklingMode{i}")
-                with open(savePath+"buckling_modes.pcl", "wb+") as file:
+                with open(savePath+"buckling_modes.pcl", "wb") as file:
                     pickle.dump(eigvecs, f)
             with open(savePath+"failure_margins.txt", "w") as file:
                 file.write(f"fail_margs: {failure_margins}")
