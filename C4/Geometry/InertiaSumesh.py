@@ -44,6 +44,7 @@ class InertiaSubmesh():
         self.all_battery_centroids = list()
         self.xs_wb_bound = [scaffold[0, 0, 0], scaffold[-1, 0, 0], scaffold[-1, -1, 0], scaffold[0, -1, 0]]
         self.ys_wb_bound = [scaffold[0, 0, 1], scaffold[-1, 0, 1], scaffold[-1, -1, 1], scaffold[0, -1, 1]]
+        self.y_ribs = scaffold[:, 0, 1]
 
         bat_masses_in_range:list[float] = list()
         s3 = np.sqrt(3)
@@ -327,10 +328,11 @@ class InertiaSubmesh():
 
 
     def plot_battery_arrangement(self):
-        fig = plt.figure(figsize=(9, 6))
+        fig = plt.figure(figsize=(7, 5))
         plt.xlabel("y [m]")
         plt.xlim((0., 21.))
         plt.ylabel("x [m]")
+        plt.ylim((self.xs_wb_bound[0]-.1, self.xs_wb_bound[-1]+.1))
         batm = np.array(self.battery_masses)
         batc = np.array(self.all_battery_centroids)
         batx = batc[:, 0]
@@ -344,8 +346,13 @@ class InertiaSubmesh():
         plt.scatter(baty1kV, batx1kV, label="Battery Packs >= 1 kV")
         plt.scatter(batyS, batxS, label="Battery Packs < 1 kV")
 
+        x_fore = lambda y:self.xs_wb_bound[1]*(y-self.ys_wb_bound[0])/(self.ys_wb_bound[1]-self.ys_wb_bound[0])+self.xs_wb_bound[0]*(self.ys_wb_bound[1]-y)/(self.ys_wb_bound[1]-self.ys_wb_bound[0])
+        x_aft = lambda y:self.xs_wb_bound[-2]*(y-self.ys_wb_bound[0])/(self.ys_wb_bound[1]-self.ys_wb_bound[0])+self.xs_wb_bound[-1]*(self.ys_wb_bound[1]-y)/(self.ys_wb_bound[1]-self.ys_wb_bound[0])
+
         plt.plot([0]+self.ys_wb_bound+[0], [self.xs_wb_bound[0]]+self.xs_wb_bound+[self.xs_wb_bound[-1]], label="Wingbox boundary", color="black")
-        plt.plot([self.ys_wb_bound[0], self.ys_wb_bound[0]], [self.xs_wb_bound[0], self.xs_wb_bound[-1]], label="Fuselage boundary", color="red")
+        plt.plot([self.y_ribs[0], self.y_ribs[0]], [self.xs_wb_bound[0], self.xs_wb_bound[-1]], color="red", label="rib y locations", linestyle="dashed")
+        for yrib in self.y_ribs[1:-1]:
+            plt.plot([yrib, yrib], [x_fore(yrib), x_aft(yrib)], color="red", linestyle="dashed")
 
         plt.legend(loc="lower right")
         plt.savefig("IsmOut.pdf")
