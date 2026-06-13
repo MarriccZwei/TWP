@@ -4,25 +4,25 @@ from ..ConfigFiles import userConfig as uc
 
 import copy
 
-rail_d = 0.01
+# rail_d = 0.03
 hypers = mc.HYPERPARAMS.copy()
-hypers["d"] = rail_d
+# hypers["d"] = rail_d
 
 res = mc.RES.copy()
-res["klb"] = 0
+# res["klb"] = 0
 
 desvars_initial = {
-    '(2t/H)_Sq':0.22530687313282435,
-    '(2t/H)_Pq':0.1935629980547246,
-    '(2t/H)_Aq':0.1672213443406646,
-    'W_bb':0.01565030262301346,
-    'W_mb':0.015801529483939807,
-    'W_lb':0.026136016966417944,
-    'ds':0.011931627269955957,
-    'de':0.011719753338197511,
-    '(2t/H)_sq':0.1604809890242429,
-    '(2t/H)_pq':0.16069977670949012,
-    '(2t/H)_aq':0.1601870632712459
+    '(2t/H)_Sq':0.249,
+    '(2t/H)_Pq':0.263,
+    '(2t/H)_Aq':0.096,
+    'W_bb':0.016,
+    'W_mb':0.015,
+    'W_lb':0.030,
+    'ds':0.016,
+    'de':0.013,
+    '(2t/H)_sq':0.168,
+    '(2t/H)_pq':0.146,
+    '(2t/H)_aq':0.077
 }
 
 optimiser = Optimiser(desvars_initial, mc.LC_INFO, mc.GEOM_SOURCE, hypers, mc.MASSES, mc.N, mc.MATERIALS, res, mc.G0, mc.MTOM, mc.NAIRFS, mc.LBUCKLSF,

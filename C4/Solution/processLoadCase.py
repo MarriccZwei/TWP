@@ -11,6 +11,7 @@ import pyfe3d as pf3
 import scipy.sparse as ss
 import scipy.sparse.linalg as ssl
 import pyvista as pv
+import pickle
 
 def process_load_case(model:Pyfe3DModel, lc:LoadCase, materials:ty.Dict[str, float], desvars:ty.Dict[str, float],
                       beamTypes:ty.List[str], quadTypes:ty.List[str], exclusion:Exclusion,
@@ -165,9 +166,12 @@ def process_load_case(model:Pyfe3DModel, lc:LoadCase, materials:ty.Dict[str, flo
                 for i in range(eigvecs.shape[1]):
                     plot_nodal_quantity(prep_displacements(eigvecs[:,i], model, eigvec_scaling/max(eigvecs[:,i])), eigvecs[:,i][2::pf3.DOF],
                                     model, savePath, f"BucklingMode{i}")
+                with open(savePath+"buckling_modes.pcl", "wb+") as file:
+                    pickle.dump(eigvecs, f)
             with open(savePath+"failure_margins.txt", "w") as file:
                 file.write(f"fail_margs: {failure_margins}")
                 file.write(f"Maximum heave displacement: {np.max(u[2::pf3.DOF])} m")
+
             print(f"Report saved at the path below.\n{savePath}")        
 
     return failure_margins
