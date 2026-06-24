@@ -6,7 +6,7 @@ import scipy.optimize as op
 import matplotlib.pyplot as plt
 
 class ElysianWing():
-    def __init__(self, GEOM_SOURCE:dict[str, float | asb.Airfoil], H_per_c_sq:float, maxrays:int=15, debug:bool=False, xperc_fore_safe:float=.1, xperc_rear_safe=.9):
+    def __init__(self, GEOM_SOURCE:dict[str, float | asb.Airfoil], H_per_c_sq:float, maxrays:int=15, debug:bool=False, xperc_fore_safe:float=.09, xperc_rear_safe=.9):
         #0) Overall wing boundaries
         self.H_per_c_sq = H_per_c_sq
         self.yfus = GEOM_SOURCE["yfus"]
