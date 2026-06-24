@@ -78,7 +78,7 @@ def test_full_geometry():
         "deltazhn":1.362017,
         "deltaxhn":1.548961,
         "(x/c)_fore":.15,
-        "(x/c)_rear":.71,
+        "(x/c)_rear":.7,
         "cr":5.,
         "ct":2.,
         "ylg":5.768546,
