@@ -26,7 +26,7 @@ for i, N, Nfoil in zip(range(len(Ns)), Ns, Nfoils):
     print(f"Processed N: {N}, nfoil: {Nfoil} in {time.time()-t1} [s], freqs [rad/s]: {omegan[:, i]}\n") 
 
     with open(uc.REFINE_SAVE_PATH+f"{N}\\freqmodes.pcl", 'wb+') as f:
-        pickle.dump((omegan[:, i], peigvecs), f)
+        pickle.dump((omegan[:nfreq, i], peigvecs[:, :nfreq]), f)
 
 for j in range(nfreq): 
     plt.plot(Ns, np.real(omegan[j, :]), label=f"frequency {j+1}")
