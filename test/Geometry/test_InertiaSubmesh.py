@@ -78,7 +78,7 @@ def test_full_geometry():
         "deltazhn":1.362017,
         "deltaxhn":1.548961,
         "(x/c)_fore":.15,
-        "(x/c)_rear":.7,
+        "(x/c)_rear":.71,
         "cr":5.,
         "ct":2.,
         "ylg":5.768546,
@@ -109,8 +109,8 @@ def test_full_geometry():
     assert len(ism.battery_centroids) == len(ism.bat_masses_in_range)
     print(len(ism.battery_masses))
 
-    for centr, mass in zip(ism.battery_centroids, ism.bat_masses_in_range):
-        print(f"Battery @ {centr} with mass: {mass}")
+    # for centr, mass in zip(ism.battery_centroids, ism.bat_masses_in_range):
+    #     print(f"Battery @ {centr} with mass: {mass}")
 
     ism.plot_battery_arrangement()
 
