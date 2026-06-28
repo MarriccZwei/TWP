@@ -19,4 +19,5 @@ for i in [0, 3]:
             plotName=f"buckl_plot{i}",
             model=optimiser.model
         )
-    print("saved")
+        Ue = eigvec[optimiser.model.bu].T @ optimiser.model.KC0uu @ eigvec[optimiser.model.bu]
+    print("saved", Ue)
