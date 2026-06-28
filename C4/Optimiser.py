@@ -8,6 +8,7 @@ import aerosandbox as asb
 import aerosandbox.numpy as np
 import numpy.typing as nt
 import scipy.optimize as opt
+import gc
 
 class Optimiser():
     def __init__(self, desvarsInitial:ty.Dict[str,float], loadCasesInfo:ty.List[ty.Dict[str, object]], GEOM_SOURCE:dict[str, float], HYPERPARAMS:dict[str, float], 
@@ -179,6 +180,8 @@ class Optimiser():
                     failure_margins[1]=lcmargins[1]
                 if failure_margins[2]>lcmargins[2]:#linear buckling load multiplier, the less, the worse
                     failure_margins[2]=lcmargins[2]
+
+            gc.collect()
 
         #4) logging if enabled
         if not (self.logEveryNIters is None):
