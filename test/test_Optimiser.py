@@ -15,5 +15,5 @@ optimiser = Optimiser(mc.DESVARS_INITIAL, lcinf, mc.GEOM_SOURCE, mc.HYPERPARAMS,
 
 assert np.allclose(optimiser.desvarvec(optimiser.desvars_from_vec(optimiser.desvarvec())), optimiser.desvarvec())
 
-print(optimiser.simulate_constraints(optimiser.desvarvec(), True, uc.FW_SAVE_PATH))
-print(optimiser.objective(optimiser.desvarvec()))
+# print(optimiser.forward(optimiser.desvarvec(), True, uc.FW_SAVE_PATH))
+# print(optimiser.objective(optimiser.desvarvec()))
