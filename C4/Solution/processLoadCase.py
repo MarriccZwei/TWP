@@ -32,6 +32,8 @@ def process_load_case(model:Pyfe3DModel, lc:LoadCase, materials:ty.Dict[str, flo
     :returns: An array with maximum quad stress margin, beam stress margin, buckling load multiplier, flutter bool as float, 0.=>stable
     :type return: NDArray[float64]
     '''
+    model.KC0_M_update(100.) #static solution
+
     #1) weight update & static solution
     lc.update_weight(model.M)
     f = lc.loadstack()
@@ -70,6 +72,7 @@ def process_load_case(model:Pyfe3DModel, lc:LoadCase, materials:ty.Dict[str, flo
 
     #2.3) buckling
     if num_eig_lb > 0: 
+        model.KC0_M_update(10000.) #modal solution
         KG = ss.coo_matrix((KGv, (KGr, KGc)), shape=(model.N, model.N)).tocsc()
         KGuu = model.uu_matrix(KG)
         eigvecs = np.zeros((model.N, num_eig_lb))
@@ -182,6 +185,7 @@ def process_aeroelastic_load_case(model:Pyfe3DModel, lc:LoadCase, plot:bool=Fals
     """
     
     """
+    model.KC0_M_update(10000.) #modal solution
     KAuu = model.uu_matrix(lc.KA)#*1.67 prandtl-glauert M=.8
     peigvecs = np.zeros((model.N, k))
     eigvalsFlutter, peigvecsu = ssl.eigs(A=model.KC0uu - KAuu, M=model.Muu, k=k, which='LM', sigma=-1.)

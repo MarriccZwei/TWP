@@ -137,7 +137,7 @@ class Pyfe3DModel():
         self.inertia_poses.append(pos)
 
 
-    def KC0_M_update(self, beamprops:ty.List[pbp.BeamProp], beamorients:ty.List[ty.Tuple[float]], 
+    def load_props(self, beamprops:ty.List[pbp.BeamProp], beamorients:ty.List[ty.Tuple[float]], 
                    shellprops:ty.List[psp.ShellProp], matdirs:ty.List[ty.Tuple[float]],
                    inertia_vals:ty.List[float]):
         '''
@@ -152,17 +152,21 @@ class Pyfe3DModel():
         for matvec in matdirs:
             assert len(matvec)==3
 
-        nquads = len(self.quads)
-        nbeams = len(self.beams)
-        ninert = len(self.inertia_poses)
-        nsprings = len(self.springs)
+        
 
         #1) storing the element properties
         self.beamprops = beamprops
         self.beamorients = beamorients
         self.shellprops = shellprops
         self.matdirs = matdirs
-        self.inertia_vals = inertia_vals
+        self.inertia_vals = inertia_vals  
+
+
+    def KC0_M_update(self, K6ROT:float=100.):
+        nquads = len(self.quads)
+        nbeams = len(self.beams)
+        ninert = len(self.inertia_poses)
+        nsprings = len(self.springs)
 
         #2) calculating matrix size based on element data sizes
         kc0_size = 0
@@ -201,8 +205,8 @@ class Pyfe3DModel():
         init_k_KG = 0
 
         #5) quad contributions
-        for quad, shellprop, matdir in zip(self.quads, shellprops, matdirs):
-            quad.K6ROT = 100 #as per docs for modal sols
+        for quad, shellprop, matdir in zip(self.quads, self.shellprops, self.matdirs):
+            quad.K6ROT = K6ROT
             quad.init_k_KC0 = init_k_KC0
             quad.init_k_M = init_k_M
             quad.init_k_KG = init_k_KG
@@ -216,7 +220,7 @@ class Pyfe3DModel():
             init_k_KG += self.quaddata.KG_SPARSE_SIZE
 
         #6) beam contributions
-        for beam, beamprop, beamorient in zip(self.beams, beamprops, beamorients):
+        for beam, beamprop, beamorient in zip(self.beams, self.beamprops, self.beamorients):
             beam.init_k_KC0 = init_k_KC0
             beam.init_k_M = init_k_M
             beam.init_k_KG = init_k_KG
@@ -240,7 +244,7 @@ class Pyfe3DModel():
             init_k_KG += self.springdata.KG_SPARSE_SIZE
 
         #7) inertia contributions
-        for inertia_pos, inertia_val in zip(self.inertia_poses, inertia_vals):
+        for inertia_pos, inertia_val in zip(self.inertia_poses, self.inertia_vals):
             k = init_k_M
             pos = pf3.DOF*inertia_pos
             self.Mr[k] = 0+pos
@@ -267,3 +271,4 @@ class Pyfe3DModel():
         #9) re-aplying the boundary conditions
         self.KC0uu = self.uu_matrix(self.KC0)
         self.Muu = self.uu_matrix(self.M)
+        

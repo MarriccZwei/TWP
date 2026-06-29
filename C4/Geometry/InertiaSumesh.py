@@ -223,7 +223,8 @@ class InertiaSubmesh():
             elif eleType == 'ms':
                 model.load_spring(*eleNodePoses, 1e6, 0., 0., 1e6, 0., 0., 0., 1., 0.)
 
-        model.KC0_M_update([], [], [], [], inertia_vals)
+        model.load_props([], [], [], [], inertia_vals)
+        model.KC0_M_update()
 
         #control sum of the DOF remaining free
         ctrl_sum = pf3.DOF*(len(eqpt_dict["motor_is"])+len(eqpt_dict["lg_is"])+1+len(bat_centroids))

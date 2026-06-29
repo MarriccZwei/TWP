@@ -55,7 +55,8 @@ def test_quads():
     for p1, p2, p3, p4 in zip(pos1, pos2, pos3, pos4):
         model.load_quad(p1, p2, p3, p4)
     
-    model.KC0_M_update([], [], [prop]*num_elements, [(1,0,0)]*num_elements, [])
+    model.load_props([], [], [prop]*num_elements, [(1,0,0)]*num_elements, [])
+    model.KC0_M_update(100)
 
     #load application
     f = np.zeros(model.N)
@@ -191,7 +192,8 @@ def test_beams():
     for pos1, pos2 in zip(pos1s, pos2s):
         model.load_beam(pos1, pos2)
     
-    model.KC0_M_update([prop]*num_elements, [(0,1,1)]*num_elements, [], [], [])
+    model.load_props([prop]*num_elements, [(0,1,1)]*num_elements, [], [], [])
+    model.KC0_M_update(100.)
 
     #comparison with the original model
     data = pf3.BeamCData()
@@ -263,7 +265,8 @@ def test_inertia():
     model = Pyfe3DModel(ncoords, lambda x,y,z:(np.isclose(x,1),np.isclose(x,1),np.isclose(x,1),True,True,True))
     model.load_inertia(0)
     model.load_inertia(2)
-    model.KC0_M_update([], [], [], [], [2., 6.])
+    model.load_props([], [], [], [], [2., 6.])
+    model.KC0_M_update(100.)
     assert np.allclose([2,2,2,0,0,0,0,0,0,0,0,0,6,6,6,0,0,0], model.M.diagonal())
     assert np.allclose([0,0,0,6,6,6], model.Muu.diagonal())
 
@@ -332,7 +335,8 @@ def test_spring():
     model.load_beam(0, 1)
     model.load_spring(1, 2, 1e10, 1e10, 1e10, 1e10, 1e10, 1e10, 1., 0., 0.)
     #model.load_beam(1,2)
-    model.KC0_M_update([prop], [beamorient], [], [], [])
+    model.load_props([prop], [beamorient], [], [], [])
+    model.KC0_M_update(100.)
     fu = f[model.bu]
     uu_test = ssl.spsolve(model.KC0uu, fu)
     assert np.allclose(uu_test[:pf3.DOF], uu_gt), f"test:\n {uu_test[:pf3.DOF]},\n gt: {uu_gt}"

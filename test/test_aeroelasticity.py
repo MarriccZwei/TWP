@@ -122,7 +122,7 @@ def test_self_weight():
     matdirs = ep["matdirs"]
     inertia_vals = ep["inertia_vals"]
 
-    model.KC0_M_update(beamprops, beamorients, shellprops, matdirs, inertia_vals)
+    model.load_props(beamprops, beamorients, shellprops, matdirs, inertia_vals)
 
     airfs, les, tes = wing.aero_foils(12)
 

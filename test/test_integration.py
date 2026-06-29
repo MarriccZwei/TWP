@@ -85,8 +85,8 @@ def test_self_weight():
         '(2t/H)_Sq':0.3,
         '(2t/H)_Pq':0.25,
         '(2t/H)_Aq':0.1,
-        'W_bb':0.004,
-        'W_mb':0.004,
+        'W_bb':0.01,
+        'W_mb':0.01,
         'W_lb':0.02,
         'ds':.01,
         'de':.01,
@@ -114,7 +114,7 @@ def test_self_weight():
     matdirs = ep["matdirs"]
     inertia_vals = ep["inertia_vals"]
 
-    model.KC0_M_update(beamprops, beamorients, shellprops, matdirs, inertia_vals)
+    model.load_props(beamprops, beamorients, shellprops, matdirs, inertia_vals)
     # model.KC0_M_update(beamprops, beamorients, shellprops, matdirs, [0]*len(inertia_vals)) #optional removing bending relief
 
     airfs, les, tes = wing.aero_foils(10)
