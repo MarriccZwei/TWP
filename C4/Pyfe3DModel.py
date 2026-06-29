@@ -202,6 +202,7 @@ class Pyfe3DModel():
 
         #5) quad contributions
         for quad, shellprop, matdir in zip(self.quads, shellprops, matdirs):
+            quad.K6ROT = 1e4 #as per docs for modal sols
             quad.init_k_KC0 = init_k_KC0
             quad.init_k_M = init_k_M
             quad.init_k_KG = init_k_KG
