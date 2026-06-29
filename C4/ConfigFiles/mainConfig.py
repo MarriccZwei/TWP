@@ -5,12 +5,12 @@ from .classified import MASSES
 
 DESVARS_INITIAL = {
         '(2t/H)_Sq':0.3,
-        '(2t/H)_Pq':0.15,
+        '(2t/H)_Pq':0.25,
         '(2t/H)_Aq':0.1,
-        'W_bb':0.004,
-        'W_mb':0.004,
-        'W_lb':0.03,
-        'ds':.02,
+        'W_bb':0.01,
+        'W_mb':0.01,
+        'W_lb':0.02,
+        'ds':.01,
         'de':.01,
         '(2t/H)_sq':0.06,
         '(2t/H)_pq':0.03,
