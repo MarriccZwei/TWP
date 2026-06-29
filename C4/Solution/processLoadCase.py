@@ -42,6 +42,12 @@ def process_load_case(model:Pyfe3DModel, lc:LoadCase, materials:ty.Dict[str, flo
     u = np.zeros_like(f)
     u[model.bu] = uu
 
+    if num_eig_lb > 0: #NOTE: pre-buckling state separate from the static solution
+        model.KC0_M_update(10000.) #modal solution
+        uub = spsolve(model.KC0uu, fu)
+        ub =  np.zeros_like(f)
+        ub[model.bu] = uub
+
     #2) post-processing
     quad_failure_margins = list()
     beam_failure_margins = list()
@@ -53,26 +59,35 @@ def process_load_case(model:Pyfe3DModel, lc:LoadCase, materials:ty.Dict[str, flo
     for quad, matdir, shellprop, quadType in zip(model.quads, model.matdirs, model.shellprops, quadTypes):
         quad.update_probe_ue(u)
         quad.update_probe_xe(model.ncoords_flatten)
-        if num_eig_lb > 0: quad.update_KG(KGr, KGc, KGv, shellprop)
         if (exclusion.is_excluded(model.ncoords[model.nid_pos[quad.n1], :]) or exclusion.is_excluded(model.ncoords[model.nid_pos[quad.n2], :]) or
             exclusion.is_excluded(model.ncoords[model.nid_pos[quad.n3], :]) or exclusion.is_excluded(model.ncoords[model.nid_pos[quad.n4], :])):
             quad_failure_margins.append(0.)
         else:
             quad_failure_margins.append(quad_stress_recovery(desvars, materials, quad, shellprop, matdir, quadType, model.quadprobe))
 
+        if num_eig_lb > 0: 
+            quad.update_probe_ue(ub)
+            quad.update_probe_xe(model.ncoords_flatten)
+            quad.update_KG(KGr, KGc, KGv, shellprop)
+        
+
     #2.2) beam postprocessing
     for beam, beamorient, beamprop, beamType in zip(model.beams, model.beamorients, model.beamprops, beamTypes):
         beam.update_probe_ue(u)
         beam.update_probe_xe(model.ncoords_flatten)
-        if num_eig_lb > 0: beam.update_KG(KGr, KGc, KGv, beamprop)
         if exclusion.is_excluded(model.ncoords[model.nid_pos[beam.n1], :]) or exclusion.is_excluded(model.ncoords[model.nid_pos[beam.n2], :]):
             beam_failure_margins.append(0.)
         else:
             beam_failure_margins.append(beam_stress_recovery(desvars, materials, beam, beamprop, beamorient, beamType, model.beamprobe))
 
+        if num_eig_lb > 0: 
+            beam.update_probe_ue(ub)
+            beam.update_probe_xe(model.ncoords_flatten)
+            beam.update_KG(KGr, KGc, KGv, beamprop)
+        
+
     #2.3) buckling
     if num_eig_lb > 0: 
-        model.KC0_M_update(10000.) #modal solution
         KG = ss.coo_matrix((KGv, (KGr, KGc)), shape=(model.N, model.N)).tocsc()
         KGuu = model.uu_matrix(KG)
         eigvecs = np.zeros((model.N, num_eig_lb))
