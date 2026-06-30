@@ -61,7 +61,7 @@ class LoadCase():
         '''
         _, vlm, _, _, lift = self._vlm(return_lift=True, debug=debug)
         ratio = self.MTOM*self.g0*self.n/lift
-        _, self.A = self._aero2fem(vlm, coords_affected, nid_pos_affected, ratio)
+        _, self.A = self._aero2fem(vlm, coords_affected, nid_pos_affected, ratio, power=0)
 
 
     def apply_thrust(self, nid_pos_affected:nt.NDArray[np.int32]):
@@ -100,7 +100,7 @@ class LoadCase():
     
 
     #=====IMPLEMENTATION AERODYNAMIC LOAD==================================
-    def _aero2fem(self, vlm:asb.VortexLatticeMethod, ncoords_s:nt.NDArray[np.float32], ids_s:nt.NDArray[np.int32], ratio:int):
+    def _aero2fem(self, vlm:asb.VortexLatticeMethod, ncoords_s:nt.NDArray[np.float32], ids_s:nt.NDArray[np.int32], ratio:int, power:int=2):
         """ncoords selected - only selected nodes to which we apply the loads - will have to be tracked externally with ids_s"""
 
         # x, y, z coordinates of each node, NOTE assuming same order for DOFs
@@ -108,8 +108,6 @@ class LoadCase():
 
         tree = ssp.cKDTree(ncoords_s)
         d, node_indices = tree.query(vlm.vortex_centers[vortex_valid], k=self.nneighs)
-
-        power = 2
         weights = (1/d**power)/((1/d**power).sum(axis=1)[:, None])
         assert np.allclose(weights.sum(axis=1), 1)
 

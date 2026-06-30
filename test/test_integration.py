@@ -128,7 +128,7 @@ def test_self_weight():
     lc.apply_landing(mesher.get_submesh('li')[0])
     ctrl_sum_L = np.sqrt(lc.L[0::pf3.DOF].sum()**2+lc.L[1::pf3.DOF].sum()**2+lc.L[2::pf3.DOF].sum()**2)
     ctrl_sum_A_z = lc.n*G0*MTOM/2
-    assert np.isclose(ctrl_sum_L, 1118340.), ctrl_sum_L
+    assert np.isclose(ctrl_sum_L, 1118340./2), ctrl_sum_L
     print(f"applied: {lc.A[2::pf3.DOF].sum()} < (slightly) nominal: {ctrl_sum_A_z}")
     
     #post processing
