@@ -157,6 +157,7 @@ def test_geometry_init():
     plt.scatter(outer_quad_centroids_x, outer_quad_centroids_y)
     plt.scatter(inner_quad_centroids_x, inner_quad_centroids_y)
     plt.show()
+    print(f"model.N: {model.N}")
             
 
 if __name__ == "__main__":
