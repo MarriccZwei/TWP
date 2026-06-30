@@ -14,6 +14,7 @@ res_no_buckl = mc.RES
 res_no_buckl["klb"] = 0
 
 for n in ns:
+    res_no_buckl["nneighs"] = 2 * n
     optimiser = Optimiser(mc.DESVARS_INITIAL, lcinfo, mc.GEOM_SOURCE, mc.HYPERPARAMS, mc.MASSES, n, mc.MATERIALS, res_no_buckl, mc.G0, mc.MTOM, mc.NAIRFS, mc.LBUCKLSF,
                         mc.BOUNDS)
     dvv = optimiser.forward(optimiser.desvarvec(), True, uc.REFINE_SAVE_PATH+f"{n}\\")
