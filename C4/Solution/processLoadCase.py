@@ -87,6 +87,7 @@ def process_load_case(model:Pyfe3DModel, lc:LoadCase, materials:ty.Dict[str, flo
         
 
     #2.3) buckling
+    eigvals = None
     if num_eig_lb > 0: 
         KG = ss.coo_matrix((KGv, (KGr, KGc)), shape=(model.N, model.N)).tocsc()
         KGuu = model.uu_matrix(KG)
