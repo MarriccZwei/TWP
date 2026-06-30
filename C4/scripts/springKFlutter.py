@@ -24,9 +24,9 @@ for i, N, Nfoil, kspr in zip(range(len(Ns)), Ns, Nfoils, ks):
     t1 = time.time()
     optimiser = Optimiser(mc.DESVARS_INITIAL, [mc.LC_INFO[2]], mc.GEOM_SOURCE, mc.HYPERPARAMS, mc.MASSES, N, mc.MATERIALS, res, mc.G0, mc.MTOM, Nfoil, mc.LBUCKLSF,
                         mc.BOUNDS)
-    omegas_returned, peigvecs = process_aeroelastic_load_case(optimiser.model, optimiser.lcs[0], True,  uc.REFINE_SAVE_PATH+f"{N}\\", mc.RES["kfl"], False, True)
+    omegas_returned, peigvecs = process_aeroelastic_load_case(optimiser.model, optimiser.lcs[0], True,  uc.REFINE_SAVE_PATH+f"{i+4}\\", mc.RES["kfl"], False, True)
     omegan[:, i] = omegas_returned[:nfreq]  
-    print(f"Processed N: {N}, nfoil: {Nfoil} in {time.time()-t1} [s], freqs [rad/s]: {omegan[:, i]}\n") 
+    print(f"Processed k: {kspr}, nfoil: {Nfoil} in {time.time()-t1} [s], freqs [rad/s]: {omegan[:, i]}\n") 
 
     with open(uc.REFINE_SAVE_PATH+f"{i+4}\\freqmodes.pcl", 'wb+') as f:
         pickle.dump((omegan[:nfreq, i], peigvecs[:, :nfreq]), f)
