@@ -17,11 +17,12 @@ nfreq = 5
 ks = [1e6, 1e8, 1e10, 1e12, 1e14, 1e16, 1e18, 1e20]
 omegan = np.zeros((nfreq, len(Ns)), dtype=np.complex64)
 res = mc.RES.copy()
+nairf = 11
 
 for i, N, kspr in zip(range(len(Ns)), Ns, ks):
     res["sks"] = (kspr, 0., 0., kspr, 0., 0., 0., 1., 0.)
     t1 = time.time()
-    optimiser = Optimiser(mc.DESVARS_INITIAL, [mc.LC_INFO[2]], mc.GEOM_SOURCE, mc.HYPERPARAMS, mc.MASSES, N, mc.MATERIALS, res, mc.G0, mc.MTOM, mc.NAIRFS, mc.LBUCKLSF,
+    optimiser = Optimiser(mc.DESVARS_INITIAL, [mc.LC_INFO[2]], mc.GEOM_SOURCE, mc.HYPERPARAMS, mc.MASSES, N, mc.MATERIALS, res, mc.G0, mc.MTOM, nairf, mc.LBUCKLSF,
                         mc.BOUNDS)
     omegas_returned, peigvecs = process_aeroelastic_load_case(optimiser.model, optimiser.lcs[0], True,  uc.REFINE_SAVE_PATH+f"{i+4}\\", mc.RES["kfl"], False, True)
     omegan[:, i] = omegas_returned[:nfreq]  
