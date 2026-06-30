@@ -3,7 +3,7 @@ from ..ConfigFiles import mainConfig as mc
 from ..ConfigFiles import userConfig as uc
 import matplotlib.pyplot as plt
 
-ns = [13, 14, 15, 16, 17, 18, 19, 20]#[5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16]
+ns = [5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16]
 beam_stresses = list()
 quad_stresses = list()
 
@@ -14,8 +14,8 @@ res_no_buckl = mc.RES
 res_no_buckl["klb"] = 0
 
 for n in ns:
-    res_no_buckl["bres"] = 2 * n
-    res_no_buckl["cres"] = n
+    # res_no_buckl["bres"] = 2 * n
+    # res_no_buckl["cres"] = n
     optimiser = Optimiser(mc.DESVARS_INITIAL, lcinfo, mc.GEOM_SOURCE, mc.HYPERPARAMS, mc.MASSES, n, mc.MATERIALS, res_no_buckl, mc.G0, mc.MTOM, mc.NAIRFS, mc.LBUCKLSF,
                         mc.BOUNDS)
     dvv = optimiser.forward(optimiser.desvarvec(), True, uc.REFINE_SAVE_PATH+f"{n}\\")

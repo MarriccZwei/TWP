@@ -47,13 +47,13 @@ class StructuralSubmesh():
 
             self._rib_creation(i+1)
 
-            if i < furthest_motor_i: #NOTE: for i = furthest i we have our inboard at the boundary so the bay is outboard of the boundary
-                self._railing_creation(self.wing.scaffold[i, 0, :], self.wing.scaffold[i+1, 0, :], ny, [], "eb") #top motor support
-                self._railing_creation(self.wing.scaffold[i, 1, :], self.wing.scaffold[i+1, 1, :], ny, [], "eb") #bottom motor support
+            #if i < furthest_motor_i: #NOTE: for i = furthest i we have our inboard at the boundary so the bay is outboard of the boundary
+            self._railing_creation(self.wing.scaffold[i, 0, :], self.wing.scaffold[i+1, 0, :], ny, [], "eb") #top motor support
+            self._railing_creation(self.wing.scaffold[i, 1, :], self.wing.scaffold[i+1, 1, :], ny, [], "eb") #bottom motor support
 
-            if i < furthest_lg_i: #same for landing gear supports
-                self._railing_creation(self.wing.scaffold[i, -1, :], self.wing.scaffold[i+1, -1, :], ny, [], "sb")
-                self._railing_creation(self.wing.scaffold[i, -2, :], self.wing.scaffold[i+1, -2, :], ny, [], "sb")
+            #if i < furthest_lg_i: #same for landing gear supports
+            self._railing_creation(self.wing.scaffold[i, -1, :], self.wing.scaffold[i+1, -1, :], ny, [], "sb")
+            self._railing_creation(self.wing.scaffold[i, -2, :], self.wing.scaffold[i+1, -2, :], ny, [], "sb")
 
             for inb, oub in zip(self.wing.scaffold[i, 2:-2, :], self.wing.scaffold[i+1, 2:-2, :]):
                 self._railing_creation(inb, oub, ny, [HYPERPARAMS['d']], "rb") #battery rails
