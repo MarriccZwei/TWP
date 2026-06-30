@@ -63,11 +63,11 @@ class JointsAvailable():
     #NOTE: MIL-B-6812E assumes double shear, we will have single shear so we have to halve the values
     #all bolt fine-threaded steel
     _JOINT_DATA = [Joint(d_inch, inse_ratio, Nmax, Vmax, nrows=nrows, SF=1.5) for d_inch, inse_ratio, Nmax, Vmax, nrows in zip(
-       [1/4, 5/16, 3/8, 7/16, 1/2, 9/16, 5/8, 3/4, 7/8, 1, 1+1/8, 1+1/4]*2, #diameters
-       [1.25, 1.25, 1.19, 1.19, 1.1, 1.1, 1.1, 1.1, 1.1, 1.1, 1.1, 1.1, 1.1]*2, #insert diameter ratios
-       [4080, 6500, 10100, 13600, 18500, 23600, 30100, 44000, 60000, 80700, 101800, 130200]*2, #allowable tesile
-       [7360/2, 11500/2, 16560/2, 22500/2, 29400/2, 37400/2, 46000/2, 66300/2, 90100/2, 117800/2, 147500/2, 182100/2]*2, #allowable shear
-       [2]*12+[4]*12 #whether 2 bolt rows or 4 bolt holes
+       [1/4, 5/16, 3/8, 7/16, 1/2, 9/16, 5/8, 3/4, 7/8, 1, 1+1/8, 1+1/4], #diameters
+       [1.25, 1.25, 1.19, 1.19, 1.1, 1.1, 1.1, 1.1, 1.1, 1.1, 1.1, 1.1, 1.1], #insert diameter ratios
+       [4080, 6500, 10100, 13600, 18500, 23600, 30100, 44000, 60000, 80700, 101800, 130200], #allowable tesile
+       [7360/2, 11500/2, 16560/2, 22500/2, 29400/2, 37400/2, 46000/2, 66300/2, 90100/2, 117800/2, 147500/2, 182100/2], #allowable shear
+       [2]*12 #whether 2 bolt rows or 4 bolt holes
     )]
 
     @classmethod
