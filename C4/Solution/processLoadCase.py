@@ -32,7 +32,7 @@ def process_load_case(model:Pyfe3DModel, lc:LoadCase, materials:ty.Dict[str, flo
     :returns: An array with maximum quad stress margin, beam stress margin, buckling load multiplier, flutter bool as float, 0.=>stable
     :type return: NDArray[float64]
     '''
-    model.KC0_M_update(100.) #static solution
+    model.KC0_M_update(10.) #static solution
 
     #1) weight update & static solution
     lc.update_weight(model.M)
