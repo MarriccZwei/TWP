@@ -89,7 +89,7 @@ class LoadCase():
         nNodes = len(nid_pos_affected)
         aoa = np.deg2rad(self.op.alpha)
         bank = np.deg2rad(self.bank)
-        lPerNode = self.nlg*self.g0*self.MTOM/nNodes #NOTE no division by 2 - we assume asymmetric landing
+        lPerNode = self.nlg*self.g0*self.MTOM/nNodes/2 #NOTE division by 2 - we assume 2-point landing
         self.L[0::pf3.DOF][nid_pos_affected] = -lPerNode*np.sin(aoa)*np.cos(bank)
         self.L[1::pf3.DOF][nid_pos_affected] = -lPerNode*np.sin(bank)
         self.L[2::pf3.DOF][nid_pos_affected] = lPerNode*np.cos(aoa)*np.cos(bank)
