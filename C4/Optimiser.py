@@ -245,6 +245,7 @@ class Optimiser():
             matdirs = ep["matdirs"]
             inertia_vals = ep["inertia_vals"]
             self.model.load_props(beamprops, beamorients, shellprops, matdirs, inertia_vals)
+            self.model.KC0_M_update()
             self.ep = ep
 
             #3) updating logging step if logging enabled
