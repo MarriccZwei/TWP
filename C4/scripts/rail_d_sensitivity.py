@@ -18,7 +18,7 @@ objectives_report = "=====FINAL REPORT=====\n"
 
 for rail_d in rail_ds:
     hypers["d"] = rail_d
-    optimiser = Optimiser(desvarsInit, [mc.LC_INFO[0], mc.LC_INFO[3]], mc.GEOM_SOURCE, hypers, mc.MASSES, mc.N, mc.MATERIALS, resNoBuckl, mc.G0, mc.MTOM, mc.NAIRFS, mc.LBUCKLSF,
+    optimiser = Optimiser(desvarsInit, [mc.LC_INFO[0]], mc.GEOM_SOURCE, hypers, mc.MASSES, mc.N, mc.MATERIALS, resNoBuckl, mc.G0, mc.MTOM, mc.NAIRFS, mc.LBUCKLSF,
                         mc.BOUNDS, logEveryNIters=1)
     result = opt.minimize(optimiser.objective, optimiser.desvarvec(), method='COBYLA', constraints=optimiser.constraint(),
                         options={'rhobeg':.2})
