@@ -201,7 +201,7 @@ def process_aeroelastic_load_case(model:Pyfe3DModel, lc:LoadCase, plot:bool=Fals
     """
     
     """
-    model.KC0_M_update(1000.*56052/model.N) #modal solution
+    model.KC0_M_update(10000.*56052/model.N) #modal solution
     KAuu = model.uu_matrix(lc.KA)#*1.67 prandtl-glauert M=.8
     peigvecs = np.zeros((model.N, k))
     eigvalsFlutter, peigvecsu = ssl.eigs(A=model.KC0uu - KAuu, M=model.Muu, k=k, which='LM', sigma=-1.)
