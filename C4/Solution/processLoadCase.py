@@ -43,7 +43,7 @@ def process_load_case(model:Pyfe3DModel, lc:LoadCase, materials:ty.Dict[str, flo
     u[model.bu] = uu
 
     if num_eig_lb > 0: #NOTE: pre-buckling state separate from the static solution
-        model.KC0_M_update(100000.*56052/model.N) #modal solution
+        model.KC0_M_update(10000.*56052/model.N) #modal solution
         uub = spsolve(model.KC0uu, fu)
         ub =  np.zeros_like(f)
         ub[model.bu] = uub
