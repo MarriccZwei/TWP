@@ -201,6 +201,7 @@ class Optimiser():
         :rtype: float
         '''
         self._update_model(desvarvec)
+        self.model.KC0_M_update()
         #W=M@g, with this vector the magnitude of the weight vector will be that of total system mass
         unit_gvect = np.array([0.,0.,1.,0.,0.,0.]*self.model.ncoords.shape[0])
         totmass = np.sum(self.model.M@unit_gvect)
@@ -245,7 +246,6 @@ class Optimiser():
             matdirs = ep["matdirs"]
             inertia_vals = ep["inertia_vals"]
             self.model.load_props(beamprops, beamorients, shellprops, matdirs, inertia_vals)
-            self.model.KC0_M_update()
             self.ep = ep
 
             #3) updating logging step if logging enabled
