@@ -206,12 +206,18 @@ class Pyfe3DModel():
 
         #5) quad contributions
         for quad, shellprop, matdir in zip(self.quads, self.shellprops, self.matdirs):
-            quad.K6ROT = K6ROT
+            quad.update_rotation_matrix(self.ncoords_flatten, matdir[0], matdir[1], matdir[2])
+            quad.update_probe_xe(self.ncoords_flatten)
+            Aquad = np.linalg.norm(np.cross([self.quadprobe.xe[3]-self.quadprobe.xe[0],
+                                             self.quadprobe.xe[4]-self.quadprobe.xe[1],
+                                             self.quadprobe.xe[5]-self.quadprobe.xe[2]],
+                                             [self.quadprobe.xe[9]-self.quadprobe.xe[0],
+                                              self.quadprobe.xe[10]-self.quadprobe.xe[1],
+                                              self.quadprobe.xe[11]-self.quadprobe.xe[2]]))
+            quad.K6ROT = K6ROT*Aquad*shellprop.A66*1e-6
             quad.init_k_KC0 = init_k_KC0
             quad.init_k_M = init_k_M
             quad.init_k_KG = init_k_KG
-            quad.update_rotation_matrix(self.ncoords_flatten, matdir[0], matdir[1], matdir[2])
-            quad.update_probe_xe(self.ncoords_flatten)
             quad.update_KC0(self.KC0r, self.KC0c, self.KC0v, shellprop) #matrix contribution, changing the matrices sent
             quad.update_M(self.Mr, self.Mc, self.Mv, shellprop)
             #as mentioned above, KG not updated here

@@ -32,7 +32,7 @@ def process_load_case(model:Pyfe3DModel, lc:LoadCase, materials:ty.Dict[str, flo
     :returns: An array with maximum quad stress margin, beam stress margin, buckling load multiplier, flutter bool as float, 0.=>stable
     :type return: NDArray[float64]
     '''
-    model.KC0_M_update(100.*56052/model.N) #static solution - drilling stiffness must be kept constant across the model
+    model.KC0_M_update(100.) #static solution - drilling stiffness must be kept constant across the model
 
     #1) weight update & static solution
     lc.update_weight(model.M)
@@ -43,7 +43,7 @@ def process_load_case(model:Pyfe3DModel, lc:LoadCase, materials:ty.Dict[str, flo
     u[model.bu] = uu
 
     if num_eig_lb > 0: #NOTE: pre-buckling state separate from the static solution
-        model.KC0_M_update(10000.*56052/model.N) #modal solution
+        model.KC0_M_update(10000.) #modal solution
         uub = spsolve(model.KC0uu, fu)
         ub =  np.zeros_like(f)
         ub[model.bu] = uub
