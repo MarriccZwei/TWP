@@ -27,10 +27,6 @@ class StructuralSubmesh():
 
         ys_per_bay = np.ceil(n_x_tot * y_difference / x_difference_avg).astype(np.int8)
 
-        eq_dict = self.wing.large_equipment_summary()
-        furthest_motor_i = eq_dict["motor_is"][-1]
-        furthest_lg_i = eq_dict["lg_is"][-1]
-
         #2)bay-by bay mesh creation
         for i, ny in enumerate(ys_per_bay):
             self._sheet_creation(wing.scaffold[i, 0, :], wing.scaffold[i, 1, :], wing.scaffold[i+1, 0, :], wing.scaffold[i+1, 1, :], ny, "pq") #fore spar
