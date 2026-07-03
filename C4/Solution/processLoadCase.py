@@ -57,6 +57,7 @@ def process_load_case(model:Pyfe3DModel, lc:LoadCase, materials:ty.Dict[str, flo
     
     #2.1) quad postprocessing
     for quad, matdir, shellprop, quadType in zip(model.quads, model.matdirs, model.shellprops, quadTypes):
+        quad.update_rotation_matrix(model.ncoords_flatten, matdir[0], matdir[1], matdir[2])
         quad.update_probe_ue(u)
         quad.update_probe_xe(model.ncoords_flatten)
         if (exclusion.is_excluded(model.ncoords[model.nid_pos[quad.n1], :]) or exclusion.is_excluded(model.ncoords[model.nid_pos[quad.n2], :]) or
@@ -66,6 +67,7 @@ def process_load_case(model:Pyfe3DModel, lc:LoadCase, materials:ty.Dict[str, flo
             quad_failure_margins.append(quad_stress_recovery(desvars, materials, quad, shellprop, matdir, quadType, model.quadprobe))
 
         if num_eig_lb > 0: 
+            quad.update_rotation_matrix(model.ncoords_flatten, matdir[0], matdir[1], matdir[2])
             quad.update_probe_ue(ub)
             quad.update_probe_xe(model.ncoords_flatten)
             quad.update_KG(KGr, KGc, KGv, shellprop)
@@ -73,6 +75,7 @@ def process_load_case(model:Pyfe3DModel, lc:LoadCase, materials:ty.Dict[str, flo
 
     #2.2) beam postprocessing
     for beam, beamorient, beamprop, beamType in zip(model.beams, model.beamorients, model.beamprops, beamTypes):
+        beam.update_rotation_matrix(beamorient[0], beamorient[1], beamorient[2], model.ncoords_flatten)
         beam.update_probe_ue(u)
         beam.update_probe_xe(model.ncoords_flatten)
         if exclusion.is_excluded(model.ncoords[model.nid_pos[beam.n1], :]) or exclusion.is_excluded(model.ncoords[model.nid_pos[beam.n2], :]):
@@ -81,6 +84,7 @@ def process_load_case(model:Pyfe3DModel, lc:LoadCase, materials:ty.Dict[str, flo
             beam_failure_margins.append(beam_stress_recovery(desvars, materials, beam, beamprop, beamorient, beamType, model.beamprobe))
 
         if num_eig_lb > 0: 
+            beam.update_rotation_matrix(beamorient[0], beamorient[1], beamorient[2], model.ncoords_flatten)
             beam.update_probe_ue(ub)
             beam.update_probe_xe(model.ncoords_flatten)
             beam.update_KG(KGr, KGc, KGv, beamprop)

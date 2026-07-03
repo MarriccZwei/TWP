@@ -17,6 +17,7 @@ lcinfo = [mc.LC_INFO[0]]
 for n in ns:
     optimiser = Optimiser(desvars, lcinfo, mc.GEOM_SOURCE, mc.HYPERPARAMS, mc.MASSES, n, mc.MATERIALS, mc.RES, mc.G0, mc.MTOM, mc.NAIRFS, mc.LBUCKLSF,
                         mc.BOUNDS)
+    assert np.isclose(optimiser.lcs[0].nlg, 0)
     dvv = optimiser.forward(optimiser.desvarvec(), True, uc.REFINE_SAVE_PATH+f"{n}\\")
     # quad_stresses.append(dvv[0])
     # beam_stresses.append(dvv[1])
