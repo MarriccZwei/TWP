@@ -41,19 +41,12 @@ def process_load_case(model:Pyfe3DModel, lc:LoadCase, materials:ty.Dict[str, flo
     uu = spsolve(model.KC0uu, fu)
     u = np.zeros_like(f)
     u[model.bu] = uu
-
-    if num_eig_lb > 0: #NOTE: pre-buckling state separate from the static solution
-        model.KC0_M_update(100000.) #modal solution
-        uub = spsolve(model.KC0uu, fu)
-        ub =  np.zeros_like(f)
-        ub[model.bu] = uub
+        
 
     #2) post-processing
     quad_failure_margins = list()
     beam_failure_margins = list()
-    KGr = np.zeros(model.sizeKG, dtype=pf3.INT)
-    KGc = np.zeros(model.sizeKG, dtype=pf3.INT)
-    KGv = np.zeros(model.sizeKG, dtype=pf3.DOUBLE)
+    
     
     #2.1) quad postprocessing
     for quad, matdir, shellprop, quadType in zip(model.quads, model.matdirs, model.shellprops, quadTypes):
@@ -65,12 +58,6 @@ def process_load_case(model:Pyfe3DModel, lc:LoadCase, materials:ty.Dict[str, flo
             quad_failure_margins.append(0.)
         else:
             quad_failure_margins.append(quad_stress_recovery(desvars, materials, quad, shellprop, matdir, quadType, model.quadprobe))
-
-        if num_eig_lb > 0: 
-            quad.update_rotation_matrix(model.ncoords_flatten, matdir[0], matdir[1], matdir[2])
-            quad.update_probe_ue(ub)
-            quad.update_probe_xe(model.ncoords_flatten)
-            quad.update_KG(KGr, KGc, KGv, shellprop)
         
 
     #2.2) beam postprocessing
@@ -82,18 +69,38 @@ def process_load_case(model:Pyfe3DModel, lc:LoadCase, materials:ty.Dict[str, flo
             beam_failure_margins.append(0.)
         else:
             beam_failure_margins.append(beam_stress_recovery(desvars, materials, beam, beamprop, beamorient, beamType, model.beamprobe))
-
-        if num_eig_lb > 0: 
-            beam.update_rotation_matrix(beamorient[0], beamorient[1], beamorient[2], model.ncoords_flatten)
-            beam.update_probe_ue(ub)
-            beam.update_probe_xe(model.ncoords_flatten)
-            beam.update_KG(KGr, KGc, KGv, beamprop)
         
 
     #2.3) buckling
     eigvals = None
     if num_eig_lb > 0: 
+        model.KC0_M_update(100000.) #modal solution
+
+        #pre-buckling
+        uub = spsolve(model.KC0uu, fu)
+        ub =  np.zeros_like(f)
+        ub[model.bu] = uub
+
+        KGr = np.zeros(model.sizeKG, dtype=pf3.INT)
+        KGc = np.zeros(model.sizeKG, dtype=pf3.INT)
+        KGv = np.zeros(model.sizeKG, dtype=pf3.DOUBLE)
+
+        for quad, matdir, shellprop, quadType in zip(model.quads, model.matdirs, model.shellprops, quadTypes):
+            quad.update_rotation_matrix(model.ncoords_flatten, matdir[0], matdir[1], matdir[2])
+            quad.update_probe_ue(ub)
+            quad.update_probe_xe(model.ncoords_flatten)
+            quad.update_KG(KGr, KGc, KGv, shellprop)
+
+        for beam, beamorient, beamprop, beamType in zip(model.beams, model.beamorients, model.beamprops, beamTypes):
+            beam.update_rotation_matrix(beamorient[0], beamorient[1], beamorient[2], model.ncoords_flatten)
+            beam.update_probe_ue(ub)
+            beam.update_probe_xe(model.ncoords_flatten)
+            beam.update_KG(KGr, KGc, KGv, beamprop)
+
         KG = ss.coo_matrix((KGv, (KGr, KGc)), shape=(model.N, model.N)).tocsc()
+        print(f"normKG {np.linalg.norm(KGv)}")
+        print(f"normKC {np.linalg.norm(model.KC0v)}")
+        print(f"normUB {np.linalg.norm(uub)}")
         KGuu = model.uu_matrix(KG)
         eigvecs = np.zeros((model.N, num_eig_lb))
         eigvals, eigvecsu = ssl.eigsh(A=KGuu, k=num_eig_lb, which='SM', M=model.KC0uu, tol=1e-6, sigma=1., mode='cayley')
