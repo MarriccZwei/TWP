@@ -106,6 +106,7 @@ def process_load_case(model:Pyfe3DModel, lc:LoadCase, materials:ty.Dict[str, flo
         print(f"K6ROT {model.quads[0].K6ROT}")
         print(f"shellprop A66: {model.shellprops[0].A66}")
         print(f"shellprop A11: {model.shellprops[0].A66}")
+        print(f"desvars {desvars}")
         KGuu = model.uu_matrix(KG)
         eigvecs = np.zeros((model.N, num_eig_lb))
         eigvals, eigvecsu = ssl.eigsh(A=KGuu, k=num_eig_lb, which='SM', M=model.KC0uu, tol=1e-6, sigma=1., mode='cayley')
