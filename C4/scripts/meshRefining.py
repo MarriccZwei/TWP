@@ -4,7 +4,7 @@ from ..ConfigFiles import userConfig as uc
 import matplotlib.pyplot as plt
 import numpy as np
 
-ns = [12, 13]#[5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15]
+ns = [5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15]
 # beam_stresses = list()
 # quad_stresses = list()
 lms = list()
