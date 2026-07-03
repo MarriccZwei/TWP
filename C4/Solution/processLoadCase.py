@@ -85,13 +85,13 @@ def process_load_case(model:Pyfe3DModel, lc:LoadCase, materials:ty.Dict[str, flo
         KGc = np.zeros(model.sizeKG, dtype=pf3.INT)
         KGv = np.zeros(model.sizeKG, dtype=pf3.DOUBLE)
 
-        for quad, matdir, shellprop, quadType in zip(model.quads, model.matdirs, model.shellprops, quadTypes):
+        for quad, matdir, shellprop in zip(model.quads, model.matdirs, model.shellprops):
             quad.update_rotation_matrix(model.ncoords_flatten, matdir[0], matdir[1], matdir[2])
             quad.update_probe_ue(ub)
             quad.update_probe_xe(model.ncoords_flatten)
             quad.update_KG(KGr, KGc, KGv, shellprop)
 
-        for beam, beamorient, beamprop, beamType in zip(model.beams, model.beamorients, model.beamprops, beamTypes):
+        for beam, beamorient, beamprop in zip(model.beams, model.beamorients, model.beamprops):
             beam.update_rotation_matrix(beamorient[0], beamorient[1], beamorient[2], model.ncoords_flatten)
             beam.update_probe_ue(ub)
             beam.update_probe_xe(model.ncoords_flatten)
@@ -101,6 +101,11 @@ def process_load_case(model:Pyfe3DModel, lc:LoadCase, materials:ty.Dict[str, flo
         print(f"normKG {np.linalg.norm(KGv)}")
         print(f"normKC {np.linalg.norm(model.KC0v)}")
         print(f"normUB {np.linalg.norm(uub)}")
+        print(f"normUU {np.linalg.norm(uu)}")
+        print(f"normfe {np.linalg.norm(fu)}")
+        print(f"K6ROT {model.quads[0].K6ROT}")
+        print(f"shellprop A66: {model.shellprops[0].A66}")
+        print(f"shellprop A11: {model.shellprops[0].A66}")
         KGuu = model.uu_matrix(KG)
         eigvecs = np.zeros((model.N, num_eig_lb))
         eigvals, eigvecsu = ssl.eigsh(A=KGuu, k=num_eig_lb, which='SM', M=model.KC0uu, tol=1e-6, sigma=1., mode='cayley')
