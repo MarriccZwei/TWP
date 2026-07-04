@@ -61,7 +61,7 @@ class LoadCase():
         '''
         _, vlm, _, _, lift = self._vlm(return_lift=True, debug=debug)
         ratio = self.MTOM*self.g0*self.n/lift
-        _, self.A = self._aero2fem(vlm, coords_affected, nid_pos_affected, ratio)
+        _, self.A = self._aero2fem(vlm, coords_affected, nid_pos_affected, ratio, power=1)
 
 
     def apply_thrust(self, nid_pos_affected:nt.NDArray[np.int32]):
