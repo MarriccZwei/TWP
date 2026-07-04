@@ -147,7 +147,7 @@ class InertiaSubmesh():
         wingtip_pt = (wingtip_pt[0], wingtip_pt[1], wingtip_pt[2])
         #asigning the inertia element
         self.eleTypes.append("hi")
-        self.eleArgs.append([mhi])
+        self.eleArgs.append([0]) #TODO mhi
         self.eleNodes.append([wingtip_pt])
         #assigning the spring elements
         self.eleTypes.extend(["ms"]*3)
