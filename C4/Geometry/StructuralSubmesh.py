@@ -125,7 +125,11 @@ class UniformStructuralSubmesh(StructuralSubmesh):
                                                                   X[1:, :-1].flatten(), Y[1:, :-1].flatten(), Z[1:, :-1].flatten()):
             c = (self.wing.c_at_y(y1)+self.wing.c_at_y(y4))/2
             H = Hpc*c
-            self.eleTypes.append(eleType)
+            #eleType correction for within the lg region
+            if (y1+y2+y3+y4)/4 > self.wing.ym2:
+                self.eleTypes.append(eleType)
+            else:
+                self.eleTypes.append(eleType[0].upper()+eleType[1]) #within lg region marked by uppercase, e.g. 'Sq' instead of 'sq
             self.eleArgs.append([H])
             self.eleNodes.append([(x1, y1, z1), (x2, y2, z2), (x3, y3, z3), (x4, y4, z4)])
 

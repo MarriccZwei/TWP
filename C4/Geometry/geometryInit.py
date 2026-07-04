@@ -26,7 +26,7 @@ def geometry_init(GEOM_SOURCE:dict[str, float], HYPERPARAMS:dict[str, float], MA
     wing = ElysianWing(GEOM_SOURCE, HYPERPARAMS["(H/c)_sq"])
     ism = InertiaSubmesh(wing.scaffold, HYPERPARAMS, MASSES, wing.c_at_y, wing.large_equipment_summary(), lcs, G0, MTOM)
     excl = Exclusion(wing.scaffold, ism.rjperc, wing.c_at_y)
-    ssm = JointStructuralSubmesh(wing, HYPERPARAMS, N, ism.rjperc)
+    ssm = UniformStructuralSubmesh(wing, HYPERPARAMS, N)
     mesher = Mesher(collisionDecimalPlaces)
     for eleType, eleArgs, eleNodes in zip(ism.eleTypes+ssm.eleTypes, ism.eleArgs+ssm.eleArgs, ism.eleNodes+ssm.eleNodes):
         mesher.load_ele(eleNodes, eleType, eleArgs)
