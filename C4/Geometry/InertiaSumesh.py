@@ -180,7 +180,7 @@ class InertiaSubmesh():
         lgi_inb = eqpt_dict["lg_is"][0]
         lgi_oub = eqpt_dict["lg_is"][1]
         self.eleTypes.extend(['li', 'ms', 'ms', 'ms', 'li', 'ms', 'ms', 'ms'])
-        self.eleArgs.extend([[mli/2], [], [], [], [mli/2], [], [], []])
+        self.eleArgs.extend([[0], [], [], [], [0], [], [], []]) # TODO mli/2
         #inboard landing gear
         lgcoords_inb = (lgcoords[0], scaffold[lgi_inb, -1, 1], lgcoords[2])
         self.eleNodes.append([lgcoords_inb])
