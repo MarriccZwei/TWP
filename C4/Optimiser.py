@@ -82,7 +82,7 @@ class Optimiser():
             if lcinfo["aeroelastic"]:
                 lc.aerodynamic_matrix(*self.mesher.get_submesh_list(['sq', 'Sq']))
             else:
-                lc.apply_aero(*self.mesher.get_submesh_list(['sq', 'Sq']))
+                #lc.apply_aero(*self.mesher.get_submesh_list(['sq', 'Sq'])) TODO uncomment
                 lc.apply_landing(self.mesher.get_submesh('li')[0])
                 lc.apply_thrust(self.mesher.get_submesh('mi')[0])
             self.lcs.append(lc)
