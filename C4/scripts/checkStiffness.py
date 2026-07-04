@@ -5,9 +5,9 @@ from ..ConfigFiles import userConfig as uc
 import aerosandbox.numpy as np
 import matplotlib.pyplot as plt
 
-min_pow = 7
-max_pow = 14
-num_ks = max_pow-min_pow+1
+min_pow = 6
+max_pow = 20
+num_ks = (max_pow-min_pow)//2+1
 margins = np.zeros((4, num_ks))
 ks = np.logspace(min_pow, max_pow, num_ks)
 

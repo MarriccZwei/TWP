@@ -7,7 +7,7 @@ import pyfe3d
 import numpy as np
 
 optimiser = Optimiser(mc.DESVARS_INITIAL, [mc.LC_INFO[0]], mc.GEOM_SOURCE, mc.HYPERPARAMS, mc.MASSES, mc.N, mc.MATERIALS, mc.RES, mc.G0, mc.MTOM, mc.NAIRFS, mc.LBUCKLSF,
-                      mc.BOUNDS)
+                      mc.BOUNDS) #we don't need accurate joint mass as we are plotting an already obtained mode
 
 scaling = 100
 

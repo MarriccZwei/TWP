@@ -11,7 +11,7 @@ lcinf = [mc.LC_INFO[3]]
 lcinf[0]['Ttot'] = mc.LC_INFO[0]['Ttot']
 
 optimiser = Optimiser(mc.DESVARS_INITIAL, lcinf, mc.GEOM_SOURCE, mc.HYPERPARAMS, mc.MASSES, mc.N, mc.MATERIALS, mc.RES, mc.G0, mc.MTOM, mc.NAIRFS, mc.LBUCKLSF,
-                      mc.BOUNDS)
+                      mc.BOUNDS, loadCasesJoint=mc.LC_INFO)
 
 assert np.allclose(optimiser.desvarvec(optimiser.desvars_from_vec(optimiser.desvarvec())), optimiser.desvarvec())
 

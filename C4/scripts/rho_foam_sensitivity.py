@@ -21,7 +21,7 @@ for rho_f in rho_fs:
     materials['E_FOAM'] = materials["E_ALU"]*(rho_f/materials["RHO_ALU"])**2
     materials['SF_FOAM'] = 450e6 * .3*(rho_f/materials["RHO_ALU"])**1.5
     optimiser = Optimiser(desvarsInit, [mc.LC_INFO[0]], mc.GEOM_SOURCE, mc.HYPERPARAMS, mc.MASSES, mc.N, materials, resNoBuckl, mc.G0, mc.MTOM, mc.NAIRFS, mc.LBUCKLSF,
-                        mc.BOUNDS, logEveryNIters=1)
+                        mc.BOUNDS, logEveryNIters=1, loadCasesJoint=mc.LC_INFO)
     result = opt.minimize(optimiser.objective, optimiser.desvarvec(), method='COBYLA', constraints=optimiser.constraint(),
                         options={'rhobeg':.2})
     desvarsResult = optimiser.desvars_from_vec(result.x)

@@ -13,7 +13,7 @@ import gc
 class Optimiser():
     def __init__(self, desvarsInitial:ty.Dict[str,float], loadCasesInfo:ty.List[ty.Dict[str, object]], GEOM_SOURCE:dict[str, float], HYPERPARAMS:dict[str, float], 
                  MASSES:dict[str, float], N:int, materials:ty.Dict[str, float], resConfig:ty.Dict[str, object], g0:float, MTOM:float, nairfs:int,
-                 LINBUCKLSF:float, bounds:ty.Tuple[ty.Dict[str, float]], meshMergeDigits:int=8, logEveryNIters:int=None):
+                 LINBUCKLSF:float, bounds:ty.Tuple[ty.Dict[str, float]], meshMergeDigits:int=8, logEveryNIters:int=None, loadCasesJoint:ty.List[ty.Dict[str, object]]=None):
         '''
         The constructor performs the initialisation flow as well
         
@@ -49,8 +49,11 @@ class Optimiser():
         if not (logEveryNIters is None):
             self.iteration_number = 0
 
+        if loadCasesJoint is None:
+            loadCasesJoint = loadCasesInfo
+
         #1) geometry initialization
-        self.model, self.mesher, self.excl, self.wing, ism = geometry_init(GEOM_SOURCE, HYPERPARAMS, MASSES, N, loadCasesInfo, g0, MTOM, meshMergeDigits, resConfig['sks'])
+        self.model, self.mesher, self.excl, self.wing, ism = geometry_init(GEOM_SOURCE, HYPERPARAMS, MASSES, N, loadCasesJoint, g0, MTOM, meshMergeDigits, resConfig['sks'])
         airfs, les, tes = self.wing.aero_foils(nairfs)
         self.ep:ty.Dict[str, ty.List[object]] = dict() #element property dict, updated during self._update_model
 

@@ -20,7 +20,7 @@ omegan = np.zeros((nfreq, len(Ns)), dtype=np.complex64)
 for i, N, Nfoil in zip(range(len(Ns)), Ns, Nfoils):
     t1 = time.time()
     optimiser = Optimiser(mc.DESVARS_INITIAL, [mc.LC_INFO[2]], mc.GEOM_SOURCE, mc.HYPERPARAMS, mc.MASSES, N, mc.MATERIALS, mc.RES, mc.G0, mc.MTOM, Nfoil, mc.LBUCKLSF,
-                        mc.BOUNDS)
+                        mc.BOUNDS, loadCasesJoint=mc.LC_INFO)
     omegas_returned, peigvecs = process_aeroelastic_load_case(optimiser.model, optimiser.lcs[0], True,  uc.REFINE_SAVE_PATH+f"{N}\\", mc.RES["kfl"], False, True)
     omegan[:, i] = omegas_returned[:nfreq]  
     print(f"Processed N: {N}, nfoil: {Nfoil} in {time.time()-t1} [s], freqs [rad/s]: {omegan[:, i]}\n") 
