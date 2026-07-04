@@ -275,6 +275,8 @@ class InertiaSubmesh():
                 self.eleNodes.append([(x, y, z)])
 
         self.rjperc /= 2 #accounting for the fact that rj = .5 lj
+        #TODO: remove
+        self.rjperc = 0.016416483179704212
     
         #6) Consistency check
         assert len(self.eleTypes) == len(self.eleArgs) == len(self.eleNodes)
