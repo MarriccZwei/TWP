@@ -147,7 +147,7 @@ class InertiaSubmesh():
         wingtip_pt = (wingtip_pt[0], wingtip_pt[1], wingtip_pt[2])
         #asigning the inertia element
         self.eleTypes.append("hi")
-        self.eleArgs.append([0]) #TODO mhi
+        self.eleArgs.append([mhi])
         self.eleNodes.append([wingtip_pt])
         #assigning the spring elements
         self.eleTypes.extend(["ms"]*3)
@@ -180,7 +180,7 @@ class InertiaSubmesh():
         lgi_inb = eqpt_dict["lg_is"][0]
         lgi_oub = eqpt_dict["lg_is"][1]
         self.eleTypes.extend(['li', 'ms', 'ms', 'ms', 'li', 'ms', 'ms', 'ms'])
-        self.eleArgs.extend([[0], [], [], [], [0], [], [], []]) # TODO mli/2
+        self.eleArgs.extend([[mli/2], [], [], [], [mli/2], [], [], []])
         #inboard landing gear
         lgcoords_inb = (lgcoords[0], scaffold[lgi_inb, -1, 1], lgcoords[2])
         self.eleNodes.append([lgcoords_inb])
@@ -275,6 +275,7 @@ class InertiaSubmesh():
                 self.eleNodes.append([(x, y, z)])
 
         self.rjperc /= 2 #accounting for the fact that rj = .5 lj
+        self.rjperc = 0.022
     
         #6) Consistency check
         assert len(self.eleTypes) == len(self.eleArgs) == len(self.eleNodes)
