@@ -275,7 +275,7 @@ class InertiaSubmesh():
                 self.eleNodes.append([(x, y, z)])
 
         self.rjperc /= 2 #accounting for the fact that rj = .5 lj
-        self.rjperc = 0.0285 # NOTE overwriting as St Venant does not affect the singularity size
+        self.rjperc = 0.0295 # NOTE overwriting as St Venant does not affect the singularity size
     
         #6) Consistency check
         assert len(self.eleTypes) == len(self.eleArgs) == len(self.eleNodes)
