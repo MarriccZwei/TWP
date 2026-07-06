@@ -113,8 +113,8 @@ def load_ele_props(desvars:ty.Dict[str,float], materials:ty.Dict[str,float], ele
             'beamtypes':beamtypes,
             'quadtypes':quadtypes}
 
-def quad_stress_recovery(desvars:ty.Dict[str,float], materials:ty.Dict[str,float], quad:pf3.Quad4, shellprop:psp.ShellProp,
-                          matdir:ty.Tuple[float], quadType:str, quadprobe:pf3.Quad4Probe)->float:
+def quad_stress_recovery(desvars:ty.Dict[str,float], materials:ty.Dict[str,float], quad:pf3.Quad4R, shellprop:psp.ShellProp,
+                          matdir:ty.Tuple[float], quadType:str, quadprobe:pf3.Quad4RProbe)->float:
     '''
     Returns a failure margin for a quad element
 
@@ -123,7 +123,7 @@ def quad_stress_recovery(desvars:ty.Dict[str,float], materials:ty.Dict[str,float
     :param materials: a dictionary of material properties
     :type materials:Dict[string, float]
     :param quad: the examined quad element
-    :type quad: pf3.Quad4
+    :type quad: pf3.Quad4R
     :param shellprop: the ShellProp of the examined quad
     :type shellprop: psp.ShellProp
     :param matdir: the material direction of the examined quad
@@ -131,7 +131,7 @@ def quad_stress_recovery(desvars:ty.Dict[str,float], materials:ty.Dict[str,float
     :param quadType: the type code of the examined quad
     :type quadType: str
     :param quadType: the probe the element is attached to
-    :type quadType: Quad4Probe
+    :type quadType: Quad4RProbe
     :return: the failure margin: ratio of criterion stress to allowable stress
     :rtype: float
     '''

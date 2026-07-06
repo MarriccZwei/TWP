@@ -92,7 +92,7 @@ def test_quads():
         r3 = ncoords[pos3]
         normal = np.cross(r2 - r1, r3 - r2)[2]
         assert normal > 0
-        quad = pf3.Quad4(pf3.Quad4Probe())
+        quad = pf3.Quad4R(pf3.Quad4RProbe())
         quad.n1 = n1 #@# connectring it to the global stiffness matrix
         quad.n2 = n2
         quad.n3 = n3
@@ -106,7 +106,7 @@ def test_quads():
         quad.update_probe_xe(model.ncoords_flatten)
         #quad.update_KC0(KC0r, KC0c, KC0v, prop) #matrix contribution, changing the matrices sent
         quads.append(quad)
-        init_k_KC0 += pf3.Quad4Data().KC0_SPARSE_SIZE
+        init_k_KC0 += pf3.Quad4RData().KC0_SPARSE_SIZE
 
     for qm, qcorrect, in zip(model.quads, quads):
         assert qm.n1 == qcorrect.n1
@@ -130,7 +130,7 @@ def test_quads():
 
     # obtained with bfsplate2d element, nx=ny=29
     wmax_ref = 6.594931610258557e-05
-    # obtained with Quad4 nx=7, ny=11
+    # obtained with Quad4R nx=7, ny=11
     wmax_ref = 6.496928101916171e-05
     print('w.max()', w.max())
     assert np.isclose(wmax_ref, w.max(), rtol=0.02)

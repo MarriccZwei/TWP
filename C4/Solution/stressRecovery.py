@@ -4,7 +4,7 @@ import numpy.typing as nt
 import typing as ty
 import scipy.linalg as sl
 
-def strains_quad(probe:pf3.Quad4Probe):
+def strains_quad(probe:pf3.Quad4RProbe):
     '''
     Outputs the strains vector: [exx, eyy, gxy, kxx, kyy, kxy, gyz, gxz]
     Obtained by constructing the BL matrix and multiplying it with the displacements vector
@@ -64,12 +64,12 @@ def foam_crit(s_11, s_22, s_33, s_12, s_23, s_13, nu):
     return np.sqrt((s_v2+alpha2*s_m2)/(1+alpha2/9))
 
 
-def beam_strains(probe:pf3.Quad4Probe)->ty.Tuple[ty.Callable[[float, float], float]]:
+def beam_strains(probe:pf3.Quad4RProbe)->ty.Tuple[ty.Callable[[float, float], float]]:
     '''
     obtains the three meaningful strains for beam elements as functions of ye and ze
     
     :param probe: element probe with ue and xe already updated
-    :type probe: pf3.Quad4Probe
+    :type probe: pf3.Quad4RProbe
     :return: the e_xx, e_xy, e_xz lambdas
     :rtype: Tuple[Callable[[float, float], float]]
     '''

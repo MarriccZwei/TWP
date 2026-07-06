@@ -28,17 +28,17 @@ class Pyfe3DModel():
 
         #2) pyfe3d elements and their properties
         self.beamprobe = pf3.BeamCProbe()
-        self.quadprobe = pf3.Quad4Probe()
+        self.quadprobe = pf3.Quad4RProbe()
         self.springprobe = pf3.SpringProbe()
         self.beamdata = pf3.BeamCData()
-        self.quaddata = pf3.Quad4Data()
+        self.quaddata = pf3.Quad4RData()
         self.springdata = pf3.SpringData()
 
         self.beams:ty.List[pf3.BeamC] = list()
         self.beamprops:ty.List[pbp.BeamProp] = list()
         self.beamorients:ty.List[ty.Tuple[float]] = list()
 
-        self.quads:ty.List[pf3.Quad4] = list()
+        self.quads:ty.List[pf3.Quad4R] = list()
         self.shellprops:ty.List[psp.ShellProp] = list()
         self.matdirs:ty.List[ty.Tuple[float]] = list()
 
@@ -84,7 +84,7 @@ class Pyfe3DModel():
         loads a quad to the model, whose external node ids (so starting from zero) are specified by pos1, pos2, etc.
         Following the pyfe3d doc convention for the order of nodes.
         '''
-        quad = pf3.Quad4(self.quadprobe)
+        quad = pf3.Quad4R(self.quadprobe)
         quad.n1 = self.pos_nid[pos1]
         quad.n2 = self.pos_nid[pos2]
         quad.n3 = self.pos_nid[pos3]

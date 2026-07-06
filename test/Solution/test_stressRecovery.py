@@ -7,7 +7,7 @@ from scipy.sparse import coo_matrix
 
 from pyfe3d.beamprop import BeamProp
 import pyfe3d.shellprop_utils as psu
-from pyfe3d import BeamC, BeamCData, BeamCProbe, DOF, INT, DOUBLE, Quad4Data, Quad4, Quad4Probe
+from pyfe3d import BeamC, BeamCData, BeamCProbe, DOF, INT, DOUBLE, Quad4RData, Quad4R, Quad4RProbe
 
 from ...C4.Solution.eleProps import beam_stress_recovery, load_ele_props, quad_stress_recovery
 from ...C4.Solution.stressRecovery import recover_stresses, strains_quad
@@ -238,8 +238,8 @@ def test_quad_recovery(sheet_first:bool, plot:bool=False):
     mock_ele_args = [[H]]*(ny-1)
 
     #FEA model
-    data = Quad4Data()
-    probe = Quad4Probe()
+    data = Quad4RData()
+    probe = Quad4RProbe()
 
     xtmp = np.linspace(0, lx, nx)
     ytmp = np.linspace(0, ly, ny)
@@ -279,7 +279,7 @@ def test_quad_recovery(sheet_first:bool, plot:bool=False):
         r3 = ncoords[pos3]
         normal = np.cross(r2 - r1, r3 - r2)[2]
         assert normal > 0
-        quad = Quad4(probe)
+        quad = Quad4R(probe)
         quad.n1 = n1
         quad.n2 = n2
         quad.n3 = n3
@@ -435,8 +435,8 @@ def test_quad_recovery_x(sheet_first:bool, plot:bool=False):
     mock_ele_args = [[H]]*(nx-1)
 
     #FEA model
-    data = Quad4Data()
-    probe = Quad4Probe()
+    data = Quad4RData()
+    probe = Quad4RProbe()
 
     xtmp = np.linspace(0, lx, nx)
     ytmp = np.linspace(0, ly, ny)
@@ -476,7 +476,7 @@ def test_quad_recovery_x(sheet_first:bool, plot:bool=False):
         r3 = ncoords[pos3]
         normal = np.cross(r2 - r1, r3 - r2)[2]
         assert normal > 0
-        quad = Quad4(probe)
+        quad = Quad4R(probe)
         quad.n1 = n1
         quad.n2 = n2
         quad.n3 = n3
@@ -598,8 +598,8 @@ def test_quad_recovery_x(sheet_first:bool, plot:bool=False):
 
 
 def test_stress_recovery_sub():
-    data = Quad4Data()
-    probe = Quad4Probe()
+    data = Quad4RData()
+    probe = Quad4RProbe()
     E = 100e9
     nu = .33
     sc = 5/6
@@ -609,7 +609,7 @@ def test_stress_recovery_sub():
     KC0c = np.zeros(data.KC0_SPARSE_SIZE, dtype=INT)
     KC0v = np.zeros(data.KC0_SPARSE_SIZE, dtype=DOUBLE)
 
-    quad = Quad4(probe)
+    quad = Quad4R(probe)
     quad.n1 = 1
     quad.n2 = 2
     quad.n3 = 3

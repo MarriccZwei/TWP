@@ -48,7 +48,7 @@ def geometry_init(GEOM_SOURCE:dict[str, float], HYPERPARAMS:dict[str, float], MA
         elif eleType[1]=='i':
             model.load_inertia(eleNodePoses[0])
         else:
-            raise ValueError("Invalid element type. Only 'q'->Quad4, 'b'->BeamC, 's'->spring, 'i'->Inertia elements are supported!!!")
+            raise ValueError("Invalid element type. Only 'q'->Quad4R, 'b'->BeamC, 's'->spring, 'i'->Inertia elements are supported!!!")
         
     #4) checking for the mesh being properly resolved
     expected_node_count = ism.expected_node_count+ssm.expected_node_count
