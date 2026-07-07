@@ -63,9 +63,11 @@ LC_INFO = [
     },
 ]
 
+N = 12
+
 RES = {
-    'bres':20,
-    'cres':10,
+    'bres':2*N,
+    'cres':N,
     'nneighs':10,
     'kfl':30,
     'klb':4,
@@ -75,8 +77,6 @@ RES = {
 G0 = 9.81 # [N/kg]
 MTOM = 76000. # [kg]
 LBUCKLSF = 1.5
-
-N = 12
 
 BOUNDS = (
     {

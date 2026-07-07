@@ -11,8 +11,12 @@ lms = list()
 lcinfo = [mc.LC_INFO[3]]
 lcinfo[0]["Ttot"] = 112800. # [N]
 
+res = mc.RES.copy()
+
 for n in ns:
-    optimiser = Optimiser(mc.DESVARS_INITIAL, lcinfo, mc.GEOM_SOURCE, mc.HYPERPARAMS, mc.MASSES, n, mc.MATERIALS, mc.RES, mc.G0, mc.MTOM, mc.NAIRFS, mc.LBUCKLSF,
+    res["bres"] = 2*n
+    res["cres"] = n
+    optimiser = Optimiser(mc.DESVARS_INITIAL, lcinfo, mc.GEOM_SOURCE, mc.HYPERPARAMS, mc.MASSES, n, mc.MATERIALS, res, mc.G0, mc.MTOM, mc.NAIRFS, mc.LBUCKLSF,
                         mc.BOUNDS, loadCasesJoint=mc.LC_INFO)
     dvv = optimiser.forward(optimiser.desvarvec(), True, uc.REFINE_SAVE_PATH+f"{n}\\")
     # quad_stresses.append(dvv[0])
