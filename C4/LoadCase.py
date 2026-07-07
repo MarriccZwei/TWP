@@ -241,11 +241,6 @@ class LoadCase():
             return airplane, vlm, forces, moments
 
 
-    def _karman_thiessen(self, cp:nt.NDArray[np.float64]):
-        beta = np.sqrt(1-self.m2)
-        return cp/(beta+self.m2/(1+beta)*cp/2)
-
-
     def _calc_dFv_dp(self, ymin:float, epsilon=.01, debug=False):
         rowlen = len(self.airfs)
         p = np.zeros(rowlen*2)
@@ -257,14 +252,15 @@ class LoadCase():
 
         dFv_dp = np.zeros((v, rowlen*6)) # NOTE remember to pass both heave and twist displacements
         for i in range(len(p)):
-            p_DOF = (3*i+2) #if (i<2*rowlen) else (3*(i-2*rowlen))
-            p2 = p.copy()
-            p2[i] += epsilon
+            if not (i in [rowlen-1, 2*rowlen-1]): #NOTE not considering tip flutter as tip treated as a separate subsystem not modelled in this study
+                p_DOF = (3*i+2) #if (i<2*rowlen) else (3*(i-2*rowlen))
+                p2 = p.copy()
+                p2[i] += epsilon
 
-            plane2, vlm2, f2, M2 = self._vlm(p2, debug=debug)
-            Fv2 = vlm2.forces_geometry[vortex_valid].flatten()
-            deriv = (Fv2 - Fv)/epsilon
-            dFv_dp[:, p_DOF] += deriv
+                plane2, vlm2, f2, M2 = self._vlm(p2, debug=debug)
+                Fv2 = vlm2.forces_geometry[vortex_valid].flatten()
+                deriv = (Fv2 - Fv)/epsilon
+                dFv_dp[:, p_DOF] += deriv
 
         dFv_dp = ss.csc_matrix(dFv_dp)
         return vlm_, dFv_dp
