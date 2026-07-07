@@ -12,15 +12,117 @@ def strains_quad(probe:pf3.Quad4RProbe):
     BL constructed at xi, eta = (0,0), the element's integratio point
     NOTE: The strains follow pyfe3d naming and sign convention, not the stress tensor one!
     '''
-    probe.update_BL(0,0)
-    return np.vstack([np.asarray(probe.BLexx),
-                      np.asarray(probe.BLeyy),
-                      np.asarray(probe.BLgxy),
-                      np.asarray(probe.BLkxx),
-                      np.asarray(probe.BLkyy),
-                      np.asarray(probe.BLkxy),
-                      np.asarray(probe.BLgyz_rot)+np.asarray(probe.BLgyz_grad),
-                      np.asarray(probe.BLgxz_rot)+np.asarray(probe.BLgxz_grad),])@np.asarray(probe.ue)
+    
+    # NOTE adapted from Quad4R source code
+    x1 = probe.xe[0]
+    y1 = probe.xe[1]
+    x2 = probe.xe[3]
+    y2 = probe.xe[4]
+    x3 = probe.xe[6]
+    y3 = probe.xe[7]
+    x4 = probe.xe[9]
+    y4 = probe.xe[10]
+
+    j11 = 2.0*(-y1 - y2 + y3 + y4)/(x1*y2 - x1*y4 - x2*y1 + x2*y3 - x3*y2 + x3*y4 + x4*y1 - x4*y3)
+    j12 = 2.0*(y1 - y2 - y3 + y4)/(x1*y2 - x1*y4 - x2*y1 + x2*y3 - x3*y2 + x3*y4 + x4*y1 - x4*y3)
+    j21 = 2.0*(x1 + x2 - x3 - x4)/(x1*y2 - x1*y4 - x2*y1 + x2*y3 - x3*y2 + x3*y4 + x4*y1 - x4*y3)
+    j22 = 2.0*(-x1 + x2 + x3 - x4)/(x1*y2 - x1*y4 - x2*y1 + x2*y3 - x3*y2 + x3*y4 + x4*y1 - x4*y3)
+
+    N1 = 0.25
+    N2 = 0.25
+    N3 = 0.25
+    N4 = 0.25
+
+    N1x = -0.25*j11 - 0.25*j12
+    N2x = 0.25*j11 - 0.25*j12
+    N3x = 0.25*j11 + 0.25*j12
+    N4x = -0.25*j11 + 0.25*j12
+    N1y = -0.25*j21 - 0.25*j22
+    N2y = 0.25*j21 - 0.25*j22
+    N3y = 0.25*j21 + 0.25*j22
+    N4y = -0.25*j21 + 0.25*j22
+
+    #NOTE adapted from Quad4Probe source code for constructing the strain interpolation matrix BL
+    BL_LEN = 4*pf3.DOF
+    BLexx = np.zeros(BL_LEN, dtype=np.float64)
+    BLeyy = np.zeros(BL_LEN, dtype=np.float64)
+    BLgxy = np.zeros(BL_LEN, dtype=np.float64)
+
+    BLkxx = np.zeros(BL_LEN, dtype=np.float64)
+    BLkyy = np.zeros(BL_LEN, dtype=np.float64)
+    BLkxy = np.zeros(BL_LEN, dtype=np.float64)
+
+    BLgyz_grad = np.zeros(BL_LEN, dtype=np.float64)
+    BLgyz_rot = np.zeros(BL_LEN, dtype=np.float64)
+    BLgxz_grad = np.zeros(BL_LEN, dtype=np.float64)
+    BLgxz_rot = np.zeros(BL_LEN, dtype=np.float64)
+
+    BLexx[0] = N1x
+    BLexx[6] = N2x
+    BLexx[12] = N3x
+    BLexx[18] = N4x
+
+    BLeyy[1] = N1y
+    BLeyy[7] = N2y
+    BLeyy[13] = N3y
+    BLeyy[19] = N4y
+
+    BLgxy[0] = N1y
+    BLgxy[6] = N2y
+    BLgxy[12] = N3y
+    BLgxy[18] = N4y
+    BLgxy[1] = N1x
+    BLgxy[7] = N2x
+    BLgxy[13] = N3x
+    BLgxy[19] = N4x
+
+    BLkxx[4] = N1x
+    BLkxx[10] = N2x
+    BLkxx[16] = N3x
+    BLkxx[22] = N4x
+
+    BLkyy[3] = -N1y
+    BLkyy[9] = -N2y
+    BLkyy[15] = -N3y
+    BLkyy[21] = -N4y
+
+    BLkxy[3] = -N1x
+    BLkxy[9] = -N2x
+    BLkxy[15] = -N3x
+    BLkxy[21] = -N4x
+    BLkxy[4] = N1y
+    BLkxy[10] = N2y
+    BLkxy[16] = N3y
+    BLkxy[22] = N4y
+
+    BLgyz_grad[2] = N1y
+    BLgyz_grad[8] = N2y
+    BLgyz_grad[14] = N3y
+    BLgyz_grad[20] = N4y
+
+    BLgyz_rot[3] = -N1
+    BLgyz_rot[9] = -N2
+    BLgyz_rot[15] = -N3
+    BLgyz_rot[21] = -N4
+
+    BLgxz_grad[2] = N1x
+    BLgxz_grad[8] = N2x
+    BLgxz_grad[14] = N3x
+    BLgxz_grad[20] = N4x
+
+    BLgxz_rot[4] = N1
+    BLgxz_rot[10] = N2
+    BLgxz_rot[16] = N3
+    BLgxz_rot[22] = N4
+
+    return np.vstack([np.asarray(BLexx),
+                      np.asarray(BLeyy),
+                      np.asarray(BLgxy),
+                      np.asarray(BLkxx),
+                      np.asarray(BLkyy),
+                      np.asarray(BLkxy),
+                      np.asarray(BLgyz_rot)+np.asarray(BLgyz_grad),
+                      np.asarray(BLgxz_rot)+np.asarray(BLgxz_grad),])@np.asarray(probe.ue)
 
 
 def recover_stresses(strains:nt.NDArray[np.float32], E:float, nu:float, sc:float):

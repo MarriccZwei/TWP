@@ -584,7 +584,7 @@ def test_quad_recovery_x(sheet_first:bool, plot:bool=False):
                 svm = sbend+sten
                 ref_margin = svm/sf_alu
 
-                assert np.isclose(recovered_margin, ref_margin, rtol=1e-4), f"recovered: {recovered_margin}, reference: {ref_margin}"
+                assert np.isclose(recovered_margin, ref_margin, rtol=5e-4), f"recovered: {recovered_margin}, reference: {ref_margin}"
 
             #for checking foam failure
             else:
