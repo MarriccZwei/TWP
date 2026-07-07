@@ -19,8 +19,7 @@ omegan = np.zeros((nfreq, len(Ns)), dtype=np.complex64)
 res = mc.RES.copy()
 
 for i, N, Nfoil in zip(range(len(Ns)), Ns, Nfoils):
-    res["bres"] = 2*N
-    res["cres"] = N
+    res["nneighs"] = N**2//4
     t1 = time.time()
     optimiser = Optimiser(mc.DESVARS_INITIAL, [mc.LC_INFO[2]], mc.GEOM_SOURCE, mc.HYPERPARAMS, mc.MASSES, N, mc.MATERIALS, mc.RES, mc.G0, mc.MTOM, Nfoil, mc.LBUCKLSF,
                         mc.BOUNDS, loadCasesJoint=mc.LC_INFO)

@@ -66,9 +66,9 @@ LC_INFO = [
 N = 12
 
 RES = {
-    'bres':2*N,
-    'cres':N,
-    'nneighs':10,
+    'bres':20,
+    'cres':10,
+    'nneighs':36,
     'kfl':30,
     'klb':4,
     'sks':(1e12, 0., 0., 1e12, 0., 0., 0., 1., 0.)
