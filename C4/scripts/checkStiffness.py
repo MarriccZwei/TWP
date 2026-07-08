@@ -12,11 +12,11 @@ margins = np.zeros((4, num_ks))
 ks = np.logspace(min_pow, max_pow, num_ks)
 
 for i, k in enumerate(ks):
-    desvars = mc.DESVARS_INITIAL
-    desvars['sks']=(k, 0, 0., k, 0., 0., 0., 1., 0.)
+    res = mc.RES
+    res['sks']=(k, 0, 0., k, 0., 0., 0., 1., 0.)
     print(f"analysis for k={k} ...")
 
-    optimiser = Optimiser(desvars, mc.LC_INFO, mc.GEOM_SOURCE, mc.HYPERPARAMS, mc.MASSES, mc.N, mc.MATERIALS, mc.RES, mc.G0, mc.MTOM, mc.NAIRFS, mc.LBUCKLSF,
+    optimiser = Optimiser(mc.DESVARS_INITIAL, mc.LC_INFO, mc.GEOM_SOURCE, mc.HYPERPARAMS, mc.MASSES, mc.N, mc.MATERIALS, res, mc.G0, mc.MTOM, mc.NAIRFS, mc.LBUCKLSF,
                       mc.BOUNDS)
     margins[:, i] = optimiser.forward(optimiser.desvarvec())
 
