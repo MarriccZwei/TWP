@@ -12,6 +12,7 @@ from pyfe3d import BeamC, BeamCData, BeamCProbe, DOF, INT, DOUBLE, Quad4RData, Q
 from ...C4.Solution.eleProps import beam_stress_recovery, load_ele_props, quad_stress_recovery
 from ...C4.Solution.stressRecovery import recover_stresses, strains_quad
 
+#NOTE adapted from pyfe3d unit tests
 
 def test_static_point_load_square():
     n = 30
