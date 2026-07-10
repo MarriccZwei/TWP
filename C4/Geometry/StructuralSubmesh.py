@@ -188,7 +188,7 @@ class UniformStructuralSubmesh(StructuralSubmesh):
                 self.eleNodes.append([(x1, y, z1), (x2, y, z2)])
 
 
-
+#NOTE initially considered mesh that would have nodes excatly at joint area corners - wasn't used in the end due to difficulties with linear buckling on non-uniform mesh andnot changing stress convergence that much
 class JointStructuralSubmesh(StructuralSubmesh):
     def __init__(self, wing:ElysianWing, HYPERPARAMS:dict[str, float], n:int, rjperc:float):
         self.rjperc = rjperc

@@ -274,8 +274,10 @@ class InertiaSubmesh():
                 self.eleArgs.append([mj])
                 self.eleNodes.append([(x, y, z)])
 
-        self.rjperc /= 2 #accounting for the fact that rj = .5 lj
-        self.rjperc = 0.0295 # NOTE overwriting as St Venant does not affect the singularity size
+        self.rjperc /= 2 #accounting for the fact that rj = .5 lj #NOTE: deprecated, see below
+        self.rjperc = 0.0295 # NOTE overwriting as St Venant does not affect the singularity size 
+        #initially it had been thought that excluding the literal joint area is sufficient for convergence. This was reexamined later and now, 
+        # the excluded area is selected based on convergence, as long as the effect of local geometry, i.e. beam reinforcements is still preserved.
     
         #6) Consistency check
         assert len(self.eleTypes) == len(self.eleArgs) == len(self.eleNodes)
@@ -303,25 +305,23 @@ class InertiaSubmesh():
         fy = force_vec[1::pf3.DOF]
         fz = force_vec[2::pf3.DOF]
 
-        vectors = np.column_stack((fx, fy, fz))  # shape (n_points, 3)
+        vectors = np.column_stack((fx, fy, fz))
 
-        # compute magnitudes
         magnitudes = np.linalg.norm(vectors, axis=1)
 
-        # avoid division by zero
         nonzero = magnitudes > 0
 
         unit_vectors = np.zeros_like(vectors)
         unit_vectors[nonzero] = vectors[nonzero] / magnitudes[nonzero][:, None]
 
         mesh = pv.PolyData(ncoords)
-        mesh["vectors"] = unit_vectors      # direction (normalized)
-        mesh["magnitude"] = magnitudes      # scalar for coloring
+        mesh["vectors"] = unit_vectors
+        mesh["magnitude"] = magnitudes 
 
         arrows = mesh.glyph(
             orient="vectors",
-            scale=False,        # ensures all arrows same size
-            factor=0.2          # adjust arrow length globally
+            scale=False,
+            factor=0.2
         )
 
         plotter = pv.Plotter()

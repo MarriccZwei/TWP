@@ -13,12 +13,9 @@ class Exclusion:
         epsilon = .1
     ):
         """
-        Excludes points that lie within a radius of scaffold points.
+        Excludes points that lie within a cylinder of half-height radius of scaffold points.
 
-        Radius for scaffold point with coordinate y:
-            r = rjc * c_at_y(y)
-
-        c_at_y does NOT support batch evaluation.
+        Excluded radius at y = rjc * c_at_y(y)
         """
 
         pts = np.reshape(scaffold, (-1, 3))
@@ -28,15 +25,13 @@ class Exclusion:
         self.c_at_y = c_at_y
         self.rjc = rjc
 
-        # compute radii (cannot vectorize because c_at_y isn't batchable)
         radii = []
         for p in pts:
             radii.append(rjc * c_at_y(p[1]) * (1-epsilon))
         self.radii = np.array(radii)
 
         self.max_r = float(np.max(self.radii))
-
-        # grid size = max radius
+        
         self.cell_size = self.max_r
 
         self.grid = defaultdict(list)

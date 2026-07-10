@@ -15,12 +15,26 @@ def geometry_init(GEOM_SOURCE:dict[str, float], HYPERPARAMS:dict[str, float], MA
     """
     converts the elements imported from CAD into a pyfe3d model
     
-    :param catiaout: catia export string, formatted as elementTypeCode;arg1,arg2,etc.;node1x$node1y$node1z,node2x$node2y$node2z,etc.|
-    :type catiaout: str
+    :param GEOM_SOURCE: dictionary with main geometry parameters describing the wingbox, see Configs.mainConfig for the format
+    :type catiaout: dict[str, float]
+    :param HYPERPARAMS: dictionary with the hyperparameters, see Configs.mainConfig for the format
+    :type catiaout: dict[str, float]
+    :param MASSES: dictionary with main geometry parameters describing the wingbox, see Configs.classified for the format
+    :type catiaout: dict[str, float]
+    :param N: number of nodes per sheet width, a mesh resolution specification
+    :type N: int
+    :param lcs: list of Load Cases to account for for joint sizing:
+    :type lcs: list[LoadCase]
+    :param G0: gravitational acceleration [N/kg]
+    :type G0: float
+    :param MTOM: aircraft Maximum Take-Off Mass
+    :type MTOM: float
     :param collisionDecimalPlaces: number of decimal places for which node coordinates in meters have to be matching to be considered a separate node
     :type collisionDecimalPlaces: int
     :param springargs: parameters for initialising spring elements (in this model used as stiff massless axial connectors)
     :type springargs: Tuple[float]
+
+    :returns: Pyfe3DModel and Mesher objects describing the finite element model of the wingbox
     """
     #1) resolving the mesh from submesh outputs
     wing = ElysianWing(GEOM_SOURCE, HYPERPARAMS["(H/c)_sq"])
@@ -54,6 +68,7 @@ def geometry_init(GEOM_SOURCE:dict[str, float], HYPERPARAMS:dict[str, float], MA
     expected_node_count = ism.expected_node_count+ssm.expected_node_count
     assert ncoords.shape[0] == expected_node_count, f"Nodes resolved: {ncoords.shape[0]}, nodes expected: {expected_node_count}"
 
+    #NOTE: debugging code for checking the occurence of duplicate nodes
     # from scipy.spatial import cKDTree
     # epsilon = 1e-4  # distance threshold
 

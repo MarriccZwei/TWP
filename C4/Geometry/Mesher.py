@@ -65,6 +65,14 @@ class Mesher:
     
 
     def get_submesh_list(self, eleTypes:list[str]) -> ty.Tuple[nt.NDArray[np.int32], nt.NDArray[np.float64]]:
+        '''
+        Returns node indices and node coordinates in the pyfe3d ncoords format that are connected to at least one element of the provided eleTypes
+        
+        :param eleType: the string id of the element type for which we want to obtain the corrected nodes
+        :type eleType: list[str]
+        :return: Description
+        :rtype: Tuple[NDArray[int32], NDArray[float64]]
+        '''
         indices = list()
         for eleType in eleTypes:
             indices.extend(list(self._submeshIdxHashMap[eleType].keys()))
