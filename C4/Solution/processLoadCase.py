@@ -16,19 +16,32 @@ import pickle
 def process_load_case(model:Pyfe3DModel, lc:LoadCase, materials:ty.Dict[str, float], desvars:ty.Dict[str, float],
                       beamTypes:ty.List[str], quadTypes:ty.List[str], exclusion:Exclusion,
                       plot:bool=False, savePath:str=None, 
-                      num_eig_lb:float=4)->nt.NDArray[np.float64]:
+                      num_eig_lb:int=4)->nt.NDArray[np.float64]:
     '''
-    Docstring for process_load_case
+    processing a non-aerodelastic load case
     
     :param model: an alerady updated Pyfe3DModel
     :type model: Pyfe3DModel
-    :param materials: the dictionary of material properties with keys in form "<PROPERTY>_<MATERIAL>"
     :param lc: the analysed load case, with all unchanging loads already applied
     :type lc: LoadCase
+    :param materials: the dictionary of material properties with keys in form "<PROPERTY>_<MATERIAL>"
+    :type materials: Dict[str, float]
+    :param desvars: the dictionary of design variables
+    :type desvars: Dict[str, float]
+    :param beamTypes: list of beam 2-character element codes
+    :type beamTypes: List[str]
+    :param quadTypes: list of quad 2-character element codes
+    :type quadTypes: List[str]
+    :exclusion: object of the exclusion class governing exclusion of near-joint elements from stress recovery
+    :type exclusion: Exclusion
     :param plot: whether or not to plot to results
     :type plot: bool
     :param savePath: where to save results, if set to None, but plot==True, will show the plots instead
     :type savePath: str
+    :param num_eig_lb: number of eignenvalues recovered for linear buckling
+    :type savePath: int
+    
+
     :returns: An array with maximum quad stress margin, beam stress margin, buckling load multiplier, flutter bool as float, 0.=>stable
     :type return: NDArray[float64]
     '''
@@ -207,7 +220,20 @@ def process_load_case(model:Pyfe3DModel, lc:LoadCase, materials:ty.Dict[str, flo
 
 def process_aeroelastic_load_case(model:Pyfe3DModel, lc:LoadCase, plot:bool=False, savePath:str=None, k:int=7, returnOmegan=False, returnBoth=False):
     """
-    
+    Processing an aeroelastic load case - calculating K-KA, M eigenproblem istead of stresses and buckling
+
+    :param model: an alerady updated Pyfe3DModel
+    :type model: Pyfe3DModel
+    :param lc: the analysed load case, with all unchanging loads already applied
+    :type lc: LoadCase
+    :param plot: whether to plot the resultant buckling modes
+    :type plot: bool
+    :param savePath: where to save results, if set to None, but plot==True, will show the plots instead
+    :type savePath: str
+    :param k: number of eignenvalues recovered for the vibration analysis
+    :type k: int 
+
+    :return: the array of k first natural frequencies and the model.N x k array of first k eigenvectors if returnBoth is True, else if returnOmegan is True returns only the frequencies, else return the count of non-real natural frequencies
     """
     model.KC0_M_update(10000.) #modal solution
     KAuu = model.uu_matrix(lc.KA)#*1.67 prandtl-glauert M=.8
@@ -243,6 +269,7 @@ def prep_displacements(u:nt.NDArray[np.float64], model:Pyfe3DModel, scaling:floa
     :type model: Pyfe3DModel
     :param scaling: scaling to apply to the displacements for visibility
     :type scaling: float
+
     :return: model ncoords updated by the displacements
     :rtype: NDArray[float64]
     '''
@@ -253,7 +280,7 @@ def prep_displacements(u:nt.NDArray[np.float64], model:Pyfe3DModel, scaling:floa
 def plot_nodal_quantity(ncoords:nt.NDArray[np.float64], qty:nt.NDArray[np.float64], 
                         model:Pyfe3DModel, savePath:str, plotName:str, show=False):
     '''
-    Docstring for plot_nodal_quantity
+    interpolates aquality evaluated at nodes into the elements and plots a 3D representation of it using pyvista
     
     :param ncoords: nodal coordinates on which the plot is based, shape (N/DOF, 3)
     :type ncoords: nt.NDArray[np.float64]
@@ -265,8 +292,8 @@ def plot_nodal_quantity(ncoords:nt.NDArray[np.float64], qty:nt.NDArray[np.float6
     :type savePath: str
     :param plotName: the file name of the plot in that folder
     :type plotName: str
-    :param extension: file extensions to save the plot as
-    :type extension: str
+    :param show: whether to show the plot at runtime
+    :type show: bool
     '''
     quad_qty = list()
     beam_qty = list()

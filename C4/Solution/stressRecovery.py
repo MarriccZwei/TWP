@@ -126,7 +126,20 @@ def strains_quad(probe:pf3.Quad4RProbe):
 
 
 def recover_stresses(strains:nt.NDArray[np.float32], E:float, nu:float, sc:float):
-    '''Stress recovery for an isotropic plate'''
+    '''Stress recovery for an isotropic plate
+    
+    :param strains: strains as provided by strains_quad function
+    :type strains: NDArray[np.float32]
+    :param E: material's Elastic modulus
+    :type E: float
+    :param nu: material's Poisson's ratio modulus
+    :type nu: float
+    :param sc: transverse shear correction factor
+    :type sc: float
+
+    :return: the normall stresses lmbda, the in-plane shear stress lambda, out of plane shear stresses
+    :rtype: Tuple[Callable[[float],  NDArray[np.float32]], Callable[[float],  float], float, float]
+    '''
 
     G = E/2/(1+nu)
     E_pois = E/(1-nu**2)
@@ -152,13 +165,17 @@ def recover_stresses(strains:nt.NDArray[np.float32], E:float, nu:float, sc:float
 
     
 def von_mises(s_11, s_22, s_33, s_12, s_23, s_13):
-    '''Von Mises failure criterion for a general stress tensor'''
+    '''Von Mises failure criterion for a general stress tensor
+    
+    s_11, s_22, s_33 are normal stresses, s_12, s_23, s_13 are shear stresses'''
     return np.sqrt(((s_11-s_22)**2+(s_22-s_33)**2+(s_33-s_11)**2)/2+3*(s_12**2+s_23**2+s_13**2))
 
 
 def foam_crit(s_11, s_22, s_33, s_12, s_23, s_13, nu):
     '''Foam failure criterion as in Gioux et al. 2000. doi: https://doi.org/10.1016/S0020-7403(99)00043-0.
-    With the change that regular poisson ratio, instead of the plastic one is used'''
+    With the change that regular poisson ratio, instead of the plastic one is used
+    
+    s_11, s_22, s_33 are normal stresses, s_12, s_23, s_13 are shear stresses, nu is poisson ratio'''
     alpha2 = 9*(.5-nu)/(1+nu)
     s_princ = sl.eigh(np.array([(s_11, s_12, s_13), (s_12, s_22, s_23), (s_13, s_23, s_33)]), eigvals_only=True)
     s_v2 = ((s_princ[0]-s_princ[1])**2+(s_princ[1]-s_princ[2])**2+(s_princ[2]-s_princ[0])**2)/2
@@ -172,6 +189,7 @@ def beam_strains(probe:pf3.Quad4RProbe)->ty.Tuple[ty.Callable[[float, float], fl
     
     :param probe: element probe with ue and xe already updated
     :type probe: pf3.Quad4RProbe
+
     :return: the e_xx, e_xy, e_xz lambdas
     :rtype: Tuple[Callable[[float, float], float]]
     '''
