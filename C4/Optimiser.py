@@ -104,6 +104,10 @@ class Optimiser():
         :return: the array of failure margins: [quad stress, beam stress, load multiplier, complex eigenfrequencies count]
         :rtype: NDArray[float64]
         '''
+
+        #NOTE: this function initially followed the logic of the forward(...) method, however the obtained constraints were still not smooth enough for the optimiser.
+        #As such, this stress-onl method has been created for use inside the optimisation loop
+
         self._update_model(desvarvec)
         failure_margins = np.zeros(len(self.lcs) * 2)
         for i, lc in enumerate(self.lcs):
@@ -118,7 +122,7 @@ class Optimiser():
                 # flutterCount = process_aeroelastic_load_case(self.model, lc, plot, savePathLC, self.resConfig["kfl"])
                 # if flutterCount>failure_margins[3]:
                 #     failure_margins[3] = flutterCount
-                raise NotImplementedError("Aeroelastic Load Case deprecated!!!")
+                raise NotImplementedError("Aeroelastic Load Case deprecated inside optimisation loop!!!")
                     
             #2) load case (post) processing
             else:

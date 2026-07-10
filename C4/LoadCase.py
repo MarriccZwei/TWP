@@ -250,7 +250,7 @@ class LoadCase():
         v = vortex_valid.sum()*3
         Fv = vlm_.forces_geometry[vortex_valid].flatten()
 
-        dFv_dp = np.zeros((v, rowlen*6)) # NOTE remember to pass both heave and twist displacements
+        dFv_dp = np.zeros((v, rowlen*6))
         for i in range(len(p)):
             if not (i in [rowlen-1, 2*rowlen-1]): #NOTE not considering tip flutter as tip treated as a separate subsystem not modelled in this study
                 p_DOF = (3*i+2) #if (i<2*rowlen) else (3*(i-2*rowlen))
