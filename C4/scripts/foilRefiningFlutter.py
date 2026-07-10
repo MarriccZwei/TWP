@@ -28,7 +28,7 @@ for i, N, Nfoil in zip(range(len(Ns)), Ns, Nfoils):
         pickle.dump((omegan[:nfreq, i], peigvecs[:, :nfreq]), f)
 
 for j in range(nfreq): 
-    plt.plot(Ns, np.real(omegan[j, :]), label=f"frequency {j+1}")
+    plt.plot(Nfoils, np.real(omegan[j, :]), label=f"frequency {j+1}")
 plt.legend()
 plt.ylabel("Natural frequency [rad/s]")
 plt.xlabel("Number of airfoil sections")

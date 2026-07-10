@@ -5,6 +5,10 @@ from ..ConfigFiles import userConfig as uc
 import scipy.optimize as opt
 import gc
 
+'''
+Optimisation of the wingbox for the assumed values of d and rho_foam
+'''
+
 desvarsInit = dict()
 for key in mc.BOUNDS[0].keys(): #centered initial conditions
     desvarsInit[key]=(mc.BOUNDS[0][key]+mc.BOUNDS[1][key])/2

@@ -9,9 +9,6 @@ import time
 
 import pickle
 
-def MAC(self, vec1, vec2):
-    return (np.dot(vec1, vec2)**2 / np.dot(vec1, vec1) / np.dot(vec2, vec2))
-
 Ns = [5, 6, 7, 8, 9, 10, 11, 12]
 Nfoils = [11]*8
 nfreq = 5
