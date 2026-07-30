@@ -4,7 +4,7 @@ import numpy.typing as nt
 import typing as ty
 import scipy.linalg as sl
 
-def strains_quad(probe:pf3.Quad4Probe):
+def strains_quad(probe:pf3.Quad4RProbe):
     '''
     Outputs the strains vector: [exx, eyy, gxy, kxx, kyy, kxy, gyz, gxz]
     Obtained by constructing the BL matrix and multiplying it with the displacements vector
@@ -13,7 +13,7 @@ def strains_quad(probe:pf3.Quad4Probe):
     NOTE: The strains follow pyfe3d naming and sign convention, not the stress tensor one!
     '''
     
-    # NOTE adapted from Quad4 source code
+    # NOTE adapted from Quad4R source code
     x1 = probe.xe[0]
     y1 = probe.xe[1]
     x2 = probe.xe[3]
@@ -42,7 +42,7 @@ def strains_quad(probe:pf3.Quad4Probe):
     N3y = 0.25*j21 + 0.25*j22
     N4y = -0.25*j21 + 0.25*j22
 
-    #NOTE adapted from Quad4Probe source code for constructing the strain interpolation matrix BL
+    #NOTE adapted from Quad4RProbe source code for constructing the strain interpolation matrix BL
     BL_LEN = 4*pf3.DOF
     BLexx = np.zeros(BL_LEN, dtype=np.float64)
     BLeyy = np.zeros(BL_LEN, dtype=np.float64)
@@ -183,12 +183,12 @@ def foam_crit(s_11, s_22, s_33, s_12, s_23, s_13, nu):
     return np.sqrt((s_v2+alpha2*s_m2)/(1+alpha2/9))
 
 
-def beam_strains(probe:pf3.Quad4Probe)->ty.Tuple[ty.Callable[[float, float], float]]:
+def beam_strains(probe:pf3.Quad4RProbe)->ty.Tuple[ty.Callable[[float, float], float]]:
     '''
     obtains the three meaningful strains for beam elements as functions of ye and ze
     
     :param probe: element probe with ue and xe already updated
-    :type probe: pf3.Quad4Probe
+    :type probe: pf3.Quad4RProbe
 
     :return: the e_xx, e_xy, e_xz lambdas
     :rtype: Tuple[Callable[[float, float], float]]
