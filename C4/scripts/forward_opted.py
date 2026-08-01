@@ -3,7 +3,7 @@ from ..ConfigFiles import mainConfig as mc
 from ..ConfigFiles import userConfig as uc
 import numpy as np
 
-desvars = {'(2t/H)_Sq': np.float64(0.14779078527131706), '(2t/H)_Pq': np.float64(0.1941012111518347), '(2t/H)_Aq': np.float64(0.17841345464904979), 'W_bb': np.float64(0.01578562454259829), 'W_mb': np.float64(0.018572223880988704), 'W_lb': np.float64(0.01574421166844625), 'ds': np.float64(0.015763858666424515), 'de': np.float64(0.01780049033655861), '(2t/H)_sq': np.float64(0.16046288064007755), '(2t/H)_pq': np.float64(0.10110644736027476), '(2t/H)_aq': np.float64(0.12659052092093015)}
+desvars = {'(2t/H)_Sq': np.float64(0.15836638133674147), '(2t/H)_Pq': np.float64(0.15411829099784008), '(2t/H)_Aq': np.float64(0.14747950614755173), 'W_bb': np.float64(0.016020040088785176), 'W_mb': np.float64(0.01600280320751574), 'W_lb': np.float64(0.016118796257331848), 'ds': np.float64(0.011871654977600083), 'de': np.float64(0.011876414091993087), '(2t/H)_sq': np.float64(0.15713819684923663), '(2t/H)_pq': np.float64(0.11250508084285184), '(2t/H)_aq': np.float64(0.11126672107575558)}
 
 optimiser = Optimiser(desvars, mc.LC_INFO, mc.GEOM_SOURCE, mc.HYPERPARAMS, mc.MASSES, mc.N, mc.MATERIALS, mc.RES, mc.G0, mc.MTOM, mc.NAIRFS, mc.LBUCKLSF,
                       mc.BOUNDS)
