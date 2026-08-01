@@ -212,7 +212,7 @@ class Pyfe3DModel():
             quad.init_k_KC0 = init_k_KC0
             quad.init_k_M = init_k_M
             quad.init_k_KG = init_k_KG
-            quad.update_KC0(self.KC0r, self.KC0c, self.KC0v, shellprop, hgfactor_w=1.2) #matrix contribution, changing the matrices sent
+            quad.update_KC0(self.KC0r, self.KC0c, self.KC0v, shellprop, hgfactor_w=1.4) #matrix contribution, changing the matrices sent
             quad.update_M(self.Mr, self.Mc, self.Mv, shellprop)
             #as mentioned above, KG not updated here
             init_k_KC0 += self.quaddata.KC0_SPARSE_SIZE
